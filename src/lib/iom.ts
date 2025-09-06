@@ -139,3 +139,24 @@ export async function updateIOMStatus(id: string, status: IOMStatus, userId?: st
     }
   });
 }
+
+
+export async function deleteIOM(id: string) {
+  return await prisma.iOM.delete({
+    where: { id },
+  });
+}
+
+export async function getIOMsByStatus(status: IOMStatus) {
+  return await prisma.iOM.findMany({
+    where: { status },
+    include: {
+      items: true,
+      preparedBy: { select: { name: true, email: true } },
+      requestedBy: { select: { name: true, email: true } },
+      reviewedBy: { select: { name: true, email: true } },
+      approvedBy: { select: { name: true, email: true } },
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+}

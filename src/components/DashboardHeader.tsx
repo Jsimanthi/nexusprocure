@@ -18,7 +18,7 @@ export default function DashboardHeader() {
                 Dashboard
               </Link>
               <Link href="/iom" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-                IOM
+                IOM Management
               </Link>
               <Link href="/purchase-orders" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                 Purchase Orders
