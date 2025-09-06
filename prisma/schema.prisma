@@ -1,0 +1,53 @@
+// Add to your existing prisma/schema.prisma
+model IOM {
+  id          String   @id @default(cuid())
+  iomNumber   String   @unique
+  title       String
+  from        String
+  to          String
+  subject     String
+  content     String?
+  status      IOMStatus @default(DRAFT)
+  totalAmount Float    @default(0)
+  
+  // Relationships
+  items       IOMItem[]
+  preparedBy  User     @relation(fields: [preparedById], references: [id], name: "IOMPreparedBy")
+  requestedBy User     @relation(fields: [requestedById], references: [id], name: "IOMRequestedBy")
+  reviewedBy  User?    @relation(fields: [reviewedById], references: [id], name: "IOMReviewedBy")
+  approvedBy  User?    @relation(fields: [approvedById], references: [id], name: "IOMApprovedBy")
+  
+  // Foreign keys
+  preparedById  String
+  requestedById String
+  reviewedById  String?
+  approvedById  String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model IOMItem {
+  id          String  @id @default(cuid())
+  itemName    String
+  description String?
+  quantity    Int     @default(1)
+  unitPrice   Float   @default(0)
+  totalPrice  Float   @default(0)
+  
+  // Relationship
+  iom     IOM   @relation(fields: [iomId], references: [id], onDelete: Cascade)
+  iomId   String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum IOMStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  COMPLETED
+}
