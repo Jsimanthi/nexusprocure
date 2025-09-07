@@ -120,3 +120,71 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Add print styles at the end */
+@media print {
+  .dashboard-header,
+  .status-actions,
+  .print-button {
+    display: none !important;
+  }
+  
+  body {
+    font-size: 12pt;
+    line-height: 1.4;
+    background: white !important;
+    color: black !important;
+  }
+  
+  .container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .shadow {
+    box-shadow: none !important;
+  }
+  
+  .rounded-lg {
+    border-radius: 0 !important;
+  }
+  
+  .bg-gray-100 {
+    background-color: #f7fafc !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  
+  /* Ensure good contrast for printing */
+  .text-gray-900 {
+    color: #000 !important;
+  }
+  
+  .text-gray-600 {
+    color: #333 !important;
+  }
+  
+  .text-gray-500 {
+    color: #666 !important;
+  }
+  
+  /* Reset background colors for print */
+  .bg-background {
+    background: white !important;
+  }
+  
+  .bg-card {
+    background: white !important;
+  }
+  
+  /* Reset text colors for print */
+  .text-foreground {
+    color: black !important;
+  }
+  
+  .text-card-foreground {
+    color: black !important;
+  }
+}

@@ -52,6 +52,12 @@ model User {
   reviewedIOMs  IOM[]     @relation("IOMReviewedBy")
   approvedIOMs  IOM[]     @relation("IOMApprovedBy")
   
+  // Reverse relations for PurchaseOrder
+  preparedPOs  PurchaseOrder[] @relation("POPreparedBy")
+  requestedPOs PurchaseOrder[] @relation("PORequestedBy")
+  reviewedPOs  PurchaseOrder[] @relation("POReviewedBy")
+  approvedPOs  PurchaseOrder[] @relation("POApprovedBy")
+  
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -81,6 +87,9 @@ model IOM {
   requestedBy User     @relation(fields: [requestedById], references: [id], name: "IOMRequestedBy")
   reviewedBy  User?    @relation(fields: [reviewedById], references: [id], name: "IOMReviewedBy")
   approvedBy  User?    @relation(fields: [approvedById], references: [id], name: "IOMApprovedBy")
+  
+  // Reverse relation for PurchaseOrder
+  purchaseOrders PurchaseOrder[]
   
   // Foreign keys
   preparedById  String
@@ -115,4 +124,88 @@ enum IOMStatus {
   APPROVED
   REJECTED
   COMPLETED
+}
+
+model PurchaseOrder {
+  id          String   @id @default(cuid())
+  poNumber    String   @unique
+  iomId       String?
+  vendorId    String?
+  title       String
+  status      POStatus @default(DRAFT)
+  totalAmount Float    @default(0)
+  taxAmount   Float    @default(0)
+  grandTotal  Float    @default(0)
+  taxRate     Float    @default(0) // GST tax rate in percentage
+  
+  // Company and Vendor Details
+  companyName     String
+  companyAddress  String
+  companyContact  String
+  vendorName      String
+  vendorAddress   String
+  vendorContact   String
+  
+  // Relationships
+  items      POItem[]
+  iom        IOM?     @relation(fields: [iomId], references: [id])
+  vendor     Vendor?  @relation(fields: [vendorId], references: [id])
+  preparedBy User     @relation(fields: [preparedById], references: [id], name: "POPreparedBy")
+  requestedBy User    @relation(fields: [requestedById], references: [id], name: "PORequestedBy")
+  reviewedBy User?    @relation(fields: [reviewedById], references: [id], name: "POReviewedBy")
+  approvedBy User?    @relation(fields: [approvedById], references: [id], name: "POApprovedBy")
+  
+  // Foreign keys
+  preparedById  String
+  requestedById String
+  reviewedById  String?
+  approvedById  String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model POItem {
+  id          String  @id @default(cuid())
+  itemName    String
+  description String?
+  quantity    Int     @default(1)
+  unitPrice   Float   @default(0)
+  taxRate     Float   @default(0) // Item-specific tax rate
+  taxAmount   Float   @default(0)
+  totalPrice  Float   @default(0)
+  
+  // Relationship
+  po    PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  poId  String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Vendor {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  contactInfo String
+  taxId       String?
+  website     String?
+  email       String
+  phone       String
+  
+  // Relationships
+  purchaseOrders PurchaseOrder[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum POStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  ORDERED
+  DELIVERED
+  CANCELLED
 }

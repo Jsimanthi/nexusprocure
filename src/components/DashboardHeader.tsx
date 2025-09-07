@@ -20,7 +20,7 @@ export default function DashboardHeader() {
               <Link href="/iom" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                 IOM Management
               </Link>
-              <Link href="/purchase-orders" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+              <Link href="/po" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                 Purchase Orders
               </Link>
               <Link href="/check-requests" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
@@ -28,7 +28,7 @@ export default function DashboardHeader() {
               </Link>
             </nav>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-700">
               Welcome, {session?.user?.name}

@@ -6,6 +6,14 @@ export interface IOMItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface UserRef {
+  id: string;
+  name?: string | null;
+  email: string;
 }
 
 export interface IOM {
@@ -25,6 +33,12 @@ export interface IOM {
   approvedById?: string;
   createdAt?: Date;
   updatedAt?: Date;
+  
+  // Relation fields (added by Prisma includes)
+  preparedBy?: UserRef;
+  requestedBy?: UserRef;
+  reviewedBy?: UserRef;
+  approvedBy?: UserRef;
 }
 
 export enum IOMStatus {
