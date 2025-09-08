@@ -48,6 +48,11 @@ export default function POListPage() {
     }).format(amount);
   };
 
+  // Check if a PO can be converted to CR
+  const canCreateCR = (status: string) => {
+    return ['APPROVED', 'ORDERED', 'DELIVERED'].includes(status);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -101,6 +106,11 @@ export default function POListPage() {
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(po.status)}`}>
                             {po.status.replace("_", " ")}
                           </span>
+                          {canCreateCR(po.status) && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Can Create CR
+                            </span>
+                          )}
                           <span className="text-sm font-semibold text-gray-900">
                             {formatCurrency(po.grandTotal)}
                           </span>

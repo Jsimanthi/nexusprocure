@@ -12,6 +12,7 @@ export default function PODetailPage() {
   const [po, setPo] = useState<PurchaseOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -56,6 +57,26 @@ export default function PODetailPage() {
       console.error("Error updating status:", error);
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const convertToCR = async () => {
+    setConverting(true);
+    try {
+      const response = await fetch(`/api/cr/po/${params.id}`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        const cr = await response.json();
+        router.push(`/cr/${cr.id}`);
+      } else {
+        console.error("Failed to convert PO to CR");
+      }
+    } catch (error) {
+      console.error("Error converting PO to CR:", error);
+    } finally {
+      setConverting(false);
     }
   };
 
@@ -109,6 +130,11 @@ export default function PODetailPage() {
     }
     
     return actions;
+  };
+
+  // Check if PO can be converted to CR
+  const canConvertToCR = (status: string) => {
+    return ['APPROVED', 'ORDERED', 'DELIVERED'].includes(status);
   };
 
   if (loading) {
@@ -316,6 +342,23 @@ export default function PODetailPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Convert to CR Button */}
+            {canConvertToCR(po.status) && (
+              <div className="bg-white shadow rounded-lg p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Processing</h3>
+                <button
+                  onClick={convertToCR}
+                  disabled={converting}
+                  className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-2 rounded-md text-sm font-medium"
+                >
+                  {converting ? "Converting..." : "Convert to Check Request"}
+                </button>
+                <p className="text-sm text-gray-500 mt-2">
+                  Create a payment request for this purchase order.
+                </p>
               </div>
             )}
 

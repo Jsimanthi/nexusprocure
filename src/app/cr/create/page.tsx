@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import { PurchaseOrder } from "@/types/po";
 import { PaymentMethod } from "@/types/cr";
 
@@ -116,9 +116,7 @@ export default function CreateCRPage() {
     <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
       <div className="px-4 py-6 sm:px-0">
         <div className="mb-6">
-          <Link href="/cr" className="text-blue-600 hover:text-blue-800">
-            &larr; Back to CR List
-          </Link>
+          <BackButton href="/cr" />
           <h1 className="text-3xl font-bold text-gray-900 mt-2">Create Check Request</h1>
         </div>
 
@@ -269,12 +267,13 @@ export default function CreateCRPage() {
           </div>
 
           <div className="flex justify-end space-x-4">
-            <Link
-              href="/cr"
+            <button
+              type="button"
+              onClick={() => router.push("/cr")}
               className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
             >
               Cancel
-            </Link>
+            </button>
             <button
               type="submit"
               disabled={loading}
