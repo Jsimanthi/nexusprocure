@@ -1,5 +1,4 @@
 "use client";
-import DashboardHeader from "@/components/DashboardHeader";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -20,18 +19,27 @@ export default function AnalyticsPage() {
   });
 
   if (isLoading) {
-    return <div className="text-center p-10">Loading analytics...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   if (isError) {
-    return <div className="text-center p-10 text-red-500">Error: {error.message}</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-600">
+        Error: {error.message}
+      </div>
+    );
   }
 
   const { documentCounts, poStatusCounts, spendingByMonth } = data;
 
   return (
-    <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Analytics & Reports</h1>
+    <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <div className="px-4 py-6 sm:px-0">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Analytics & Reports</h1>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -81,6 +89,7 @@ export default function AnalyticsPage() {
                 </ResponsiveContainer>
             </div>
         </div>
+      </div>
     </div>
   );
 }
