@@ -1,61 +1,76 @@
-// src/components/Notifications.tsx
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Bell, Check } from "lucide-react";
+import io, { Socket } from "socket.io-client";
+import { Notification as NotificationType } from "@prisma/client"; // Import the real type
 
-interface Notification {
-  id: string;
-  type: 'APPROVAL' | 'STATUS_CHANGE' | 'SYSTEM';
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: Date;
-  link?: string;
-}
+// --- API Fetching Functions ---
+const fetchNotifications = async () => {
+  const response = await fetch("/api/notifications");
+  if (!response.ok) throw new Error("Failed to fetch notifications");
+  return response.json();
+};
+
+const markNotificationRead = async (notificationId: string) => {
+  const response = await fetch(`/api/notifications/${notificationId}`, {
+    method: "PATCH",
+  });
+  if (!response.ok) throw new Error("Failed to mark notification as read");
+  return response.json();
+};
 
 export default function Notifications() {
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
 
+  // --- Data Fetching ---
+  const { data: notifications = [] } = useQuery<NotificationType[]>({
+    queryKey: ["notifications"],
+    queryFn: fetchNotifications,
+    enabled: !!session?.user?.id, // Only fetch if user is logged in
+  });
+
+  // --- Real-time Socket Connection ---
   useEffect(() => {
-    // In a real app, you'd fetch notifications from an API
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        type: 'APPROVAL',
-        title: 'PO Approval Required',
-        message: 'Purchase Order PO-2024-001 needs your approval',
-        read: false,
-        createdAt: new Date(),
-        link: '/po/1'
-      },
-      {
-        id: '2',
-        type: 'STATUS_CHANGE',
-        title: 'IOM Status Updated',
-        message: 'Your IOM IOM-2024-001 has been approved',
-        read: false,
-        createdAt: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-        link: '/iom/1'
-      }
-    ];
-    setNotifications(mockNotifications);
-    setUnreadCount(mockNotifications.filter(n => !n.read).length);
-  }, []);
+    if (!session?.user?.id) return;
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
-    setUnreadCount(prev => prev - 1);
+    const socket: Socket = io("http://localhost:3001");
+
+    socket.on("connect", () => {
+      console.log("Socket connected on client:", socket.id);
+      socket.emit("register", session.user.id);
+    });
+
+    socket.on("notification", (newNotification) => {
+      console.log("New notification received:", newNotification);
+      // Invalidate the query to refetch and show the new notification
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    });
+
+    return () => {
+      console.log("Disconnecting socket");
+      socket.disconnect();
+    };
+  }, [session, queryClient]);
+
+  // --- Mutations ---
+  const mutation = useMutation({
+    mutationFn: markNotificationRead,
+    onSuccess: () => {
+      // When a notification is marked as read, refetch the list
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
+  const handleMarkAsRead = (id: string) => {
+    mutation.mutate(id);
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    setUnreadCount(0);
-  };
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div className="relative">
@@ -75,20 +90,12 @@ export default function Notifications() {
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
           <div className="p-4 border-b border-gray-200 flex justify-between items-center">
             <h3 className="font-semibold">Notifications</h3>
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllAsRead}
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                Mark all as read
-              </button>
-            )}
           </div>
           
           <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
-                No notifications
+                No new notifications
               </div>
             ) : (
               notifications.map((notification) => (
@@ -100,20 +107,19 @@ export default function Notifications() {
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h4 className="font-medium text-sm text-gray-900">
-                        {notification.title}
-                      </h4>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-sm text-gray-800">
                         {notification.message}
                       </p>
                       <p className="text-xs text-gray-400 mt-2">
-                        {new Date(notification.createdAt).toLocaleTimeString()}
+                        {new Date(notification.createdAt).toLocaleString()}
                       </p>
                     </div>
                     {!notification.read && (
                       <button
-                        onClick={() => markAsRead(notification.id)}
-                        className="ml-2 p-1 text-gray-400 hover:text-gray-600"
+                        onClick={() => handleMarkAsRead(notification.id)}
+                        disabled={mutation.isPending && mutation.variables === notification.id}
+                        className="ml-2 p-1 text-gray-400 hover:text-green-600 disabled:opacity-50"
+                        title="Mark as read"
                       >
                         <Check className="w-4 h-4" />
                       </button>

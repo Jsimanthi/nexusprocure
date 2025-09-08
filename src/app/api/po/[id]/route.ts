@@ -70,7 +70,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const po = await updatePOStatus(params.id, body.status, session.user.id);
+    const po = await updatePOStatus(params.id, body.status, session);
     
     if (!po) {
       return NextResponse.json({ error: "PO not found" }, { status: 404 });

@@ -1,9 +1,10 @@
 // src/app/api/po/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/api/auth/[...nextauth]/route";
-import { createPurchaseOrder, getPOsByUser, getVendors, createVendor } from "@/lib/po";
+import { createPurchaseOrder, getPOsByUser } from "@/lib/po";
+import { createPoSchema } from "@/lib/schemas";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     
@@ -11,8 +12,22 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const pos = await getPOsByUser(session.user.id);
-    return NextResponse.json(pos);
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
+
+    const { purchaseOrders, total } = await getPOsByUser(session.user.id, {
+      page,
+      pageSize,
+    });
+
+    return NextResponse.json({
+      data: purchaseOrders,
+      total,
+      page,
+      pageSize,
+      pageCount: Math.ceil(total / pageSize),
+    });
   } catch (error) {
     console.error("Error fetching POs:", error);
     return NextResponse.json(
@@ -31,31 +46,23 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
-    // Validate required fields
-    if (!body.title || !body.companyName || !body.companyAddress || !body.companyContact || 
-        !body.vendorName || !body.vendorAddress || !body.vendorContact || !body.items) {
+    const validation = createPoSchema.safeParse(body);
+
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid input", details: validation.error.flatten() },
         { status: 400 }
       );
     }
 
-    const po = await createPurchaseOrder({
-      title: body.title,
-      iomId: body.iomId,
-      vendorId: body.vendorId,
-      companyName: body.companyName,
-      companyAddress: body.companyAddress,
-      companyContact: body.companyContact,
-      vendorName: body.vendorName,
-      vendorAddress: body.vendorAddress,
-      vendorContact: body.vendorContact,
-      taxRate: body.taxRate || 0,
-      items: body.items,
-      preparedById: session.user.id,
-      requestedById: body.requestedById || session.user.id,
-    });
+    const po = await createPurchaseOrder(
+      {
+        ...validation.data,
+        preparedById: session.user.id,
+        requestedById: validation.data.requestedById || session.user.id,
+      },
+      session
+    );
 
     return NextResponse.json(po, { status: 201 });
   } catch (error) {

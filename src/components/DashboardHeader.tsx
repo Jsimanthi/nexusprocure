@@ -18,6 +18,9 @@ export default function DashboardHeader() {
               <Link href="/dashboard" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                 Dashboard
               </Link>
+              <Link href="/dashboard/analytics" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                Analytics
+              </Link>
               <Link href="/iom" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                 IOM Management
               </Link>

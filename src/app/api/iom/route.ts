@@ -2,8 +2,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/api/auth/[...nextauth]/route";
 import { createIOM, getIOMsByUser } from "@/lib/iom";
+import { createIomSchema } from "@/lib/schemas";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     
@@ -11,8 +12,22 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const ioms = await getIOMsByUser(session.user.id);
-    return NextResponse.json(ioms);
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
+
+    const { ioms, total } = await getIOMsByUser(session.user.id, {
+      page,
+      pageSize,
+    });
+
+    return NextResponse.json({
+      data: ioms,
+      total,
+      page,
+      pageSize,
+      pageCount: Math.ceil(total / pageSize),
+    });
   } catch (error) {
     console.error("Error fetching IOMs:", error);
     return NextResponse.json(
@@ -31,24 +46,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
-    // Validate required fields
-    if (!body.title || !body.from || !body.to || !body.subject || !body.items) {
+    const validation = createIomSchema.safeParse(body);
+
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid input", details: validation.error.flatten() },
         { status: 400 }
       );
     }
 
     const iom = await createIOM({
-      title: body.title,
-      from: body.from,
-      to: body.to,
-      subject: body.subject,
-      content: body.content,
-      items: body.items,
+      ...validation.data,
       preparedById: session.user.id,
-      requestedById: body.requestedById || session.user.id,
     });
 
     return NextResponse.json(iom, { status: 201 });

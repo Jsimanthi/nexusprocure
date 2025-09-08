@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/api/auth/[...nextauth]/route";
 import { getVendorById, updateVendor, deleteVendor } from "@/lib/po";
+import { updateVendorSchema } from "@/lib/schemas";
 
 interface RouteParams {
   params: { id: string };
@@ -40,16 +41,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json();
-    
-    const vendor = await updateVendor(params.id, {
-      name: body.name,
-      address: body.address,
-      contactInfo: body.contactInfo,
-      taxId: body.taxId,
-      website: body.website,
-      email: body.email,
-      phone: body.phone,
-    });
+    const validation = updateVendorSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: validation.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const vendor = await updateVendor(params.id, validation.data);
     
     if (!vendor) {
       return NextResponse.json({ error: "Vendor not found" }, { status: 404 });

@@ -2,8 +2,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/api/auth/[...nextauth]/route";
 import { getVendors, createVendor } from "@/lib/po";
+import { createVendorSchema } from "@/lib/schemas";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     
@@ -11,8 +12,19 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const vendors = await getVendors();
-    return NextResponse.json(vendors);
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
+
+    const { vendors, total } = await getVendors({ page, pageSize });
+
+    return NextResponse.json({
+      data: vendors,
+      total,
+      page,
+      pageSize,
+      pageCount: Math.ceil(total / pageSize),
+    });
   } catch (error) {
     console.error("Error fetching vendors:", error);
     return NextResponse.json(
@@ -31,24 +43,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
-    // Validate required fields
-    if (!body.name || !body.address || !body.contactInfo || !body.email || !body.phone) {
+    const validation = createVendorSchema.safeParse(body);
+
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid input", details: validation.error.flatten() },
         { status: 400 }
       );
     }
 
-    const vendor = await createVendor({
-      name: body.name,
-      address: body.address,
-      contactInfo: body.contactInfo,
-      taxId: body.taxId,
-      website: body.website,
-      email: body.email,
-      phone: body.phone,
-    });
+    const vendor = await createVendor(validation.data);
 
     return NextResponse.json(vendor, { status: 201 });
   } catch (error) {
