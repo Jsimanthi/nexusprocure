@@ -21,6 +21,7 @@ export interface Vendor {
   website?: string;
   email: string;
   phone: string;
+  currency: string;
   createdAt?: Date;
   updatedAt?: Date;
 }

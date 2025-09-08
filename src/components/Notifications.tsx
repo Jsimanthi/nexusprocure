@@ -38,7 +38,8 @@ export default function Notifications() {
   useEffect(() => {
     if (!session?.user?.id) return;
 
-    const socket: Socket = io("http://localhost:3001");
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+    const socket: Socket = io(socketUrl);
 
     socket.on("connect", () => {
       console.log("Socket connected on client:", socket.id);
@@ -91,7 +92,7 @@ export default function Notifications() {
           <div className="p-4 border-b border-gray-200 flex justify-between items-center">
             <h3 className="font-semibold">Notifications</h3>
           </div>
-          
+
           <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
@@ -101,9 +102,8 @@ export default function Notifications() {
               notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${
-                    notification.read ? 'bg-gray-50' : 'bg-white'
-                  }`}
+                  className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${notification.read ? 'bg-gray-50' : 'bg-white'
+                    }`}
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
