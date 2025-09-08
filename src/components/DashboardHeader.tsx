@@ -23,6 +23,9 @@ export default function DashboardHeader() {
               <Link href="/po" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                 Purchase Orders
               </Link>
+              <Link href="/vendors" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                Vendors
+              </Link>
               <Link href="/check-requests" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                 Check Requests
               </Link>

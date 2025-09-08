@@ -58,6 +58,12 @@ model User {
   reviewedPOs  PurchaseOrder[] @relation("POReviewedBy")
   approvedPOs  PurchaseOrder[] @relation("POApprovedBy")
   
+  // Reverse relations for CheckRequest
+  preparedCRs  CheckRequest[] @relation("CRPreparedBy")
+  requestedCRs CheckRequest[] @relation("CRRequestedBy")
+  reviewedCRs  CheckRequest[] @relation("CRReviewedBy")
+  approvedCRs  CheckRequest[] @relation("CRApprovedBy")
+  
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -155,6 +161,9 @@ model PurchaseOrder {
   reviewedBy User?    @relation(fields: [reviewedById], references: [id], name: "POReviewedBy")
   approvedBy User?    @relation(fields: [approvedById], references: [id], name: "POApprovedBy")
   
+  // Reverse relation for CheckRequest
+  checkRequests CheckRequest[]
+  
   // Foreign keys
   preparedById  String
   requestedById String
@@ -208,4 +217,55 @@ enum POStatus {
   ORDERED
   DELIVERED
   CANCELLED
+}
+
+model CheckRequest {
+  id          String   @id @default(cuid())
+  crNumber    String   @unique
+  poId        String?
+  title       String
+  status      CRStatus @default(DRAFT)
+  totalAmount Float    @default(0)
+  taxAmount   Float    @default(0)
+  grandTotal  Float    @default(0)
+  
+  // Payment Details
+  paymentTo       String
+  paymentDate     DateTime
+  purpose         String
+  paymentMethod   PaymentMethod @default(CHEQUE)
+  bankAccount     String?
+  referenceNumber String?
+  
+  // Relationships
+  po         PurchaseOrder? @relation(fields: [poId], references: [id])
+  preparedBy User           @relation(fields: [preparedById], references: [id], name: "CRPreparedBy")
+  requestedBy User          @relation(fields: [requestedById], references: [id], name: "CRRequestedBy")
+  reviewedBy User?          @relation(fields: [reviewedById], references: [id], name: "CRReviewedBy")
+  approvedBy User?          @relation(fields: [approvedById], references: [id], name: "CRApprovedBy")
+  
+  // Foreign keys
+  preparedById  String
+  requestedById String
+  reviewedById  String?
+  approvedById  String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum CRStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  PROCESSED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CHEQUE
+  BANK_TRANSFER
+  CASH
+  ONLINE_PAYMENT
 }

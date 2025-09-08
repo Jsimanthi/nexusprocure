@@ -91,12 +91,10 @@ export default function CreatePOPage() {
 
     const fetchApprovedIOMs = async () => {
         try {
-            const response = await fetch("/api/iom");
+            const response = await fetch("/api/po/iom");
             if (response.ok) {
                 const data = await response.json();
-                // Filter only approved IOMs
-                const approvedIoms = data.filter((iom: IOM) => iom.status === "APPROVED");
-                setIoms(approvedIoms);
+                setIoms(data);
             }
         } catch (error) {
             console.error("Error fetching IOMs:", error);

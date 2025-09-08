@@ -223,3 +223,17 @@ export async function updatePOStatus(id: string, status: POStatus, userId?: stri
     }
   });
 }
+
+export async function getIOMsForPO() {
+  return await prisma.iOM.findMany({
+    where: {
+      status: "APPROVED",
+    },
+    include: {
+      items: true,
+      preparedBy: { select: { name: true, email: true } },
+      requestedBy: { select: { name: true, email: true } },
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+}
