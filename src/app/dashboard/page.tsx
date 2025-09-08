@@ -34,11 +34,16 @@ export default function DashboardPage() {
         fetch("/api/cr")
       ]);
 
-      const ioms = await iomsRes.json();
-      const pos = await posRes.json();
-      const crs = await crsRes.json();
+      const iomsData = await iomsRes.json();
+      const posData = await posRes.json();
+      const crsData = await crsRes.json();
 
-      const pendingApprovals = ioms.filter((iom: any) => 
+      // Extract the actual arrays from the response objects
+      const ioms = iomsData.data || [];
+      const pos = posData.data || [];
+      const crs = crsData.data || [];
+
+      const pendingApprovals = ioms.filter((iom: any) =>
         iom.status === "SUBMITTED" || iom.status === "UNDER_REVIEW"
       ).length;
 
@@ -48,13 +53,13 @@ export default function DashboardPage() {
         type: 'IOM',
         date: iom.createdAt
       }));
-      
+
       const recentPos = pos.slice(0, 5).map((po: any) => ({
         ...po,
         type: 'PO',
         date: po.createdAt
       }));
-      
+
       const recentCrs = crs.slice(0, 5).map((cr: any) => ({
         ...cr,
         type: 'CR',
@@ -110,7 +115,7 @@ export default function DashboardPage() {
                   View all →
                 </Link>
               </div>
-              
+
               <div className="bg-white p-6 rounded-lg shadow">
                 <h2 className="text-xl font-semibold mb-2">Purchase Orders</h2>
                 <p className="text-3xl font-bold text-green-600">{stats.poCount}</p>
@@ -119,7 +124,7 @@ export default function DashboardPage() {
                   View all →
                 </Link>
               </div>
-              
+
               <div className="bg-white p-6 rounded-lg shadow">
                 <h2 className="text-xl font-semibold mb-2">Check Requests</h2>
                 <p className="text-3xl font-bold text-purple-600">{stats.crCount}</p>
@@ -128,7 +133,7 @@ export default function DashboardPage() {
                   View all →
                 </Link>
               </div>
-              
+
               <div className="bg-white p-6 rounded-lg shadow">
                 <h2 className="text-xl font-semibold mb-2">Pending Approval</h2>
                 <p className="text-3xl font-bold text-yellow-600">{stats.pendingApprovals}</p>
@@ -165,7 +170,7 @@ export default function DashboardPage() {
                           <p className="text-sm text-gray-500">
                             {new Date(item.date).toLocaleDateString()}
                           </p>
-                          <Link 
+                          <Link
                             href={`/${item.type.toLowerCase()}/${item.id}`}
                             className="text-sm text-blue-600 hover:text-blue-800"
                           >

@@ -1,9 +1,7 @@
-// Replace the entire server/index.ts with this:
-
 import { Server } from "socket.io";
-import { createServer } from "http";
-import { NextApiRequest, NextApiResponse } from "next";
+import { createServer, IncomingMessage, ServerResponse } from "http";
 
+// Create main HTTP server for Socket.IO
 const httpServer = createServer();
 const io = new Server(httpServer, {
   cors: {
@@ -35,8 +33,8 @@ io.on("connection", (socket) => {
   });
 });
 
-// Handle notification requests
-httpServer.on('request', (req, res) => {
+// Create a separate HTTP server for notifications
+const notificationServer = createServer((req: IncomingMessage, res: ServerResponse) => {
   if (req.method === 'POST' && req.url === '/notify') {
     let body = '';
     req.on('data', chunk => {
@@ -67,7 +65,14 @@ httpServer.on('request', (req, res) => {
   }
 });
 
-const PORT = process.env.SOCKET_PORT || 3001;
-httpServer.listen(PORT, () => {
-  console.log(`Socket.IO server with notification endpoint listening on port ${PORT}`);
+// Start both servers
+const SOCKET_PORT = process.env.SOCKET_PORT || 3001;
+const NOTIFICATION_PORT = process.env.NOTIFICATION_PORT || 3002;
+
+httpServer.listen(SOCKET_PORT, () => {
+  console.log(`Socket.IO server listening on port ${SOCKET_PORT}`);
+});
+
+notificationServer.listen(NOTIFICATION_PORT, () => {
+  console.log(`Notification server listening on port ${NOTIFICATION_PORT}`);
 });

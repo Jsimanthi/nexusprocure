@@ -11,7 +11,8 @@ export async function createNotification(userId: string, message: string) {
     });
 
     // 2. Trigger the WebSocket event via the notification server
-    await fetch(`http://localhost:3002/notify`, {
+    const notificationPort = process.env.NOTIFICATION_PORT || 3002;
+    await fetch(`http://localhost:${notificationPort}/notify`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -22,7 +23,6 @@ export async function createNotification(userId: string, message: string) {
     return notification;
   } catch (error) {
     console.error("Failed to create notification:", error);
-    // Depending on requirements, you might want to handle this more gracefully
     return null;
   }
 }
