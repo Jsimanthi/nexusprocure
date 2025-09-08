@@ -4,6 +4,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import FileUpload from "@/components/FileUpload";
+import type { PutBlobResult } from '@vercel/blob';
 
 interface POItem {
     itemName: string;
@@ -42,6 +44,7 @@ interface IOM {
 export default function CreatePOPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [attachments, setAttachments] = useState<PutBlobResult[]>([]);
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [ioms, setIoms] = useState<IOM[]>([]);
     const [selectedIom, setSelectedIom] = useState<IOM | null>(null);
@@ -213,13 +216,21 @@ export default function CreatePOPage() {
                         unitPrice: item.unitPrice,
                         taxRate: item.taxRate,
                     })),
+                    attachments: attachments.map(att => ({
+                        url: att.url,
+                        filename: att.pathname,
+                        filetype: att.contentType,
+                        size: att.size,
+                    })),
                 }),
             });
 
             if (response.ok) {
                 router.push("/po");
             } else {
-                console.error("Failed to create PO");
+                const errorData = await response.json();
+                console.error("Failed to create PO", errorData);
+                alert(`Error: ${errorData.error}. Details: ${JSON.stringify(errorData.details)}`);
             }
         } catch (error) {
             console.error("Error creating PO:", error);
@@ -488,6 +499,12 @@ export default function CreatePOPage() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Attachments Section */}
+                    <div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-4">Attachments</h3>
+                        <FileUpload onUploadComplete={setAttachments} />
                     </div>
 
                     <div className="flex justify-end space-x-4">

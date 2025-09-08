@@ -1,6 +1,11 @@
 // src/lib/iom.ts
 import { prisma } from "./prisma";
 import { IOMStatus } from "@/types/iom";
+import { z } from "zod";
+import { createNotification } from "./notification";
+import { sendEmail } from "./email";
+import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
+import { createIomSchema } from "./schemas";
 
 export async function generateIOMNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -16,33 +21,45 @@ export async function generateIOMNumber(): Promise<string> {
   return `IOM-${year}-${(count + 1).toString().padStart(4, '0')}`;
 }
 
-export async function getIOMsByUser(userId: string) {
-  return await prisma.iOM.findMany({
-    where: {
-      OR: [
-        { preparedById: userId },
-        { requestedById: userId },
-        { reviewedById: userId },
-        { approvedById: userId },
-      ],
-    },
-    include: {
-      items: true,
-      preparedBy: {
-        select: { name: true, email: true }
+export async function getIOMsByUser(
+  userId: string,
+  { page = 1, pageSize = 10 }: { page?: number; pageSize?: number }
+) {
+  const where = {
+    OR: [
+      { preparedById: userId },
+      { requestedById: userId },
+      { reviewedById: userId },
+      { approvedById: userId },
+    ],
+  };
+
+  const [ioms, total] = await prisma.$transaction([
+    prisma.iOM.findMany({
+      where,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        items: true,
+        preparedBy: {
+          select: { name: true, email: true },
+        },
+        requestedBy: {
+          select: { name: true, email: true },
+        },
+        reviewedBy: {
+          select: { name: true, email: true },
+        },
+        approvedBy: {
+          select: { name: true, email: true },
+        },
       },
-      requestedBy: {
-        select: { name: true, email: true }
-      },
-      reviewedBy: {
-        select: { name: true, email: true }
-      },
-      approvedBy: {
-        select: { name: true, email: true }
-      },
-    },
-    orderBy: { createdAt: 'desc' }
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.iOM.count({ where }),
+  ]);
+
+  return { ioms, total };
 }
 
 export async function getIOMById(id: string) {
@@ -66,42 +83,24 @@ export async function getIOMById(id: string) {
   });
 }
 
-export async function createIOM(data: {
-  title: string;
-  from: string;
-  to: string;
-  subject: string;
-  content?: string;
-  items: Array<{
-    itemName: string;
-    description?: string;
-    quantity: number;
-    unitPrice: number;
-  }>;
+type CreateIomData = z.infer<typeof createIomSchema> & {
   preparedById: string;
-  requestedById: string;
-}) {
+};
+
+export async function createIOM(data: CreateIomData) {
+  const { items, ...restOfData } = data;
   const iomNumber = await generateIOMNumber();
-  const totalAmount = data.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
   return await prisma.iOM.create({
     data: {
+      ...restOfData,
       iomNumber,
-      title: data.title,
-      from: data.from,
-      to: data.to,
-      subject: data.subject,
-      content: data.content,
       totalAmount,
       status: IOMStatus.DRAFT,
-      preparedById: data.preparedById,
-      requestedById: data.requestedById,
       items: {
-        create: data.items.map(item => ({
-          itemName: item.itemName,
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
+        create: items.map(item => ({
+          ...item,
           totalPrice: item.quantity * item.unitPrice,
         })),
       },
@@ -121,13 +120,28 @@ export async function createIOM(data: {
 export async function updateIOMStatus(id: string, status: IOMStatus, userId?: string) {
   const updateData: any = { status };
   
+  const iom = await prisma.iOM.findUnique({
+    where: { id },
+    select: {
+      preparedById: true,
+      iomNumber: true,
+      preparedBy: {
+        select: { name: true, email: true }
+      }
+    },
+  });
+
+  if (!iom || !iom.preparedBy) {
+    throw new Error("IOM or originator not found.");
+  }
+
   if (status === IOMStatus.UNDER_REVIEW && userId) {
     updateData.reviewedById = userId;
   } else if (status === IOMStatus.APPROVED && userId) {
     updateData.approvedById = userId;
   }
   
-  return await prisma.iOM.update({
+  const updatedIom = await prisma.iOM.update({
     where: { id },
     data: updateData,
     include: {
@@ -138,6 +152,22 @@ export async function updateIOMStatus(id: string, status: IOMStatus, userId?: st
       approvedBy: { select: { name: true, email: true } },
     }
   });
+
+  const message = `The status of your IOM ${iom.iomNumber} has been updated to ${status}.`;
+  await createNotification(iom.preparedById, message);
+
+  await sendEmail({
+    to: iom.preparedBy.email,
+    subject: `Status Update for IOM: ${iom.iomNumber}`,
+    react: StatusUpdateEmail({
+      userName: iom.preparedBy.name || 'User',
+      documentType: 'IOM',
+      documentNumber: iom.iomNumber,
+      newStatus: status,
+    }),
+  });
+
+  return updatedIom;
 }
 
 

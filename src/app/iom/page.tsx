@@ -1,67 +1,40 @@
 // src/app/iom/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { IOM, IOMStatus } from "@/types/iom";
 import SearchAndFilter from "@/components/SearchAndFilter";
+import { useState } from "react";
+
+const fetchIOMs = async (page = 1, pageSize = 10) => {
+  const response = await fetch(`/api/iom?page=${page}&pageSize=${pageSize}`);
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
+  return response.json();
+};
 
 export default function IOMListPage() {
-  const [ioms, setIoms] = useState<IOM[]>([]);
-  const [filteredIoms, setFilteredIoms] = useState<IOM[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
-  useEffect(() => {
-    fetchIOMs();
-  }, []);
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["ioms", page, pageSize],
+    queryFn: () => fetchIOMs(page, pageSize),
+  });
 
-  const fetchIOMs = async () => {
-    try {
-      const response = await fetch("/api/iom");
-      if (response.ok) {
-        const data = await response.json();
-        setIoms(data);
-        setFilteredIoms(data);
-      }
-    } catch (error) {
-      console.error("Error fetching IOMs:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const ioms = data?.data || [];
+  const total = data?.total || 0;
+  const pageCount = data?.pageCount || 0;
 
+  // TODO: Server-side search and filtering should be implemented.
   const handleSearch = (query: string) => {
-    const filtered = ioms.filter(iom =>
-      iom.title.toLowerCase().includes(query.toLowerCase()) ||
-      iom.iomNumber.toLowerCase().includes(query.toLowerCase()) ||
-      iom.from.toLowerCase().includes(query.toLowerCase()) ||
-      iom.to.toLowerCase().includes(query.toLowerCase()) ||
-      iom.subject.toLowerCase().includes(query.toLowerCase())
-    );
-    setFilteredIoms(filtered);
+    // console.log("Search query:", query);
   };
 
   const handleFilter = (filters: any) => {
-    let filtered = ioms;
-
-    // Status filter
-    if (filters.status && filters.status.length > 0) {
-      filtered = filtered.filter(iom => filters.status.includes(iom.status));
-    }
-
-    // Date range filter
-    if (filters.dateRange.from) {
-      filtered = filtered.filter(iom => 
-        new Date(iom.createdAt!) >= new Date(filters.dateRange.from)
-      );
-    }
-    if (filters.dateRange.to) {
-      filtered = filtered.filter(iom => 
-        new Date(iom.createdAt!) <= new Date(filters.dateRange.to)
-      );
-    }
-
-    setFilteredIoms(filtered);
+    // console.log("Filters:", filters);
   };
 
   const getStatusColor = (status: string) => {
@@ -76,10 +49,26 @@ export default function IOMListPage() {
     }
   };
 
-  if (loading) {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-600">
+        Error: {error.message}
       </div>
     );
   }
@@ -110,15 +99,12 @@ export default function IOMListPage() {
 
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <ul className="divide-y divide-gray-200">
-            {filteredIoms.length === 0 ? (
+            {ioms.length === 0 ? (
               <li className="px-6 py-4 text-center text-gray-500">
-                {ioms.length === 0 
-                  ? "No IOMs found. Create your first IOM to get started."
-                  : "No IOMs match your search criteria."
-                }
+                No IOMs found.
               </li>
             ) : (
-              filteredIoms.map((iom) => (
+              ioms.map((iom: IOM) => (
                 <li key={iom.id}>
                   <Link href={`/iom/${iom.id}`} className="block hover:bg-gray-50">
                     <div className="px-4 py-4 sm:px-6">
@@ -135,8 +121,8 @@ export default function IOMListPage() {
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(iom.status)}`}>
                             {iom.status.replace("_", " ")}
                           </span>
-                          <span className="text-sm text-gray-500">
-                            ${iom.totalAmount.toFixed(2)}
+                          <span className="text-sm font-semibold text-gray-900">
+                            {formatCurrency(iom.totalAmount)}
                           </span>
                         </div>
                       </div>
@@ -157,6 +143,36 @@ export default function IOMListPage() {
             )}
           </ul>
         </div>
+
+        {/* Pagination Controls */}
+        <div className="mt-6 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to <span className="font-medium">{Math.min(page * pageSize, total)}</span> of{' '}
+              <span className="font-medium">{total}</span> results
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setPage(page - 1)}
+              disabled={page === 1}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-700">
+              Page <span className="font-medium">{page}</span> of <span className="font-medium">{pageCount}</span>
+            </span>
+            <button
+              onClick={() => setPage(page + 1)}
+              disabled={page >= pageCount}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );

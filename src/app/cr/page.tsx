@@ -1,67 +1,40 @@
 // src/app/cr/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { CheckRequest, CRStatus } from "@/types/cr";
 import SearchAndFilter from "@/components/SearchAndFilter";
+import { useState } from "react";
+
+const fetchCRs = async (page = 1, pageSize = 10) => {
+  const response = await fetch(`/api/cr?page=${page}&pageSize=${pageSize}`);
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
+  return response.json();
+};
 
 export default function CRListPage() {
-  const [crs, setCrs] = useState<CheckRequest[]>([]);
-  const [filteredCrs, setFilteredCrs] = useState<CheckRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
-  useEffect(() => {
-    fetchCRs();
-  }, []);
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["checkRequests", page, pageSize],
+    queryFn: () => fetchCRs(page, pageSize),
+  });
 
-  const fetchCRs = async () => {
-    try {
-      const response = await fetch("/api/cr");
-      if (response.ok) {
-        const data = await response.json();
-        setCrs(data);
-        setFilteredCrs(data);
-      }
-    } catch (error) {
-      console.error("Error fetching CRs:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const crs = data?.data || [];
+  const total = data?.total || 0;
+  const pageCount = data?.pageCount || 0;
 
+  // TODO: Server-side search and filtering should be implemented.
   const handleSearch = (query: string) => {
-    const filtered = crs.filter(cr =>
-      cr.title.toLowerCase().includes(query.toLowerCase()) ||
-      cr.crNumber.toLowerCase().includes(query.toLowerCase()) ||
-      cr.paymentTo.toLowerCase().includes(query.toLowerCase()) ||
-      cr.purpose.toLowerCase().includes(query.toLowerCase()) ||
-      (cr.po?.poNumber && cr.po.poNumber.toLowerCase().includes(query.toLowerCase()))
-    );
-    setFilteredCrs(filtered);
+    // console.log("Search query:", query);
   };
 
   const handleFilter = (filters: any) => {
-    let filtered = crs;
-
-    // Status filter
-    if (filters.status && filters.status.length > 0) {
-      filtered = filtered.filter(cr => filters.status.includes(cr.status));
-    }
-
-    // Date range filter
-    if (filters.dateRange.from) {
-      filtered = filtered.filter(cr => 
-        new Date(cr.createdAt!) >= new Date(filters.dateRange.from)
-      );
-    }
-    if (filters.dateRange.to) {
-      filtered = filtered.filter(cr => 
-        new Date(cr.createdAt!) <= new Date(filters.dateRange.to)
-      );
-    }
-
-    setFilteredCrs(filtered);
+    // console.log("Filters:", filters);
   };
 
   const getStatusColor = (status: string) => {
@@ -83,10 +56,18 @@ export default function CRListPage() {
     }).format(amount);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-600">
+        Error: {error.message}
       </div>
     );
   }
@@ -117,15 +98,12 @@ export default function CRListPage() {
 
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <ul className="divide-y divide-gray-200">
-            {filteredCrs.length === 0 ? (
+            {crs.length === 0 ? (
               <li className="px-6 py-4 text-center text-gray-500">
-                {crs.length === 0 
-                  ? "No check requests found. Create your first CR to get started."
-                  : "No check requests match your search criteria."
-                }
+                No check requests found.
               </li>
             ) : (
-              filteredCrs.map((cr) => (
+              crs.map((cr: CheckRequest) => (
                 <li key={cr.id}>
                   <Link href={`/cr/${cr.id}`} className="block hover:bg-gray-50">
                     <div className="px-4 py-4 sm:px-6">
@@ -169,6 +147,36 @@ export default function CRListPage() {
             )}
           </ul>
         </div>
+
+        {/* Pagination Controls */}
+        <div className="mt-6 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to <span className="font-medium">{Math.min(page * pageSize, total)}</span> of{' '}
+              <span className="font-medium">{total}</span> results
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setPage(page - 1)}
+              disabled={page === 1}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-700">
+              Page <span className="font-medium">{page}</span> of <span className="font-medium">{pageCount}</span>
+            </span>
+            <button
+              onClick={() => setPage(page + 1)}
+              disabled={page >= pageCount}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );

@@ -1,9 +1,10 @@
 // src/app/api/cr/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/api/auth/[...nextauth]/route";
-import { createCheckRequest, getCRsByUser, getPOsForCR } from "@/lib/cr";
+import { createCheckRequest, getCRsByUser } from "@/lib/cr";
+import { createCrSchema } from "@/lib/schemas";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     
@@ -11,8 +12,22 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const crs = await getCRsByUser(session.user.id);
-    return NextResponse.json(crs);
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
+
+    const { checkRequests, total } = await getCRsByUser(session.user.id, {
+      page,
+      pageSize,
+    });
+
+    return NextResponse.json({
+      data: checkRequests,
+      total,
+      page,
+      pageSize,
+      pageCount: Math.ceil(total / pageSize),
+    });
   } catch (error) {
     console.error("Error fetching CRs:", error);
     return NextResponse.json(
@@ -31,30 +46,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
-    // Validate required fields
-    if (!body.title || !body.paymentTo || !body.paymentDate || !body.purpose || 
-        !body.paymentMethod || !body.totalAmount || !body.taxAmount || !body.grandTotal) {
+    const validation = createCrSchema.safeParse(body);
+
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid input", details: validation.error.flatten() },
         { status: 400 }
       );
     }
 
     const cr = await createCheckRequest({
-      title: body.title,
-      poId: body.poId,
-      paymentTo: body.paymentTo,
-      paymentDate: new Date(body.paymentDate),
-      purpose: body.purpose,
-      paymentMethod: body.paymentMethod,
-      bankAccount: body.bankAccount,
-      referenceNumber: body.referenceNumber,
-      totalAmount: body.totalAmount,
-      taxAmount: body.taxAmount,
-      grandTotal: body.grandTotal,
+      ...validation.data,
       preparedById: session.user.id,
-      requestedById: body.requestedById || session.user.id,
     });
 
     return NextResponse.json(cr, { status: 201 });
