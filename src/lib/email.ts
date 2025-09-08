@@ -1,7 +1,12 @@
 import { Resend } from 'resend';
 import * as React from 'react';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// We will instantiate Resend inside the function to avoid initialization errors on startup.
+let resend: Resend | undefined;
+
+if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_12345678_12345678') {
+    resend = new Resend(process.env.RESEND_API_KEY);
+}
 
 export const sendEmail = async ({
   to,
@@ -12,9 +17,10 @@ export const sendEmail = async ({
   subject: string;
   react: React.ReactElement;
 }) => {
-  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
-    console.log("Resend API Key or From Email not configured. Skipping email sending.");
-    // In a real app, you might want to throw an error or handle this differently
+  if (!resend || !process.env.EMAIL_FROM) {
+    console.log(`Email sending is disabled. To: ${to}, Subject: ${subject}`);
+    // In a real app, you might want to log the email content for debugging in dev environments
+    // For now, we just return silently.
     return;
   }
 
@@ -30,6 +36,5 @@ export const sendEmail = async ({
     return data;
   } catch (error) {
     console.error(`Failed to send email to ${to}:`, error);
-    // Handle or throw the error as per application requirements
   }
 };
