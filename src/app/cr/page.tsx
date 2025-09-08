@@ -4,9 +4,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckRequest, CRStatus } from "@/types/cr";
+import SearchAndFilter from "@/components/SearchAndFilter";
 
 export default function CRListPage() {
   const [crs, setCrs] = useState<CheckRequest[]>([]);
+  const [filteredCrs, setFilteredCrs] = useState<CheckRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,12 +21,47 @@ export default function CRListPage() {
       if (response.ok) {
         const data = await response.json();
         setCrs(data);
+        setFilteredCrs(data);
       }
     } catch (error) {
       console.error("Error fetching CRs:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = (query: string) => {
+    const filtered = crs.filter(cr =>
+      cr.title.toLowerCase().includes(query.toLowerCase()) ||
+      cr.crNumber.toLowerCase().includes(query.toLowerCase()) ||
+      cr.paymentTo.toLowerCase().includes(query.toLowerCase()) ||
+      cr.purpose.toLowerCase().includes(query.toLowerCase()) ||
+      (cr.po?.poNumber && cr.po.poNumber.toLowerCase().includes(query.toLowerCase()))
+    );
+    setFilteredCrs(filtered);
+  };
+
+  const handleFilter = (filters: any) => {
+    let filtered = crs;
+
+    // Status filter
+    if (filters.status && filters.status.length > 0) {
+      filtered = filtered.filter(cr => filters.status.includes(cr.status));
+    }
+
+    // Date range filter
+    if (filters.dateRange.from) {
+      filtered = filtered.filter(cr => 
+        new Date(cr.createdAt!) >= new Date(filters.dateRange.from)
+      );
+    }
+    if (filters.dateRange.to) {
+      filtered = filtered.filter(cr => 
+        new Date(cr.createdAt!) <= new Date(filters.dateRange.to)
+      );
+    }
+
+    setFilteredCrs(filtered);
   };
 
   const getStatusColor = (status: string) => {
@@ -67,14 +104,28 @@ export default function CRListPage() {
           </Link>
         </div>
 
+        {/* Search and Filter */}
+        <SearchAndFilter
+          onSearch={handleSearch}
+          onFilter={handleFilter}
+          filterOptions={{
+            status: Object.values(CRStatus),
+            dateRange: true
+          }}
+          placeholder="Search CRs by title, number, payment to, purpose, or PO number..."
+        />
+
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <ul className="divide-y divide-gray-200">
-            {crs.length === 0 ? (
+            {filteredCrs.length === 0 ? (
               <li className="px-6 py-4 text-center text-gray-500">
-                No check requests found. Create your first CR to get started.
+                {crs.length === 0 
+                  ? "No check requests found. Create your first CR to get started."
+                  : "No check requests match your search criteria."
+                }
               </li>
             ) : (
-              crs.map((cr) => (
+              filteredCrs.map((cr) => (
                 <li key={cr.id}>
                   <Link href={`/cr/${cr.id}`} className="block hover:bg-gray-50">
                     <div className="px-4 py-4 sm:px-6">

@@ -3,6 +3,7 @@
 
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
+import Notifications from "./Notifications";
 
 export default function DashboardHeader() {
   const { data: session } = useSession();
@@ -33,6 +34,7 @@ export default function DashboardHeader() {
           </div>
 
           <div className="flex items-center space-x-4">
+            <Notifications />
             <span className="text-sm text-gray-700">
               Welcome, {session?.user?.name}
             </span>

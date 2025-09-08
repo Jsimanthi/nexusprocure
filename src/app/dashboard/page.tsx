@@ -11,6 +11,7 @@ interface DashboardStats {
   poCount: number;
   crCount: number;
   pendingApprovals: number;
+  recentActivity: any[];
 }
 
 export default function DashboardPage() {
@@ -20,14 +21,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      fetchDashboardStats();
+      fetchDashboardData();
     }
   }, [status]);
 
-  const fetchDashboardStats = async () => {
+  const fetchDashboardData = async () => {
     try {
-      // In a real app, you'd have an API endpoint for dashboard stats
-      // For now, we'll fetch counts from each endpoint
+      // Fetch all data in parallel
       const [iomsRes, posRes, crsRes] = await Promise.all([
         fetch("/api/iom"),
         fetch("/api/po"),
@@ -42,14 +42,38 @@ export default function DashboardPage() {
         iom.status === "SUBMITTED" || iom.status === "UNDER_REVIEW"
       ).length;
 
+      // Get recent activity (last 5 items from each category)
+      const recentIoms = ioms.slice(0, 5).map((iom: any) => ({
+        ...iom,
+        type: 'IOM',
+        date: iom.createdAt
+      }));
+      
+      const recentPos = pos.slice(0, 5).map((po: any) => ({
+        ...po,
+        type: 'PO',
+        date: po.createdAt
+      }));
+      
+      const recentCrs = crs.slice(0, 5).map((cr: any) => ({
+        ...cr,
+        type: 'CR',
+        date: cr.createdAt
+      }));
+
+      const recentActivity = [...recentIoms, ...recentPos, ...recentCrs]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 10);
+
       setStats({
         iomCount: ioms.length,
         poCount: pos.length,
         crCount: crs.length,
-        pendingApprovals
+        pendingApprovals,
+        recentActivity
       });
     } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
+      console.error("Error fetching dashboard data:", error);
     } finally {
       setLoading(false);
     }
@@ -70,19 +94,14 @@ export default function DashboardPage() {
   return (
     <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
       <div className="px-4 py-6 sm:px-0">
-        <div className="border-4 border-dashed border-gray-200 rounded-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Welcome to NexusProcure, {session.user?.name}!
-          </h1>
-          <p className="text-lg text-gray-600 mb-4">
-            You are logged in as: {session.user?.email}
-          </p>
-          <p className="text-lg text-gray-600">
-            Your role: <span className="font-semibold">{session.user?.role}</span>
-          </p>
-          
-          {stats && (
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">
+          Dashboard Overview
+        </h1>
+
+        {stats && (
+          <>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <div className="bg-white p-6 rounded-lg shadow">
                 <h2 className="text-xl font-semibold mb-2">IOMs</h2>
                 <p className="text-3xl font-bold text-blue-600">{stats.iomCount}</p>
@@ -119,8 +138,48 @@ export default function DashboardPage() {
                 </Link>
               </div>
             </div>
-          )}
-        </div>
+
+            {/* Recent Activity */}
+            <div className="bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-xl font-semibold">Recent Activity</h2>
+              </div>
+              <div className="divide-y divide-gray-200">
+                {stats.recentActivity.length === 0 ? (
+                  <div className="px-6 py-4 text-center text-gray-500">
+                    No recent activity
+                  </div>
+                ) : (
+                  stats.recentActivity.map((item: any) => (
+                    <div key={item.id} className="px-6 py-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-medium text-gray-900">
+                            {item.type}: {item.title}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            Status: {item.status.replace('_', ' ')}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">
+                            {new Date(item.date).toLocaleDateString()}
+                          </p>
+                          <Link 
+                            href={`/${item.type.toLowerCase()}/${item.id}`}
+                            className="text-sm text-blue-600 hover:text-blue-800"
+                          >
+                            View Details →
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

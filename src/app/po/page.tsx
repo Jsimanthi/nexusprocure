@@ -3,10 +3,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PurchaseOrder } from "@/types/po";
+import { PurchaseOrder, POStatus } from "@/types/po";
+import SearchAndFilter from "@/components/SearchAndFilter";
 
 export default function POListPage() {
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
+  const [filteredPos, setFilteredPos] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,12 +21,46 @@ export default function POListPage() {
       if (response.ok) {
         const data = await response.json();
         setPos(data);
+        setFilteredPos(data);
       }
     } catch (error) {
       console.error("Error fetching POs:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = (query: string) => {
+    const filtered = pos.filter(po =>
+      po.title.toLowerCase().includes(query.toLowerCase()) ||
+      po.poNumber.toLowerCase().includes(query.toLowerCase()) ||
+      po.vendorName.toLowerCase().includes(query.toLowerCase()) ||
+      po.companyName.toLowerCase().includes(query.toLowerCase())
+    );
+    setFilteredPos(filtered);
+  };
+
+  const handleFilter = (filters: any) => {
+    let filtered = pos;
+
+    // Status filter
+    if (filters.status && filters.status.length > 0) {
+      filtered = filtered.filter(po => filters.status.includes(po.status));
+    }
+
+    // Date range filter
+    if (filters.dateRange.from) {
+      filtered = filtered.filter(po => 
+        new Date(po.createdAt!) >= new Date(filters.dateRange.from)
+      );
+    }
+    if (filters.dateRange.to) {
+      filtered = filtered.filter(po => 
+        new Date(po.createdAt!) <= new Date(filters.dateRange.to)
+      );
+    }
+
+    setFilteredPos(filtered);
   };
 
   const getStatusColor = (status: string) => {
@@ -48,7 +84,6 @@ export default function POListPage() {
     }).format(amount);
   };
 
-  // Check if a PO can be converted to CR
   const canCreateCR = (status: string) => {
     return ['APPROVED', 'ORDERED', 'DELIVERED'].includes(status);
   };
@@ -82,14 +117,28 @@ export default function POListPage() {
           </div>
         </div>
 
+        {/* Search and Filter */}
+        <SearchAndFilter
+          onSearch={handleSearch}
+          onFilter={handleFilter}
+          filterOptions={{
+            status: Object.values(POStatus),
+            dateRange: true
+          }}
+          placeholder="Search POs by title, number, vendor, or company..."
+        />
+
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <ul className="divide-y divide-gray-200">
-            {pos.length === 0 ? (
+            {filteredPos.length === 0 ? (
               <li className="px-6 py-4 text-center text-gray-500">
-                No purchase orders found. Create your first PO to get started.
+                {pos.length === 0 
+                  ? "No purchase orders found. Create your first PO to get started."
+                  : "No purchase orders match your search criteria."
+                }
               </li>
             ) : (
-              pos.map((po) => (
+              filteredPos.map((po) => (
                 <li key={po.id}>
                   <Link href={`/po/${po.id}`} className="block hover:bg-gray-50">
                     <div className="px-4 py-4 sm:px-6">

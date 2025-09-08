@@ -3,10 +3,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { IOM } from "@/types/iom";
+import { IOM, IOMStatus } from "@/types/iom";
+import SearchAndFilter from "@/components/SearchAndFilter";
 
 export default function IOMListPage() {
   const [ioms, setIoms] = useState<IOM[]>([]);
+  const [filteredIoms, setFilteredIoms] = useState<IOM[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,12 +21,47 @@ export default function IOMListPage() {
       if (response.ok) {
         const data = await response.json();
         setIoms(data);
+        setFilteredIoms(data);
       }
     } catch (error) {
       console.error("Error fetching IOMs:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = (query: string) => {
+    const filtered = ioms.filter(iom =>
+      iom.title.toLowerCase().includes(query.toLowerCase()) ||
+      iom.iomNumber.toLowerCase().includes(query.toLowerCase()) ||
+      iom.from.toLowerCase().includes(query.toLowerCase()) ||
+      iom.to.toLowerCase().includes(query.toLowerCase()) ||
+      iom.subject.toLowerCase().includes(query.toLowerCase())
+    );
+    setFilteredIoms(filtered);
+  };
+
+  const handleFilter = (filters: any) => {
+    let filtered = ioms;
+
+    // Status filter
+    if (filters.status && filters.status.length > 0) {
+      filtered = filtered.filter(iom => filters.status.includes(iom.status));
+    }
+
+    // Date range filter
+    if (filters.dateRange.from) {
+      filtered = filtered.filter(iom => 
+        new Date(iom.createdAt!) >= new Date(filters.dateRange.from)
+      );
+    }
+    if (filters.dateRange.to) {
+      filtered = filtered.filter(iom => 
+        new Date(iom.createdAt!) <= new Date(filters.dateRange.to)
+      );
+    }
+
+    setFilteredIoms(filtered);
   };
 
   const getStatusColor = (status: string) => {
@@ -60,14 +97,28 @@ export default function IOMListPage() {
           </Link>
         </div>
 
+        {/* Search and Filter */}
+        <SearchAndFilter
+          onSearch={handleSearch}
+          onFilter={handleFilter}
+          filterOptions={{
+            status: Object.values(IOMStatus),
+            dateRange: true
+          }}
+          placeholder="Search IOMs by title, number, from, to, or subject..."
+        />
+
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <ul className="divide-y divide-gray-200">
-            {ioms.length === 0 ? (
+            {filteredIoms.length === 0 ? (
               <li className="px-6 py-4 text-center text-gray-500">
-                No IOMs found. Create your first IOM to get started.
+                {ioms.length === 0 
+                  ? "No IOMs found. Create your first IOM to get started."
+                  : "No IOMs match your search criteria."
+                }
               </li>
             ) : (
-              ioms.map((iom) => (
+              filteredIoms.map((iom) => (
                 <li key={iom.id}>
                   <Link href={`/iom/${iom.id}`} className="block hover:bg-gray-50">
                     <div className="px-4 py-4 sm:px-6">
