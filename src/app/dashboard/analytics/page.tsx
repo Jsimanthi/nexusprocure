@@ -1,5 +1,5 @@
 "use client";
-
+import DashboardHeader from "@/components/DashboardHeader";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
