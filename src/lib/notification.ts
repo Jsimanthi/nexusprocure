@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { triggerPusherEvent } from "./pusher";
 
 export async function createNotification(userId: string, message: string) {
   try {
@@ -10,15 +11,10 @@ export async function createNotification(userId: string, message: string) {
       },
     });
 
-    // 2. Trigger the WebSocket event via the notification server
-    const notificationPort = process.env.NOTIFICATION_PORT || 3002;
-    await fetch(`http://localhost:${notificationPort}/notify`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ userId, message }),
-    });
+    // 2. Trigger a real-time event using Pusher
+    const channel = `private-user-${userId}`;
+    const event = "new-notification";
+    await triggerPusherEvent(channel, event, { message });
 
     return notification;
   } catch (error) {

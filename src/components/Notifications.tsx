@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Bell, Check } from "lucide-react";
-import io, { Socket } from "socket.io-client";
+import Pusher from 'pusher-js';
 import { Notification as NotificationType } from "@prisma/client"; // Import the real type
 
 // --- API Fetching Functions ---
@@ -34,27 +34,36 @@ export default function Notifications() {
     enabled: !!session?.user?.id, // Only fetch if user is logged in
   });
 
-  // --- Real-time Socket Connection ---
+  // --- Real-time Pusher Connection ---
   useEffect(() => {
     if (!session?.user?.id) return;
 
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
-    const socket: Socket = io(socketUrl);
+    // TODO: Add these to your .env.local file
+    const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY || 'app-key';
+    const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'ap2';
 
-    socket.on("connect", () => {
-      console.log("Socket connected on client:", socket.id);
-      socket.emit("register", session.user.id);
+    const pusher = new Pusher(pusherKey, {
+      cluster: pusherCluster,
+      authEndpoint: '/api/pusher/auth',
+      auth: {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
     });
 
-    socket.on("notification", (newNotification) => {
-      console.log("New notification received:", newNotification);
+    const channelName = `private-user-${session.user.id}`;
+    const channel = pusher.subscribe(channelName);
+
+    channel.bind("new-notification", (data: { message: string }) => {
+      console.log("New notification received via Pusher:", data);
       // Invalidate the query to refetch and show the new notification
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     });
 
     return () => {
-      console.log("Disconnecting socket");
-      socket.disconnect();
+      pusher.unsubscribe(channelName);
+      pusher.disconnect();
     };
   }, [session, queryClient]);
 
