@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { PurchaseOrder, POStatus } from "@/types/po";
 import SearchAndFilter from "@/components/SearchAndFilter";
-import DashboardHeader from "@/components/DashboardHeader";
 import { useState } from "react";
 
 const fetchPOs = async (page = 1, pageSize = 10) => {
@@ -56,7 +55,6 @@ export default function POListPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100">
-        <DashboardHeader />
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -69,7 +67,6 @@ export default function POListPage() {
   if (isError) {
     return (
       <div className="min-h-screen bg-gray-100">
-        <DashboardHeader />
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
@@ -93,7 +90,6 @@ export default function POListPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <DashboardHeader />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
