@@ -29,9 +29,9 @@ export async function generatePONumber(): Promise<string> {
 
 export async function getPOsByUser(
   userId: string,
-  { page = 1, pageSize = 10 }: { page?: number; pageSize?: number }
+  { page = 1, pageSize = 10, search = "", status = "" }: { page?: number; pageSize?: number, search?: string, status?: string }
 ) {
-  const where = {
+  const userClause = {
     OR: [
       { preparedById: userId },
       { requestedById: userId },
@@ -39,6 +39,27 @@ export async function getPOsByUser(
       { approvedById: userId },
     ],
   };
+
+  const where: Prisma.PurchaseOrderWhereInput = {
+    AND: [userClause],
+  };
+
+  if (status) {
+    const statuses = status.split(',') as POStatus[];
+    if (statuses.length > 0) {
+      where.AND.push({ status: { in: statuses } });
+    }
+  }
+
+  if (search) {
+    where.AND.push({
+      OR: [
+        { poNumber: { contains: search, mode: 'insensitive' } },
+        { title: { contains: search, mode: 'insensitive' } },
+        { vendorName: { contains: search, mode: 'insensitive' } },
+      ],
+    });
+  }
 
   const [purchaseOrders, total] = await prisma.$transaction([
     prisma.purchaseOrder.findMany({

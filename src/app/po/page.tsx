@@ -5,98 +5,75 @@ import Link from "next/link";
 import { PurchaseOrder, POStatus } from "@/types/po";
 import SearchAndFilter from "@/components/SearchAndFilter";
 import { useState } from "react";
+import PageLayout from "@/components/PageLayout";
+import { formatCurrency, getPOStatusColor } from "@/lib/utils";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ErrorDisplay from "@/components/ErrorDisplay";
 
-const fetchPOs = async (page = 1, pageSize = 10) => {
-  const response = await fetch(`/api/po?page=${page}&pageSize=${pageSize}`);
+const fetchPOs = async (page = 1, pageSize = 10, searchTerm = "", status = "") => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    pageSize: pageSize.toString(),
+    search: searchTerm,
+    status: status,
+  });
+  const response = await fetch(`/api/po?${params.toString()}`);
   if (!response.ok) throw new Error("Network response was not ok");
   return response.json();
 };
 
 export default function POListPage() {
   const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const pageSize = 10;
+
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["purchaseOrders", page, pageSize],
-    queryFn: () => fetchPOs(page, pageSize),
+    queryKey: ["purchaseOrders", page, pageSize, searchTerm, statusFilter],
+    queryFn: () => fetchPOs(page, pageSize, searchTerm, statusFilter),
   });
+
   const pos = data?.data || [];
   const total = data?.total || 0;
   const pageCount = data?.pageCount || 0;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "DRAFT": return "bg-gray-100 text-gray-800";
-      case "PENDING_APPROVAL": return "bg-blue-100 text-blue-800";
-      case "APPROVED": return "bg-green-100 text-green-800";
-      case "REJECTED": return "bg-red-100 text-red-800";
-      case "ORDERED": return "bg-purple-100 text-purple-800";
-      case "DELIVERED": return "bg-teal-100 text-teal-800";
-      case "CANCELLED": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
-
   const handleSearch = (query: string) => {
-    console.log("Search query:", query);
+    setPage(1);
+    setSearchTerm(query);
   };
 
-  const handleFilter = (filters: any) => {
-    console.log("Filters:", filters);
+  const handleFilter = (filters: { status: string[] }) => {
+    setPage(1);
+    setStatusFilter(filters.status.join(','));
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        </div>
-      </div>
+      <PageLayout title="Purchase Orders">
+        <LoadingSpinner />
+      </PageLayout>
     );
   }
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-              <svg className="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Purchase Orders</h3>
-              <p className="text-red-700">{error.message}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageLayout title="Purchase Orders">
+        <ErrorDisplay
+          title="Error Loading Purchase Orders"
+          message={error.message}
+          onRetry={() => window.location.reload()}
+        />
+      </PageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <h1 className="text-3xl font-bold text-gray-900">Purchase Orders</h1>
-            <Link
-              href="/po/create"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
+    <PageLayout title="Purchase Orders">
+      <>
+        <div className="flex justify-end mb-6">
+          <Link
+            href="/po/create"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
             >
               Create New PO
             </Link>
@@ -205,8 +182,7 @@ export default function POListPage() {
               </div>
             </div>
           )}
-        </div>
-      </div>
-    </div>
+      </>
+    </PageLayout>
   );
 }

@@ -29,9 +29,9 @@ export async function generateCRNumber(): Promise<string> {
 
 export async function getCRsByUser(
   userId: string,
-  { page = 1, pageSize = 10 }: { page?: number; pageSize?: number }
+  { page = 1, pageSize = 10, search = "", status = "" }: { page?: number; pageSize?: number, search?: string, status?: string }
 ) {
-  const where = {
+  const userClause = {
     OR: [
       { preparedById: userId },
       { requestedById: userId },
@@ -39,6 +39,29 @@ export async function getCRsByUser(
       { approvedById: userId },
     ],
   };
+
+  const where: Prisma.CheckRequestWhereInput = {
+    AND: [userClause],
+  };
+
+  if (status) {
+    const statuses = status.split(',') as CRStatus[];
+    if (statuses.length > 0) {
+      where.AND.push({ status: { in: statuses } });
+    }
+  }
+
+  if (search) {
+    where.AND.push({
+      OR: [
+        { crNumber: { contains: search, mode: 'insensitive' } },
+        { title: { contains: search, mode: 'insensitive' } },
+        { paymentTo: { contains: search, mode: 'insensitive' } },
+        { purpose: { contains: search, mode: 'insensitive' } },
+        { po: { poNumber: { contains: search, mode: 'insensitive' } } },
+      ],
+    });
+  }
 
   const [checkRequests, total] = await prisma.$transaction([
     prisma.checkRequest.findMany({

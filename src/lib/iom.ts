@@ -29,9 +29,9 @@ export async function generateIOMNumber(): Promise<string> {
 
 export async function getIOMsByUser(
   userId: string,
-  { page = 1, pageSize = 10 }: { page?: number; pageSize?: number }
+  { page = 1, pageSize = 10, search = "", status = "" }: { page?: number; pageSize?: number, search?: string, status?: string }
 ) {
-  const where = {
+  const userClause = {
     OR: [
       { preparedById: userId },
       { requestedById: userId },
@@ -39,6 +39,29 @@ export async function getIOMsByUser(
       { approvedById: userId },
     ],
   };
+
+  const where: Prisma.IOMWhereInput = {
+    AND: [userClause],
+  };
+
+  if (status) {
+    const statuses = status.split(',') as IOMStatus[];
+    if (statuses.length > 0) {
+      where.AND.push({ status: { in: statuses } });
+    }
+  }
+
+  if (search) {
+    where.AND.push({
+      OR: [
+        { iomNumber: { contains: search, mode: 'insensitive' } },
+        { title: { contains: search, mode: 'insensitive' } },
+        { subject: { contains: search, mode: 'insensitive' } },
+        { from: { contains: search, mode: 'insensitive' } },
+        { to: { contains: search, mode: 'insensitive' } },
+      ],
+    });
+  }
 
   const [ioms, total] = await prisma.$transaction([
     prisma.iOM.findMany({
