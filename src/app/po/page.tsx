@@ -120,7 +120,7 @@ export default function POListPage() {
                             </span>
                           </div>
                           <div className="flex items-center space-x-2 flex-shrink-0">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(po.status)}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPOStatusColor(po.status)}`}>
                               {po.status.replace("_", " ")}
                             </span>
                             <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">

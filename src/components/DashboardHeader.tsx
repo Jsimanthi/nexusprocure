@@ -6,10 +6,21 @@ import Link from "next/link";
 import Notifications from "./Notifications";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export default function DashboardHeader() {
   const { data: session } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  const navLinks = [
+    { href: "/dashboard", text: "Dashboard" },
+    { href: "/dashboard/analytics", text: "Analytics" },
+    { href: "/iom", text: "IOMs" },
+    { href: "/po", text: "POs" },
+    { href: "/cr", text: "CRs" },
+    { href: "/vendors", text: "Vendors" },
+  ];
 
   return (
     <header className="bg-white shadow-sm">
@@ -20,24 +31,19 @@ export default function DashboardHeader() {
             
             {/* Desktop Navigation */}
             <nav className="hidden md:flex ml-8 space-x-4">
-              <Link href="/dashboard" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                Dashboard
-              </Link>
-              <Link href="/dashboard/analytics" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                Analytics
-              </Link>
-              <Link href="/iom" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                IOM Management
-              </Link>
-              <Link href="/po" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                Purchase Orders
-              </Link>
-              <Link href="/vendors" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                Vendors
-              </Link>
-              <Link href="/cr" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                Check Requests
-              </Link>
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    pathname === link.href
+                      ? "bg-gray-100 text-gray-900"
+                      : "text-gray-700 hover:text-gray-900"
+                  }`}
+                >
+                  {link.text}
+                </Link>
+              ))}
             </nav>
           </div>
 
@@ -68,24 +74,19 @@ export default function DashboardHeader() {
         {isMobileMenuOpen && (
           <div className="md:hidden pb-4">
             <nav className="grid grid-cols-2 gap-2">
-              <Link href="/dashboard" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-gray-50">
-                Dashboard
-              </Link>
-              <Link href="/dashboard/analytics" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-gray-50">
-                Analytics
-              </Link>
-              <Link href="/iom" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-gray-50">
-                IOM Management
-              </Link>
-              <Link href="/po" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-gray-50">
-                Purchase Orders
-              </Link>
-              <Link href="/vendors" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-gray-50">
-                Vendors
-              </Link>
-              <Link href="/cr" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors bg-gray-50">
-                Check Requests
-              </Link>
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    pathname === link.href
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                  }`}
+                >
+                  {link.text}
+                </Link>
+              ))}
             </nav>
             <div className="mt-3 pt-3 border-t border-gray-200">
               <span className="text-sm text-gray-700 px-3">

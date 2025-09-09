@@ -1,6 +1,9 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import PageLayout from '@/components/PageLayout';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import ErrorDisplay from '@/components/ErrorDisplay';
 
 const fetchAnalyticsData = async () => {
   const response = await fetch("/api/analytics");
@@ -37,31 +40,20 @@ export default function AnalyticsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        </div>
-      </div>
+      <PageLayout title="Analytics & Reports">
+        <LoadingSpinner />
+      </PageLayout>
     );
   }
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-              <svg className="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.540 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Analytics</h3>
-              <p className="text-red-700">{error.message}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageLayout title="Analytics & Reports">
+        <ErrorDisplay
+          title="Error Loading Analytics"
+          message={error.message}
+        />
+      </PageLayout>
     );
   }
 
@@ -74,13 +66,11 @@ export default function AnalyticsPage() {
   const spendingByMonth = data?.spendingByMonth || [];
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Analytics & Reports</h1>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
-              <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wide">Total Purchase Orders</h3>
+    <PageLayout title="Analytics & Reports">
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
+            <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wide">Total Purchase Orders</h3>
               <p className="text-3xl font-bold text-gray-900 mt-2">{documentCounts.purchaseOrders}</p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
@@ -172,8 +162,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+      </>
+    </PageLayout>
   );
 }

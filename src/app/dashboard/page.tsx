@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import PageLayout from "@/components/PageLayout";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ErrorDisplay from "@/components/ErrorDisplay";
 
 interface DashboardStats {
   iomCount: number;
@@ -88,13 +91,9 @@ export default function DashboardPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        </div>
-      </div>
+      <PageLayout title="Dashboard Overview">
+        <LoadingSpinner />
+      </PageLayout>
     );
   }
 
@@ -103,36 +102,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">
-            Dashboard Overview
-          </h1>
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">Error</h3>
-                  <p className="text-sm text-red-700 mt-1">{error}</p>
-                  <button
-                    onClick={fetchDashboardData}
-                    className="text-sm text-red-800 underline mt-2"
-                  >
-                    Try again
-                  </button>
-                </div>
-                </div>
-            </div>
-          )}
-          {stats && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <PageLayout title="Dashboard Overview">
+      <>
+        {error && (
+          <div className="mb-6">
+            <ErrorDisplay
+              title="Error Loading Dashboard"
+              message={error}
+              onRetry={fetchDashboardData}
+            />
+          </div>
+        )}
+        {stats && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
                   <h2 className="text-xl font-semibold mb-2">IOMs</h2>
                   <p className="text-3xl font-bold text-blue-600">{stats.iomCount}</p>
@@ -209,8 +192,7 @@ export default function DashboardPage() {
               </div>
             </>
           )}
-        </div>
-      </div>
-    </div>
+      </>
+    </PageLayout>
   );
 }
