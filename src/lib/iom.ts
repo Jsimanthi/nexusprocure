@@ -7,6 +7,10 @@ import { sendEmail } from "./email";
 import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
 import { createIomSchema } from "./schemas";
 import * as React from "react";
+import { Session } from "next-auth";
+import { authorize } from "./auth-utils";
+import { Role } from "@/types/auth";
+import { logAudit, getAuditUser } from "./audit";
 
 export async function generateIOMNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -88,12 +92,12 @@ type CreateIomData = z.infer<typeof createIomSchema> & {
   preparedById: string;
 };
 
-export async function createIOM(data: CreateIomData) {
+export async function createIOM(data: CreateIomData, session: Session) {
   const { items, ...restOfData } = data;
   const iomNumber = await generateIOMNumber();
   const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
-  return await prisma.iOM.create({
+  const createdIom = await prisma.iOM.create({
     data: {
       ...restOfData,
       iomNumber,
@@ -116,16 +120,30 @@ export async function createIOM(data: CreateIomData) {
       },
     }
   });
+
+  const auditUser = getAuditUser(session);
+  await logAudit("CREATE", {
+    model: "IOM",
+    recordId: createdIom.id,
+    userId: auditUser.userId,
+    userName: auditUser.userName,
+    changes: createdIom,
+  });
+
+  return createdIom;
 }
 
-export async function updateIOMStatus(id: string, status: IOMStatus, userId?: string) {
+export async function updateIOMStatus(id: string, status: IOMStatus, session: Session) {
+  authorize(session, Role.MANAGER);
   const updateData: any = { status };
-  
+  const userId = session.user.id;
+
   const iom = await prisma.iOM.findUnique({
     where: { id },
     select: {
       preparedById: true,
       iomNumber: true,
+      status: true, // For audit log
       preparedBy: {
         select: { name: true, email: true }
       }
@@ -136,9 +154,9 @@ export async function updateIOMStatus(id: string, status: IOMStatus, userId?: st
     throw new Error("IOM or originator not found.");
   }
 
-  if (status === IOMStatus.UNDER_REVIEW && userId) {
+  if (status === IOMStatus.UNDER_REVIEW) {
     updateData.reviewedById = userId;
-  } else if (status === IOMStatus.APPROVED && userId) {
+  } else if (status === IOMStatus.APPROVED) {
     updateData.approvedById = userId;
   }
   
@@ -171,10 +189,36 @@ export async function updateIOMStatus(id: string, status: IOMStatus, userId?: st
     react: emailComponent,
   });
 
+  const auditUser = getAuditUser(session);
+  await logAudit("STATUS_CHANGE", {
+    model: "IOM",
+    recordId: id,
+    userId: auditUser.userId,
+    userName: auditUser.userName,
+    changes: {
+      from: iom.status,
+      to: status,
+    },
+  });
+
   return updatedIom;
 }
 
-export async function deleteIOM(id: string) {
+export async function deleteIOM(id: string, session: Session) {
+  authorize(session, Role.MANAGER);
+  const iomToDelete = await prisma.iOM.findUnique({ where: { id } });
+
+  if (iomToDelete) {
+    const auditUser = getAuditUser(session);
+    await logAudit("DELETE", {
+      model: "IOM",
+      recordId: id,
+      userId: auditUser.userId,
+      userName: auditUser.userName,
+      changes: iomToDelete,
+    });
+  }
+
   return await prisma.iOM.delete({
     where: { id },
   });
