@@ -14,8 +14,25 @@ const fetchAnalyticsData = async () => {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
+// Define types for the analytics data
+interface AnalyticsData {
+  documentCounts: {
+    purchaseOrders: number;
+    ioms: number;
+    checkRequests: number;
+  };
+  poStatusCounts: Array<{
+    status: string;
+    count: number;
+  }>;
+  spendingByMonth: Array<{
+    month: string;
+    total: number;
+  }>;
+}
+
 export default function AnalyticsPage() {
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error } = useQuery<AnalyticsData>({
     queryKey: ["analytics"],
     queryFn: fetchAnalyticsData,
     retry: 2,
@@ -53,7 +70,15 @@ export default function AnalyticsPage() {
     );
   }
 
-  const { documentCounts, poStatusCounts, spendingByMonth } = data;
+  // Use default values if data is undefined
+  const documentCounts = data?.documentCounts || {
+    purchaseOrders: 0,
+    ioms: 0,
+    checkRequests: 0
+  };
+
+  const poStatusCounts = data?.poStatusCounts || [];
+  const spendingByMonth = data?.spendingByMonth || [];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -93,9 +118,9 @@ export default function AnalyticsPage() {
                       cy="50%" 
                       outerRadius={80} 
                       fill="#8884d8" 
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${name}: ${(percent! * 100).toFixed(0)}%`}
                     >
-                      {poStatusCounts.map((entry: any, index: number) => (
+                      {poStatusCounts.map((entry: { status: string; count: number }, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>

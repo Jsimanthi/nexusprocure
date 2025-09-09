@@ -8,6 +8,7 @@ import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
 import { createPoSchema, createVendorSchema, updateVendorSchema } from "./schemas";
 import { logAudit, getAuditUser } from "./audit";
 import { Session } from "next-auth";
+import * as React from "react";
 
 export async function generatePONumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -264,16 +265,19 @@ export async function updatePOStatus(id: string, status: POStatus, session: Sess
   const message = `The status of your Purchase Order ${po.poNumber} has been updated to ${status}.`;
   await createNotification(po.preparedById, message);
 
+  // Create the email component with proper typing
+  const emailComponent = React.createElement(StatusUpdateEmail, {
+    userName: po.preparedBy.name || 'User',
+    documentType: 'Purchase Order',
+    documentNumber: po.poNumber,
+    newStatus: status,
+  });
+
   // Send an email notification
   await sendEmail({
     to: po.preparedBy.email,
     subject: `Status Update for PO: ${po.poNumber}`,
-    react: StatusUpdateEmail({
-      userName: po.preparedBy.name || 'User',
-      documentType: 'Purchase Order',
-      documentNumber: po.poNumber,
-      newStatus: status,
-    }),
+    react: emailComponent,
   });
 
   // Log the audit trail
@@ -288,7 +292,6 @@ export async function updatePOStatus(id: string, status: POStatus, session: Sess
       to: status,
     },
   });
-
 
   return updatedPo;
 }

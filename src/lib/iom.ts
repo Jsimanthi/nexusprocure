@@ -6,6 +6,7 @@ import { createNotification } from "./notification";
 import { sendEmail } from "./email";
 import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
 import { createIomSchema } from "./schemas";
+import * as React from "react";
 
 export async function generateIOMNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -156,20 +157,22 @@ export async function updateIOMStatus(id: string, status: IOMStatus, userId?: st
   const message = `The status of your IOM ${iom.iomNumber} has been updated to ${status}.`;
   await createNotification(iom.preparedById, message);
 
+  // Create the email component with proper typing
+  const emailComponent = React.createElement(StatusUpdateEmail, {
+    userName: iom.preparedBy.name || 'User',
+    documentType: 'IOM',
+    documentNumber: iom.iomNumber,
+    newStatus: status,
+  });
+
   await sendEmail({
     to: iom.preparedBy.email,
     subject: `Status Update for IOM: ${iom.iomNumber}`,
-    react: StatusUpdateEmail({
-      userName: iom.preparedBy.name || 'User',
-      documentType: 'IOM',
-      documentNumber: iom.iomNumber,
-      newStatus: status,
-    }),
+    react: emailComponent,
   });
 
   return updatedIom;
 }
-
 
 export async function deleteIOM(id: string) {
   return await prisma.iOM.delete({

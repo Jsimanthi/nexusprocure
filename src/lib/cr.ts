@@ -6,6 +6,7 @@ import { createNotification } from "./notification";
 import { sendEmail } from "./email";
 import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
 import { createCrSchema } from "./schemas";
+import * as React from "react";
 
 export async function generateCRNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -159,17 +160,19 @@ export async function updateCRStatus(id: string, status: CRStatus, userId?: stri
   const message = `The status of your Check Request ${cr.crNumber} has been updated to ${status}.`;
   await createNotification(cr.preparedById, message);
 
+  // Create the email component with proper typing
+  const emailComponent = React.createElement(StatusUpdateEmail, {
+    userName: cr.preparedBy.name || 'User',
+    documentType: 'Check Request',
+    documentNumber: cr.crNumber,
+    newStatus: status,
+  });
+
   await sendEmail({
     to: cr.preparedBy.email,
     subject: `Status Update for CR: ${cr.crNumber}`,
-    react: StatusUpdateEmail({
-      userName: cr.preparedBy.name || 'User',
-      documentType: 'Check Request',
-      documentNumber: cr.crNumber,
-      newStatus: status,
-    }),
+    react: emailComponent,
   });
 
   return updatedCr;
 }
-

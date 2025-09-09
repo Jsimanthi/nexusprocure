@@ -1,3 +1,4 @@
+// src/app/vendors/page.tsx
 "use client";
 import { useState } from "react";
 import Link from "next/link";
@@ -91,7 +92,6 @@ export default function VendorsPage() {
     setFormData({});
   };
 
-  // TODO: Implement server-side search and filtering
   const handleSearch = (query: string) => {
     console.log("Search query:", query);
   };
@@ -118,8 +118,20 @@ export default function VendorsPage() {
       <div className="min-h-screen bg-gray-100">
         <DashboardHeader />
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0 flex items-center justify-center text-red-600">
-            Error: {error.message}
+          <div className="px-4 py-6 sm:px-0">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+              <svg className="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Vendors</h3>
+              <p className="text-red-700">{error.message}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -131,12 +143,12 @@ export default function VendorsPage() {
       <DashboardHeader />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <h1 className="text-3xl font-bold text-gray-900">Vendor Management</h1>
-            <div className="space-x-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <Link
                 href="/po"
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md"
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors text-center"
               >
                 Back to POs
               </Link>
@@ -145,7 +157,7 @@ export default function VendorsPage() {
                   cancelForm();
                   setShowForm(true);
                 }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 Add New Vendor
               </button>
@@ -165,145 +177,177 @@ export default function VendorsPage() {
           {/* Vendor Form */}
           {showForm && (
             <div className="bg-white shadow rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold mb-4">
+              <h2 className="text-xl font-semibold mb-4 text-gray-900">
                 {editingVendor ? "Edit Vendor" : "Add New Vendor"}
               </h2>
               <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Vendor Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Vendor Name *</label>
                   <input
                     type="text"
                     required
                     value={formData.name || ''}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Enter vendor name"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                   <input
                     type="email"
                     required
                     value={formData.email || ''}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="vendor@example.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Phone *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
                   <input
                     type="tel"
                     required
                     value={formData.phone || ''}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="+91 1234567890"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Tax ID (GSTIN)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tax ID (GSTIN)</label>
                   <input
                     type="text"
                     value={formData.taxId || ''}
                     onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="GSTIN number"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Address *</label>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
                   <textarea
                     rows={3}
                     required
                     value={formData.address || ''}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Full vendor address"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Contact Info *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Contact Info *</label>
                   <input
                     type="text"
                     required
                     value={formData.contactInfo || ''}
                     onChange={(e) => setFormData({ ...formData, contactInfo: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Contact person name"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Website</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
                   <input
                     type="url"
                     value={formData.website || ''}
                     onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="https://vendor-website.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Default Currency</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Default Currency</label>
                   <select
                     value={formData.currency || 'INR'}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   >
-                    <option>INR</option>
-                    <option>USD</option>
-                    <option>EUR</option>
-                    <option>GBP</option>
-                    <option>JPY</option>
+                    <option value="INR">INR (Indian Rupee)</option>
+                    <option value="USD">USD (US Dollar)</option>
+                    <option value="EUR">EUR (Euro)</option>
+                    <option value="GBP">GBP (British Pound)</option>
+                    <option value="JPY">JPY (Japanese Yen)</option>
                   </select>
                 </div>
                 <div className="md:col-span-2 flex justify-end space-x-4 pt-4">
                   <button
                     type="button"
                     onClick={cancelForm}
-                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
+                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md text-sm font-medium transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={mutation.isPending}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md disabled:opacity-50"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     {mutation.isPending ? 'Saving...' : (editingVendor ? "Update Vendor" : "Add Vendor")}
                   </button>
                 </div>
-                {mutation.isError && <p className="text-red-500 md:col-span-2">{mutation.error.message}</p>}
+                {mutation.isError && (
+                  <div className="md:col-span-2">
+                    <p className="text-red-500 text-sm">{mutation.error.message}</p>
+                  </div>
+                )}
               </form>
             </div>
           )}
 
           {/* Vendors List */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6">
+              <h3 className="text-lg font-medium leading-6 text-gray-900">Vendors</h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">List of all vendors in the system</p>
+            </div>
+            
             <ul className="divide-y divide-gray-200">
               {vendors.length === 0 ? (
-                <li className="px-6 py-4 text-center text-gray-500">No vendors found.</li>
+                <li className="px-6 py-12 text-center">
+                  <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <p className="text-gray-500 text-lg">No vendors found.</p>
+                  <p className="text-gray-400 text-sm mt-2">Add your first vendor to get started</p>
+                </li>
               ) : (
                 vendors.map((vendor: Vendor) => (
-                  <li key={vendor.id} className="hover:bg-gray-50">
+                  <li key={vendor.id} className="hover:bg-gray-50 transition-colors">
                     <div className="px-4 py-4 sm:px-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-medium text-gray-900">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-medium text-gray-900 truncate">
                             {vendor.name} <span className="text-sm font-normal text-gray-500">({vendor.currency})</span>
                           </h3>
-                          <p className="text-sm text-gray-500">{vendor.email} | {vendor.phone}</p>
+                          <p className="text-sm text-gray-500 truncate">
+                            {vendor.email} | {vendor.phone}
+                          </p>
                         </div>
-                        <div className="flex space-x-4">
+                        <div className="flex space-x-4 flex-shrink-0">
                           <button
                             onClick={() => handleEdit(vendor)}
-                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDelete(vendor.id!)}
                             disabled={deleteMutation.isPending && deleteMutation.variables === vendor.id}
-                            className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
+                            className="text-red-600 hover:text-red-800 text-sm font-medium transition-colors disabled:opacity-50"
                           >
                             {deleteMutation.isPending && deleteMutation.variables === vendor.id ? 'Deleting...' : 'Delete'}
                           </button>
                         </div>
                       </div>
+                      {vendor.taxId && (
+                        <p className="text-sm text-gray-500 mt-2">
+                          Tax ID: {vendor.taxId}
+                        </p>
+                      )}
+                      <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                        {vendor.address}
+                      </p>
                     </div>
                   </li>
                 ))
@@ -312,33 +356,35 @@ export default function VendorsPage() {
           </div>
 
           {/* Pagination Controls */}
-          <div className="mt-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to <span className="font-medium">{Math.min(page * pageSize, total)}</span> of{' '}
-                <span className="font-medium">{total}</span> results
-              </p>
+          {(pageCount > 1 || total > 0) && (
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to <span className="font-medium">{Math.min(page * pageSize, total)}</span> of{' '}
+                  <span className="font-medium">{total}</span> results
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-700">
+                  Page <span className="font-medium">{page}</span> of <span className="font-medium">{pageCount}</span>
+                </span>
+                <button
+                  onClick={() => setPage(page + 1)}
+                  disabled={page >= pageCount}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setPage(page - 1)}
-                disabled={page === 1}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-700">
-                Page <span className="font-medium">{page}</span> of <span className="font-medium">{pageCount}</span>
-              </span>
-              <button
-                onClick={() => setPage(page + 1)}
-                disabled={page >= pageCount}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
