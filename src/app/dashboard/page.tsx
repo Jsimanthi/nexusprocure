@@ -1,11 +1,8 @@
-// src/app/dashboard/page.tsx
 "use client";
-
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import DashboardHeader from "@/components/DashboardHeader";
 
 interface DashboardStats {
   iomCount: number;
@@ -30,53 +27,50 @@ export default function DashboardPage() {
   const fetchDashboardData = async () => {
     try {
       setError(null);
-      // Fetch all data in parallel
       const [iomsRes, posRes, crsRes] = await Promise.all([
         fetch("/api/iom"),
         fetch("/api/po"),
         fetch("/api/cr")
       ]);
-
+      
       if (!iomsRes.ok || !posRes.ok || !crsRes.ok) {
         throw new Error("Failed to fetch dashboard data");
       }
-
+      
       const iomsData = await iomsRes.json();
       const posData = await posRes.json();
       const crsData = await crsRes.json();
-
-      // Extract the actual arrays from the response objects
+      
       const ioms = iomsData.data || [];
       const pos = posData.data || [];
       const crs = crsData.data || [];
-
+      
       const pendingApprovals = ioms.filter((iom: any) =>
         iom.status === "SUBMITTED" || iom.status === "UNDER_REVIEW"
       ).length;
-
-      // Get recent activity (last 5 items from each category)
+      
       const recentIoms = ioms.slice(0, 5).map((iom: any) => ({
         ...iom,
         type: 'IOM',
         date: iom.createdAt
       }));
-
+      
       const recentPos = pos.slice(0, 5).map((po: any) => ({
         ...po,
         type: 'PO',
         date: po.createdAt
       }));
-
+      
       const recentCrs = crs.slice(0, 5).map((cr: any) => ({
         ...cr,
         type: 'CR',
         date: cr.createdAt
       }));
-
+      
       const recentActivity = [...recentIoms, ...recentPos, ...recentCrs]
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 10);
-
+      
       setStats({
         iomCount: ioms.length,
         poCount: pos.length,
@@ -95,7 +89,6 @@ export default function DashboardPage() {
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-gray-100">
-        <DashboardHeader />
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -111,13 +104,11 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <DashboardHeader />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">
             Dashboard Overview
           </h1>
-
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
               <div className="flex">
@@ -136,13 +127,11 @@ export default function DashboardPage() {
                     Try again
                   </button>
                 </div>
-              </div>
+                </div>
             </div>
           )}
-
           {stats && (
             <>
-              {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
                   <h2 className="text-xl font-semibold mb-2">IOMs</h2>
@@ -152,7 +141,6 @@ export default function DashboardPage() {
                     View all →
                   </Link>
                 </div>
-
                 <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
                   <h2 className="text-xl font-semibold mb-2">Purchase Orders</h2>
                   <p className="text-3xl font-bold text-green-600">{stats.poCount}</p>
@@ -161,7 +149,6 @@ export default function DashboardPage() {
                     View all →
                   </Link>
                 </div>
-
                 <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
                   <h2 className="text-xl font-semibold mb-2">Check Requests</h2>
                   <p className="text-3xl font-bold text-purple-600">{stats.crCount}</p>
@@ -170,7 +157,6 @@ export default function DashboardPage() {
                     View all →
                   </Link>
                 </div>
-
                 <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
                   <h2 className="text-xl font-semibold mb-2">Pending Approval</h2>
                   <p className="text-3xl font-bold text-yellow-600">{stats.pendingApprovals}</p>
@@ -180,8 +166,6 @@ export default function DashboardPage() {
                   </Link>
                 </div>
               </div>
-
-              {/* Recent Activity */}
               <div className="bg-white rounded-lg shadow overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                   <h2 className="text-xl font-semibold">Recent Activity</h2>

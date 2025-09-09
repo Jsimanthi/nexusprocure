@@ -1,12 +1,9 @@
-// src/app/cr/page.tsx
 "use client";
-
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { CheckRequest, CRStatus } from "@/types/cr";
 import SearchAndFilter from "@/components/SearchAndFilter";
 import { useState } from "react";
-import DashboardHeader from "@/components/DashboardHeader";
 
 const fetchCRs = async (page = 1, pageSize = 10) => {
   const response = await fetch(`/api/cr?page=${page}&pageSize=${pageSize}`);
@@ -19,7 +16,6 @@ const fetchCRs = async (page = 1, pageSize = 10) => {
 export default function CRListPage() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
-
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["checkRequests", page, pageSize],
     queryFn: () => fetchCRs(page, pageSize),
@@ -59,7 +55,6 @@ export default function CRListPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100">
-        <DashboardHeader />
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -72,7 +67,6 @@ export default function CRListPage() {
   if (isError) {
     return (
       <div className="min-h-screen bg-gray-100">
-        <DashboardHeader />
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
@@ -96,7 +90,6 @@ export default function CRListPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <DashboardHeader />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
@@ -108,8 +101,6 @@ export default function CRListPage() {
               Create New CR
             </Link>
           </div>
-
-          {/* Search and Filter */}
           <SearchAndFilter
             onSearch={handleSearch}
             onFilter={handleFilter}
@@ -119,13 +110,11 @@ export default function CRListPage() {
             }}
             placeholder="Search CRs by title, number, payment to, purpose, or PO number..."
           />
-
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">
             <div className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6">
               <h3 className="text-lg font-medium leading-6 text-gray-900">Check Requests</h3>
               <p className="mt-1 max-w-2xl text-sm text-gray-500">List of all check requests in the system</p>
             </div>
-            
             <ul className="divide-y divide-gray-200">
               {crs.length === 0 ? (
                 <li className="px-6 py-12 text-center">
@@ -183,8 +172,6 @@ export default function CRListPage() {
               )}
             </ul>
           </div>
-
-          {/* Pagination Controls */}
           {(pageCount > 1 || total > 0) && (
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>

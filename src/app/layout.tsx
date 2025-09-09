@@ -1,9 +1,9 @@
-// src/app/layout.tsx
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import SessionProvider from "@/providers/SessionProvider";
 import QueryProvider from "@/providers/QueryProvider";
+import DashboardHeader from "@/components/DashboardHeader"; // ← Add this import
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +22,8 @@ export default function RootLayout({
       <body className={inter.className}>
         <QueryProvider>
           <SessionProvider>
-            {children}
+            <DashboardHeader /> {/* ← Add DashboardHeader here */}
+            <main>{children}</main> {/* ← Wrap children in main tag */}
           </SessionProvider>
         </QueryProvider>
       </body>
