@@ -15,10 +15,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
+    const search = searchParams.get("search") || "";
+    const status = searchParams.get("status") || "";
 
     const { checkRequests, total } = await getCRsByUser(session.user.id, {
       page,
       pageSize,
+      search,
+      status,
     });
 
     return NextResponse.json({
@@ -55,10 +59,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cr = await createCheckRequest({
-      ...validation.data,
-      preparedById: session.user.id,
-    });
+    const cr = await createCheckRequest(
+      {
+        ...validation.data,
+        preparedById: session.user.id,
+      },
+      session
+    );
 
     return NextResponse.json(cr, { status: 201 });
   } catch (error) {

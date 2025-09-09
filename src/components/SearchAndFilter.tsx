@@ -136,8 +136,9 @@ export default function SearchAndFilter({
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">From</label>
+                    <label htmlFor="date-from" className="block text-xs text-gray-500 mb-1">From</label>
                     <input
+                      id="date-from"
                       type="date"
                       value={dateRange.from}
                       onChange={(e) => handleDateFilter('from', e.target.value)}
@@ -145,8 +146,9 @@ export default function SearchAndFilter({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">To</label>
+                    <label htmlFor="date-to" className="block text-xs text-gray-500 mb-1">To</label>
                     <input
+                      id="date-to"
                       type="date"
                       value={dateRange.to}
                       onChange={(e) => handleDateFilter('to', e.target.value)}
