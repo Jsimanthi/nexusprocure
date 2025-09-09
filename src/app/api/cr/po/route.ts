@@ -1,5 +1,5 @@
 // src/app/api/cr/po/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
 import { getPOsForCR } from "@/lib/cr";
 

@@ -22,7 +22,7 @@ export async function generatePONumber(): Promise<string> {
       },
     },
   });
-  
+
   return `PO-${year}-${(count + 1).toString().padStart(4, '0')}`;
 }
 
@@ -39,6 +39,7 @@ export async function getPOsByUser(
     ],
   };
 
+  // Correctly initialize AND as an array
   const where: Prisma.PurchaseOrderWhereInput = {
     AND: [userClause],
   };
@@ -46,16 +47,16 @@ export async function getPOsByUser(
   if (status) {
     const statuses = status.split(',') as POStatus[];
     if (statuses.length > 0) {
-      where.AND.push({ status: { in: statuses } });
+      (where.AND as Prisma.PurchaseOrderWhereInput[]).push({ status: { in: statuses } });
     }
   }
 
   if (search) {
-    where.AND.push({
+    (where.AND as Prisma.PurchaseOrderWhereInput[]).push({
       OR: [
-        { poNumber: { contains: search, mode: 'insensitive' } },
-        { title: { contains: search, mode: 'insensitive' } },
-        { vendorName: { contains: search, mode: 'insensitive' } },
+        { poNumber: { contains: search } }, // Removed mode: 'insensitive'
+        { title: { contains: search } }, // Removed mode: 'insensitive'
+        { vendorName: { contains: search } }, // Removed mode: 'insensitive'
       ],
     });
   }
@@ -168,24 +169,23 @@ type CreatePoData = z.infer<typeof createPoSchema> & {
 export async function createPurchaseOrder(data: CreatePoData, session: Session) {
   const { items, attachments, ...restOfData } = data;
 
-  // Calculate totals
   let totalAmount = 0;
   let taxAmount = 0;
-  
+
   const itemsWithTotals = items.map(item => {
     const itemTaxAmount = (item.quantity * item.unitPrice) * (item.taxRate / 100);
     const itemTotalPrice = (item.quantity * item.unitPrice) + itemTaxAmount;
-    
+
     totalAmount += item.quantity * item.unitPrice;
     taxAmount += itemTaxAmount;
-    
+
     return {
       ...item,
       taxAmount: itemTaxAmount,
       totalPrice: itemTotalPrice
     };
   });
-  
+
   const grandTotal = totalAmount + taxAmount;
 
   const maxRetries = 3;
@@ -193,7 +193,7 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
 
   for (let i = 0; i < maxRetries; i++) {
     const poNumber = await generatePONumber();
-    const poData: any = {
+    const poData = {
       ...restOfData,
       poNumber,
       totalAmount,
@@ -203,18 +203,17 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
       items: {
         create: itemsWithTotals,
       },
+      ...(attachments && attachments.length > 0 && {
+        attachments: {
+          create: attachments.map(att => ({
+            url: att.url,
+            filename: att.filename,
+            filetype: att.filetype,
+            size: att.size,
+          })),
+        },
+      })
     };
-
-    if (attachments && attachments.length > 0) {
-      poData.attachments = {
-        create: attachments.map(att => ({
-          url: att.url,
-          filename: att.filename,
-          filetype: att.filetype,
-          size: att.size,
-        })),
-      };
-    }
 
     try {
       const createdPo = await prisma.purchaseOrder.create({
@@ -247,31 +246,34 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
     } catch (error) {
       lastError = error;
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        // Unique constraint violation, retry
         console.warn(`Unique constraint violation for PO number. Retrying... (${i + 1}/${maxRetries})`);
         continue;
       }
-      // For other errors, break the loop and re-throw
       throw error;
     }
   }
 
-  // If the loop completes without success, throw the last captured error
   throw new Error(`Failed to create purchase order after ${maxRetries} attempts. Last error: ${lastError}`);
 }
 
 export async function updatePOStatus(id: string, status: POStatus, session: Session) {
   authorize(session, Role.MANAGER);
-  const updateData: any = { status };
+  
+  interface UpdateData {
+    status: POStatus;
+    reviewedById?: string;
+    approvedById?: string;
+  }
+  
+  const updateData: UpdateData = { status };
   const userId = session.user.id;
   
-  // First, get the PO to identify the user who prepared it
   const po = await prisma.purchaseOrder.findUnique({
     where: { id },
     select: {
       preparedById: true,
       poNumber: true,
-      status: true, // Get old status for audit log
+      status: true,
       preparedBy: {
         select: { name: true, email: true }
       }
@@ -307,11 +309,9 @@ export async function updatePOStatus(id: string, status: POStatus, session: Sess
     }
   });
 
-  // Create a real-time notification
   const message = `The status of your Purchase Order ${po.poNumber} has been updated to ${status}.`;
   await createNotification(po.preparedById, message);
 
-  // Create the email component with proper typing
   const emailComponent = React.createElement(StatusUpdateEmail, {
     userName: po.preparedBy.name || 'User',
     documentType: 'Purchase Order',
@@ -319,14 +319,12 @@ export async function updatePOStatus(id: string, status: POStatus, session: Sess
     newStatus: status,
   });
 
-  // Send an email notification
   await sendEmail({
     to: po.preparedBy.email,
     subject: `Status Update for PO: ${po.poNumber}`,
     react: emailComponent,
   });
 
-  // Log the audit trail
   const auditUser = getAuditUser(session);
   await logAudit("STATUS_CHANGE", {
     model: "PurchaseOrder",

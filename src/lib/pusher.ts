@@ -1,3 +1,4 @@
+// src/lib/pusher.ts
 import Pusher from 'pusher';
 
 // These credentials should be set in your .env.local file
@@ -23,7 +24,7 @@ export const pusherServer = new Pusher({
  * @param event The name of the event.
  * @param data The payload for the event.
  */
-export async function triggerPusherEvent(channel: string, event: string, data: any) {
+export async function triggerPusherEvent<T>(channel: string, event: string, data: T) {
   try {
     await pusherServer.trigger(channel, event, data);
   } catch (error) {

@@ -22,7 +22,7 @@ export async function generateIOMNumber(): Promise<string> {
       },
     },
   });
-  
+
   return `IOM-${year}-${(count + 1).toString().padStart(4, '0')}`;
 }
 
@@ -30,34 +30,34 @@ export async function getIOMsByUser(
   userId: string,
   { page = 1, pageSize = 10, search = "", status = "" }: { page?: number; pageSize?: number, search?: string, status?: string }
 ) {
-  const userClause = {
-    OR: [
-      { preparedById: userId },
-      { requestedById: userId },
-      { reviewedById: userId },
-      { approvedById: userId },
-    ],
-  };
-
   const where: Prisma.IOMWhereInput = {
-    AND: [userClause],
+    AND: [
+      {
+        OR: [
+          { preparedById: userId },
+          { requestedById: userId },
+          { reviewedById: userId },
+          { approvedById: userId },
+        ],
+      },
+    ],
   };
 
   if (status) {
     const statuses = status.split(',') as IOMStatus[];
     if (statuses.length > 0) {
-      where.AND.push({ status: { in: statuses } });
+      (where.AND as Prisma.IOMWhereInput[]).push({ status: { in: statuses } });
     }
   }
 
   if (search) {
-    where.AND.push({
+    (where.AND as Prisma.IOMWhereInput[]).push({
       OR: [
-        { iomNumber: { contains: search, mode: 'insensitive' } },
-        { title: { contains: search, mode: 'insensitive' } },
-        { subject: { contains: search, mode: 'insensitive' } },
-        { from: { contains: search, mode: 'insensitive' } },
-        { to: { contains: search, mode: 'insensitive' } },
+        { iomNumber: { contains: search } }, // Removed mode: 'insensitive'
+        { title: { contains: search } }, // Removed mode: 'insensitive'
+        { subject: { contains: search } }, // Removed mode: 'insensitive'
+        { from: { contains: search } }, // Removed mode: 'insensitive'
+        { to: { contains: search } }, // Removed mode: 'insensitive'
       ],
     });
   }
@@ -176,7 +176,15 @@ export async function createIOM(data: CreateIomData, session: Session) {
 
 export async function updateIOMStatus(id: string, status: IOMStatus, session: Session) {
   authorize(session, Role.MANAGER);
-  const updateData: any = { status };
+  
+  // Use a more specific type instead of 'any'
+  interface UpdateData {
+    status: IOMStatus;
+    reviewedById?: string;
+    approvedById?: string;
+  }
+  
+  const updateData: UpdateData = { status };
   const userId = session.user.id;
 
   const iom = await prisma.iOM.findUnique({
@@ -184,7 +192,7 @@ export async function updateIOMStatus(id: string, status: IOMStatus, session: Se
     select: {
       preparedById: true,
       iomNumber: true,
-      status: true, // For audit log
+      status: true,
       preparedBy: {
         select: { name: true, email: true }
       }
@@ -200,7 +208,7 @@ export async function updateIOMStatus(id: string, status: IOMStatus, session: Se
   } else if (status === IOMStatus.APPROVED) {
     updateData.approvedById = userId;
   }
-  
+
   const updatedIom = await prisma.iOM.update({
     where: { id },
     data: updateData,
@@ -216,7 +224,6 @@ export async function updateIOMStatus(id: string, status: IOMStatus, session: Se
   const message = `The status of your IOM ${iom.iomNumber} has been updated to ${status}.`;
   await createNotification(iom.preparedById, message);
 
-  // Create the email component with proper typing
   const emailComponent = React.createElement(StatusUpdateEmail, {
     userName: iom.preparedBy.name || 'User',
     documentType: 'IOM',

@@ -1,7 +1,8 @@
+// src/lib/cr.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createCheckRequest, updateCRStatus } from './cr';
 import { prisma } from './prisma';
-import { CRStatus } from '@/types/cr';
+import { CRStatus, CreateCrData, CheckRequest } from '@/types/cr';
 import { Session } from 'next-auth';
 import { Prisma, Role } from '@prisma/client';
 
@@ -14,23 +15,58 @@ vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
 
 const mockUserSession = (role: Role): Session => ({
-  user: { id: `user-${role.toLowerCase()}-id`, name: `${role} User`, role },
+  user: { id: `user-${role.toLowerCase()}-id`, name: `${role} User`, role, email: `${role.toLowerCase()}@example.com` },
   expires: '2099-01-01T00:00:00.000Z',
 });
+
+// A complete mock object to satisfy the Prisma CheckRequest type
+const mockCheckRequest: CheckRequest = {
+  id: 'new-cr-id',
+  crNumber: 'CR-2024-001',
+  poId: null,
+  title: 'Test CR',
+  status: CRStatus.DRAFT,
+  totalAmount: 100,
+  taxAmount: 10,
+  grandTotal: 110,
+  currency: 'USD',
+  exchangeRate: 1,
+  paymentTo: 'Vendor',
+  paymentDate: new Date(),
+  purpose: 'Testing',
+  paymentMethod: 'CASH',
+  bankAccount: null,
+  referenceNumber: null,
+  preparedById: 'user-1',
+  requestedById: 'user-1',
+  reviewedById: null,
+  approvedById: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
 describe('Check Request (CR) Functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // @ts-ignore
     vi.mocked(getAuditUser).mockReturnValue({ userId: 'mock-user-id', userName: 'Mock User' });
   });
 
   describe('createCheckRequest', () => {
     it('should create a CR and log the audit trail', async () => {
-      const crData = { title: 'Test CR', paymentTo: 'Vendor', paymentDate: new Date(), purpose: 'Testing', preparedById: 'user-1' };
+      const crData: CreateCrData = {
+        title: 'Test CR',
+        paymentTo: 'Vendor',
+        paymentDate: new Date(),
+        purpose: 'Testing',
+        paymentMethod: 'CASH',
+        totalAmount: 100,
+        taxAmount: 10,
+        grandTotal: 110,
+        preparedById: 'user-1',
+        requestedById: 'user-1'
+      };
       const session = mockUserSession(Role.USER);
-      // @ts-ignore
-      prisma.checkRequest.create.mockResolvedValue({ id: 'new-cr-id', ...crData });
+      vi.mocked(prisma.checkRequest.create).mockResolvedValue(mockCheckRequest);
 
       await createCheckRequest(crData, session);
 
@@ -39,19 +75,28 @@ describe('Check Request (CR) Functions', () => {
     });
 
     it('should retry creating a CR if a unique constraint violation occurs', async () => {
-      const crData = { title: 'Test Retry CR', paymentTo: 'Vendor', paymentDate: new Date(), purpose: 'Testing', preparedById: 'user-1' };
+      const crData: CreateCrData = {
+        title: 'Test Retry CR',
+        paymentTo: 'Vendor',
+        paymentDate: new Date(),
+        purpose: 'Testing',
+        paymentMethod: 'CASH',
+        totalAmount: 100,
+        taxAmount: 10,
+        grandTotal: 110,
+        preparedById: 'user-1',
+        requestedById: 'user-1'
+      };
       const session = mockUserSession(Role.USER);
       const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed',
-        { code: 'P2002', clientVersion: 'test' }
+        { code: 'P2002', clientVersion: 'test', meta: {} }
       );
 
-      // @ts-ignore
-      prisma.checkRequest.count.mockResolvedValue(0);
-      // @ts-ignore
-      prisma.checkRequest.create
+      vi.mocked(prisma.checkRequest.count).mockResolvedValue(0);
+      vi.mocked(prisma.checkRequest.create)
         .mockRejectedValueOnce(uniqueConstraintError)
-        .mockResolvedValue({ id: 'new-cr-id', ...crData });
+        .mockResolvedValue(mockCheckRequest);
 
       await createCheckRequest(crData, session);
 
@@ -60,18 +105,25 @@ describe('Check Request (CR) Functions', () => {
 
     it('should throw an error if the CR total exceeds the PO total', async () => {
       const poId = 'po-123';
-      const crData = {
+      const crData: CreateCrData = {
         title: 'Test CR',
         poId,
         grandTotal: 1500,
         paymentTo: 'Vendor',
         paymentDate: new Date(),
         purpose: 'Testing',
-        preparedById: 'user-1'
+        paymentMethod: 'CASH',
+        totalAmount: 1400,
+        taxAmount: 100,
+        preparedById: 'user-1',
+        requestedById: 'user-1'
       };
       const session = mockUserSession(Role.USER);
-      // @ts-ignore
-      prisma.purchaseOrder.findUnique.mockResolvedValue({ grandTotal: 1000 });
+      vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
+        ...mockCheckRequest,
+        id: 'po-123',
+        grandTotal: 1000
+      });
 
       await expect(createCheckRequest(crData, session)).rejects.toThrow(
         'Check Request total (1500) cannot exceed Purchase Order total (1000).'
@@ -80,20 +132,26 @@ describe('Check Request (CR) Functions', () => {
 
     it('should succeed if the CR total is less than or equal to the PO total', async () => {
       const poId = 'po-123';
-      const crData = {
+      const crData: CreateCrData = {
         title: 'Test CR',
         poId,
         grandTotal: 900,
         paymentTo: 'Vendor',
         paymentDate: new Date(),
         purpose: 'Testing',
-        preparedById: 'user-1'
+        paymentMethod: 'CASH',
+        totalAmount: 850,
+        taxAmount: 50,
+        preparedById: 'user-1',
+        requestedById: 'user-1'
       };
       const session = mockUserSession(Role.USER);
-      // @ts-ignore
-      prisma.purchaseOrder.findUnique.mockResolvedValue({ grandTotal: 1000 });
-      // @ts-ignore
-      prisma.checkRequest.create.mockResolvedValue({ id: 'new-cr-id', ...crData });
+      vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
+        ...mockCheckRequest,
+        id: 'po-123',
+        grandTotal: 1000
+      });
+      vi.mocked(prisma.checkRequest.create).mockResolvedValue(mockCheckRequest);
 
       await expect(createCheckRequest(crData, session)).resolves.not.toThrow();
       expect(prisma.checkRequest.create).toHaveBeenCalled();
@@ -106,16 +164,16 @@ describe('Check Request (CR) Functions', () => {
     const managerSession = mockUserSession(Role.MANAGER);
 
     beforeEach(() => {
-      // @ts-ignore
-      prisma.checkRequest.findUnique.mockResolvedValue({
+      vi.mocked(prisma.checkRequest.findUnique).mockResolvedValue({
+        ...mockCheckRequest,
         id: crId,
-        preparedById: 'user-prepared-id',
-        crNumber: 'CR-2024-0001',
-        status: CRStatus.DRAFT,
-        preparedBy: { name: 'Test User', email: 'test@example.com' },
+        preparedBy: { name: 'Test User', email: 'test@example.com', id: 'user-prepared-id', role: Role.USER }
       });
-      // @ts-ignore
-      prisma.checkRequest.update.mockResolvedValue({});
+      vi.mocked(prisma.checkRequest.update).mockResolvedValue({
+        ...mockCheckRequest,
+        id: crId,
+        preparedBy: { name: 'Test User', email: 'test@example.com', id: 'user-prepared-id', role: Role.USER }
+      });
     });
 
     it('should throw an error if a USER tries to approve a CR', async () => {

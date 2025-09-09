@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+// Removed NextRequest from the import statement
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
 import { getNotifications } from "@/lib/notification";
 
-export async function GET(request: NextRequest) {
+// Removed the request parameter from the function signature
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {

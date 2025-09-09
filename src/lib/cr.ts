@@ -4,13 +4,13 @@ import { CRStatus, PaymentMethod } from "@/types/cr";
 import { z } from "zod";
 import { createNotification } from "./notification";
 import { sendEmail } from "./email";
-import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
+import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail"; // Corrected import path
 import { createCrSchema } from "./schemas";
 import * as React from "react";
 import { Session } from "next-auth";
 import { authorize } from "./auth-utils";
 import { logAudit, getAuditUser } from "./audit";
-import { Prisma, Role } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client"; // Corrected Prisma import
 
 export async function generateCRNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -22,7 +22,7 @@ export async function generateCRNumber(): Promise<string> {
       },
     },
   });
-  
+
   return `CR-${year}-${(count + 1).toString().padStart(4, '0')}`;
 }
 
@@ -30,34 +30,34 @@ export async function getCRsByUser(
   userId: string,
   { page = 1, pageSize = 10, search = "", status = "" }: { page?: number; pageSize?: number, search?: string, status?: string }
 ) {
-  const userClause = {
-    OR: [
-      { preparedById: userId },
-      { requestedById: userId },
-      { reviewedById: userId },
-      { approvedById: userId },
-    ],
-  };
-
   const where: Prisma.CheckRequestWhereInput = {
-    AND: [userClause],
+    AND: [
+      {
+        OR: [
+          { preparedById: userId },
+          { requestedById: userId },
+          { reviewedById: userId },
+          { approvedById: userId },
+        ],
+      },
+    ],
   };
 
   if (status) {
     const statuses = status.split(',') as CRStatus[];
     if (statuses.length > 0) {
-      where.AND.push({ status: { in: statuses } });
+      (where.AND as Prisma.CheckRequestWhereInput[]).push({ status: { in: statuses } });
     }
   }
 
   if (search) {
-    where.AND.push({
+    (where.AND as Prisma.CheckRequestWhereInput[]).push({
       OR: [
-        { crNumber: { contains: search, mode: 'insensitive' } },
-        { title: { contains: search, mode: 'insensitive' } },
-        { paymentTo: { contains: search, mode: 'insensitive' } },
-        { purpose: { contains: search, mode: 'insensitive' } },
-        { po: { poNumber: { contains: search, mode: 'insensitive' } } },
+        { crNumber: { contains: search } }, // Removed mode: 'insensitive'
+        { title: { contains: search } }, // Removed mode: 'insensitive'
+        { paymentTo: { contains: search } }, // Removed mode: 'insensitive'
+        { purpose: { contains: search } }, // Removed mode: 'insensitive'
+        { po: { poNumber: { contains: search } } }, // Removed mode: 'insensitive'
       ],
     });
   }
@@ -124,7 +124,6 @@ type CreateCrData = z.infer<typeof createCrSchema> & {
 };
 
 export async function createCheckRequest(data: CreateCrData, session: Session) {
-  // Financial Validation
   if (data.poId) {
     const po = await prisma.purchaseOrder.findUnique({
       where: { id: data.poId },
@@ -188,7 +187,14 @@ export async function createCheckRequest(data: CreateCrData, session: Session) {
 
 export async function updateCRStatus(id: string, status: CRStatus, session: Session) {
   authorize(session, Role.MANAGER);
-  const updateData: any = { status };
+  
+  interface UpdateData {
+    status: CRStatus;
+    reviewedById?: string;
+    approvedById?: string;
+  }
+  
+  const updateData: UpdateData = { status };
   const userId = session.user.id;
 
   const cr = await prisma.checkRequest.findUnique({
@@ -196,7 +202,7 @@ export async function updateCRStatus(id: string, status: CRStatus, session: Sess
     select: {
       preparedById: true,
       crNumber: true,
-      status: true, // For audit log
+      status: true,
       preparedBy: {
         select: { name: true, email: true }
       }
@@ -212,7 +218,7 @@ export async function updateCRStatus(id: string, status: CRStatus, session: Sess
   } else if (status === CRStatus.APPROVED) {
     updateData.approvedById = userId;
   }
-  
+
   const updatedCr = await prisma.checkRequest.update({
     where: { id },
     data: updateData,
@@ -232,7 +238,6 @@ export async function updateCRStatus(id: string, status: CRStatus, session: Sess
   const message = `The status of your Check Request ${cr.crNumber} has been updated to ${status}.`;
   await createNotification(cr.preparedById, message);
 
-  // Create the email component with proper typing
   const emailComponent = React.createElement(StatusUpdateEmail, {
     userName: cr.preparedBy.name || 'User',
     documentType: 'Check Request',

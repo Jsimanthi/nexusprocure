@@ -11,13 +11,13 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth();
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const cr = await getCRById(params.id);
-    
+
     if (!cr) {
       return NextResponse.json({ error: "CR not found" }, { status: 404 });
     }
@@ -47,13 +47,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth();
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
-    
+
     if (!body.status) {
       return NextResponse.json(
         { error: "Status is required" },
@@ -70,8 +70,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const cr = await updateCRStatus(params.id, body.status, session.user.id);
-    
+    // Corrected line
+    const cr = await updateCRStatus(params.id, body.status, session);
+
     if (!cr) {
       return NextResponse.json({ error: "CR not found" }, { status: 404 });
     }

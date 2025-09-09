@@ -4,9 +4,17 @@
 import { useState } from "react";
 import { Search, Filter, X } from "lucide-react";
 
+export interface FilterState {
+  status: string[];
+  dateRange: {
+    from: string;
+    to: string;
+  };
+}
+
 interface SearchAndFilterProps {
   onSearch: (query: string) => void;
-  onFilter: (filters: any) => void;
+  onFilter: (filters: FilterState) => void;
   filterOptions?: {
     status?: string[];
     dateRange?: boolean;
@@ -15,11 +23,11 @@ interface SearchAndFilterProps {
   placeholder?: string;
 }
 
-export default function SearchAndFilter({ 
-  onSearch, 
-  onFilter, 
+export default function SearchAndFilter({
+  onSearch,
+  onFilter,
   filterOptions,
-  placeholder = "Search..." 
+  placeholder = "Search..."
 }: SearchAndFilterProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -36,7 +44,7 @@ export default function SearchAndFilter({
     const newStatus = selectedStatus.includes(status)
       ? selectedStatus.filter(s => s !== status)
       : [...selectedStatus, status];
-    
+
     setSelectedStatus(newStatus);
     onFilter({ status: newStatus, dateRange });
   };

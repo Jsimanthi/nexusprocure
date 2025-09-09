@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -7,12 +7,41 @@ import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 
+interface Iom {
+  id: string;
+  status: string;
+  title: string;
+  createdAt: string;
+}
+
+interface PurchaseOrder {
+  id: string;
+  status: string;
+  title: string;
+  createdAt: string;
+}
+
+interface CheckRequest {
+  id: string;
+  status: string;
+  title: string;
+  createdAt: string;
+}
+
+interface RecentActivityItem {
+  id: string;
+  type: 'IOM' | 'PO' | 'CR';
+  date: string;
+  status: string;
+  title: string;
+}
+
 interface DashboardStats {
   iomCount: number;
   poCount: number;
   crCount: number;
   pendingApprovals: number;
-  recentActivity: any[];
+  recentActivity: RecentActivityItem[];
 }
 
 export default function DashboardPage() {
@@ -21,13 +50,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      fetchDashboardData();
-    }
-  }, [status]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setError(null);
       const [iomsRes, posRes, crsRes] = await Promise.all([
@@ -35,45 +58,45 @@ export default function DashboardPage() {
         fetch("/api/po"),
         fetch("/api/cr")
       ]);
-      
+
       if (!iomsRes.ok || !posRes.ok || !crsRes.ok) {
         throw new Error("Failed to fetch dashboard data");
       }
-      
+
       const iomsData = await iomsRes.json();
       const posData = await posRes.json();
       const crsData = await crsRes.json();
-      
-      const ioms = iomsData.data || [];
-      const pos = posData.data || [];
-      const crs = crsData.data || [];
-      
-      const pendingApprovals = ioms.filter((iom: any) =>
+
+      const ioms: Iom[] = iomsData.data || [];
+      const pos: PurchaseOrder[] = posData.data || [];
+      const crs: CheckRequest[] = crsData.data || [];
+
+      const pendingApprovals = ioms.filter((iom: Iom) =>
         iom.status === "SUBMITTED" || iom.status === "UNDER_REVIEW"
       ).length;
-      
-      const recentIoms = ioms.slice(0, 5).map((iom: any) => ({
+
+      const recentIoms = ioms.slice(0, 5).map((iom: Iom) => ({
         ...iom,
-        type: 'IOM',
+        type: 'IOM' as const, // Use 'as const' to infer literal type
         date: iom.createdAt
       }));
-      
-      const recentPos = pos.slice(0, 5).map((po: any) => ({
+
+      const recentPos = pos.slice(0, 5).map((po: PurchaseOrder) => ({
         ...po,
-        type: 'PO',
+        type: 'PO' as const,
         date: po.createdAt
       }));
-      
-      const recentCrs = crs.slice(0, 5).map((cr: any) => ({
+
+      const recentCrs = crs.slice(0, 5).map((cr: CheckRequest) => ({
         ...cr,
-        type: 'CR',
+        type: 'CR' as const,
         date: cr.createdAt
       }));
-      
+
       const recentActivity = [...recentIoms, ...recentPos, ...recentCrs]
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 10);
-      
+
       setStats({
         iomCount: ioms.length,
         poCount: pos.length,
@@ -87,7 +110,13 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Empty dependency array because this function doesn't rely on outside variables
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchDashboardData();
+    }
+  }, [status, fetchDashboardData]); // Add fetchDashboardData to the dependency array
 
   if (status === "loading" || loading) {
     return (
@@ -162,7 +191,7 @@ export default function DashboardPage() {
                       <p className="mt-2">No recent activity</p>
                     </div>
                   ) : (
-                    stats.recentActivity.map((item: any) => (
+                    stats.recentActivity.map((item: RecentActivityItem) => (
                       <div key={item.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                         <div className="flex justify-between items-start">
                           <div className="flex-1 min-w-0">

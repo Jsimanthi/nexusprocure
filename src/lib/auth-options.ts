@@ -1,8 +1,14 @@
 // src/lib/auth-options.ts
-import type { NextAuthConfig } from "next-auth";
+import type { NextAuthConfig, User, Session } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
+
+// Define a custom user type that includes the 'role' field
+interface ExtendedUser extends User {
+  role?: string;
+}
 
 const DEMO_PASSWORD = "password123";
 
@@ -50,7 +56,7 @@ export const authOptions: NextAuthConfig = {
         }
 
         const passwordValid = await bcrypt.compare(
-          password, 
+          password,
           user.password || ""
         );
 
@@ -69,13 +75,13 @@ export const authOptions: NextAuthConfig = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }: { token: JWT; user: ExtendedUser | undefined }) {
       if (user) {
         token.role = user.role;
       }
       return token;
     },
-    async session({ session, token }: any) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (session.user) {
         session.user.role = token.role as string;
         session.user.id = token.sub as string;
