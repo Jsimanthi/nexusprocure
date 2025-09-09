@@ -1,10 +1,9 @@
 import { pusherServer } from '@/lib/pusher';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth-options';
+import { auth } from '@/lib/auth-server';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

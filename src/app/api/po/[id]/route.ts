@@ -1,6 +1,6 @@
 // src/app/api/po/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@/lib/auth-server";
 import { getPOById, updatePOStatus } from "@/lib/po";
 import { POStatus } from "@/types/po";
 
