@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createCheckRequest, updateCRStatus } from './cr';
 import { prisma } from './prisma';
 import { CRStatus } from '@/types/cr';
-import { Role } from '@/types/auth';
 import { Session } from 'next-auth';
-import { Prisma } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 
 import { logAudit, getAuditUser } from './audit';
 

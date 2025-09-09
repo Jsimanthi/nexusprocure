@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createIOM, updateIOMStatus, deleteIOM } from './iom';
 import { prisma } from './prisma';
 import { IOMStatus } from '@/types/iom';
-import { Role } from '@/types/auth';
 import { Session } from 'next-auth';
-import { Prisma } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 
 import { logAudit, getAuditUser } from './audit';
 
