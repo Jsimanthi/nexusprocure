@@ -4,6 +4,7 @@ import { prisma } from './prisma';
 import { POStatus } from '@/types/po';
 import { Role } from '@/types/auth';
 import { Session } from 'next-auth';
+import { Prisma } from '@prisma/client';
 
 // Mock external dependencies
 vi.mock('@/lib/prisma');
@@ -105,6 +106,42 @@ describe('Purchase Order Functions', () => {
           }),
         })
       );
+    });
+
+    it('should retry creating a PO if a unique constraint violation occurs', async () => {
+      // Arrange
+      const inputData = {
+        title: 'Test Retry PO',
+        companyName: 'Test Company',
+        companyAddress: '123 Test St',
+        companyContact: 'Test Contact',
+        vendorName: 'Test Vendor',
+        vendorAddress: '456 Vendor Ave',
+        vendorContact: 'Vendor Contact',
+        taxRate: 10,
+        items: [],
+        preparedById: 'user-prepared-id',
+        requestedById: 'user-requested-id',
+        attachments: [],
+      };
+      const session = mockUserSession(Role.USER);
+      const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        { code: 'P2002', clientVersion: 'test' }
+      );
+
+      // @ts-ignore
+      prisma.purchaseOrder.count.mockResolvedValue(0);
+      // @ts-ignore
+      prisma.purchaseOrder.create
+        .mockRejectedValueOnce(uniqueConstraintError) // Fail first time
+        .mockResolvedValue({ id: 'po-125', ...inputData }); // Succeed second time
+
+      // Act
+      await createPurchaseOrder(inputData, session);
+
+      // Assert
+      expect(prisma.purchaseOrder.create).toHaveBeenCalledTimes(2);
     });
   });
 

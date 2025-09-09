@@ -4,6 +4,7 @@ import { prisma } from './prisma';
 import { IOMStatus } from '@/types/iom';
 import { Role } from '@/types/auth';
 import { Session } from 'next-auth';
+import { Prisma } from '@prisma/client';
 
 import { logAudit, getAuditUser } from './audit';
 
@@ -36,6 +37,26 @@ describe('IOM Functions', () => {
 
       expect(prisma.iOM.create).toHaveBeenCalled();
       expect(logAudit).toHaveBeenCalledWith("CREATE", expect.any(Object));
+    });
+
+    it('should retry creating an IOM if a unique constraint violation occurs', async () => {
+      const iomData = { title: 'Test Retry IOM', from: 'Dept A', to: 'Dept B', subject: 'Test', preparedById: 'user-1', items: [] };
+      const session = mockUserSession(Role.USER);
+      const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        { code: 'P2002', clientVersion: 'test' }
+      );
+
+      // @ts-ignore
+      prisma.iOM.count.mockResolvedValue(0);
+      // @ts-ignore
+      prisma.iOM.create
+        .mockRejectedValueOnce(uniqueConstraintError)
+        .mockResolvedValue({ id: 'new-iom-id', ...iomData });
+
+      await createIOM(iomData, session);
+
+      expect(prisma.iOM.create).toHaveBeenCalledTimes(2);
     });
   });
 

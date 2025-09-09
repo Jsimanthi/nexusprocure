@@ -11,6 +11,7 @@ import { Session } from "next-auth";
 import { authorize } from "./auth-utils";
 import { Role } from "@/types/auth";
 import { logAudit, getAuditUser } from "./audit";
+import { Prisma } from "@prisma/client";
 
 export async function generateIOMNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -94,11 +95,14 @@ type CreateIomData = z.infer<typeof createIomSchema> & {
 
 export async function createIOM(data: CreateIomData, session: Session) {
   const { items, ...restOfData } = data;
-  const iomNumber = await generateIOMNumber();
   const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
-  const createdIom = await prisma.iOM.create({
-    data: {
+  const maxRetries = 3;
+  let lastError: unknown;
+
+  for (let i = 0; i < maxRetries; i++) {
+    const iomNumber = await generateIOMNumber();
+    const iomData = {
       ...restOfData,
       iomNumber,
       totalAmount,
@@ -109,28 +113,43 @@ export async function createIOM(data: CreateIomData, session: Session) {
           totalPrice: item.quantity * item.unitPrice,
         })),
       },
-    },
-    include: {
-      items: true,
-      preparedBy: {
-        select: { name: true, email: true }
-      },
-      requestedBy: {
-        select: { name: true, email: true }
-      },
+    };
+
+    try {
+      const createdIom = await prisma.iOM.create({
+        data: iomData,
+        include: {
+          items: true,
+          preparedBy: {
+            select: { name: true, email: true }
+          },
+          requestedBy: {
+            select: { name: true, email: true }
+          },
+        }
+      });
+
+      const auditUser = getAuditUser(session);
+      await logAudit("CREATE", {
+        model: "IOM",
+        recordId: createdIom.id,
+        userId: auditUser.userId,
+        userName: auditUser.userName,
+        changes: createdIom,
+      });
+
+      return createdIom;
+    } catch (error) {
+      lastError = error;
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        console.warn(`Unique constraint violation for IOM number. Retrying... (${i + 1}/${maxRetries})`);
+        continue;
+      }
+      throw error;
     }
-  });
+  }
 
-  const auditUser = getAuditUser(session);
-  await logAudit("CREATE", {
-    model: "IOM",
-    recordId: createdIom.id,
-    userId: auditUser.userId,
-    userName: auditUser.userName,
-    changes: createdIom,
-  });
-
-  return createdIom;
+  throw new Error(`Failed to create IOM after ${maxRetries} attempts. Last error: ${lastError}`);
 }
 
 export async function updateIOMStatus(id: string, status: IOMStatus, session: Session) {

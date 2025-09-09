@@ -11,6 +11,7 @@ import { Session } from "next-auth";
 import * as React from "react";
 import { authorize } from "./auth-utils";
 import { Role } from "@/types/auth";
+import { Prisma } from "@prisma/client";
 
 export async function generatePONumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -145,7 +146,6 @@ type CreatePoData = z.infer<typeof createPoSchema> & {
 };
 
 export async function createPurchaseOrder(data: CreatePoData, session: Session) {
-  const poNumber = await generatePONumber();
   const { items, attachments, ...restOfData } = data;
 
   // Calculate totals
@@ -168,56 +168,76 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
   
   const grandTotal = totalAmount + taxAmount;
 
-  const poData: any = {
-    ...restOfData,
-    poNumber,
-    totalAmount,
-    taxAmount,
-    grandTotal,
-    status: POStatus.DRAFT,
-    items: {
-      create: itemsWithTotals,
-    },
-  };
+  const maxRetries = 3;
+  let lastError: unknown;
 
-  if (attachments && attachments.length > 0) {
-    poData.attachments = {
-      create: attachments.map(att => ({
-        url: att.url,
-        filename: att.filename,
-        filetype: att.filetype,
-        size: att.size,
-      })),
+  for (let i = 0; i < maxRetries; i++) {
+    const poNumber = await generatePONumber();
+    const poData: any = {
+      ...restOfData,
+      poNumber,
+      totalAmount,
+      taxAmount,
+      grandTotal,
+      status: POStatus.DRAFT,
+      items: {
+        create: itemsWithTotals,
+      },
     };
-  }
 
-  const createdPo = await prisma.purchaseOrder.create({
-    data: poData,
-    include: {
-      items: true,
-      attachments: true,
-      preparedBy: { select: { name: true, email: true } },
-      requestedBy: { select: { name: true, email: true } },
-      vendor: true,
-      iom: {
+    if (attachments && attachments.length > 0) {
+      poData.attachments = {
+        create: attachments.map(att => ({
+          url: att.url,
+          filename: att.filename,
+          filetype: att.filetype,
+          size: att.size,
+        })),
+      };
+    }
+
+    try {
+      const createdPo = await prisma.purchaseOrder.create({
+        data: poData,
         include: {
+          items: true,
+          attachments: true,
           preparedBy: { select: { name: true, email: true } },
           requestedBy: { select: { name: true, email: true } },
+          vendor: true,
+          iom: {
+            include: {
+              preparedBy: { select: { name: true, email: true } },
+              requestedBy: { select: { name: true, email: true } },
+            }
+          }
         }
+      });
+
+      const auditUser = getAuditUser(session);
+      await logAudit("CREATE", {
+        model: "PurchaseOrder",
+        recordId: createdPo.id,
+        userId: auditUser.userId,
+        userName: auditUser.userName,
+        changes: createdPo,
+      });
+
+      return createdPo;
+    } catch (error) {
+      lastError = error;
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        // Unique constraint violation, retry
+        console.warn(`Unique constraint violation for PO number. Retrying... (${i + 1}/${maxRetries})`);
+        continue;
       }
+      // For other errors, break the loop and re-throw
+      throw error;
     }
-  });
+  }
 
-  const auditUser = getAuditUser(session);
-  await logAudit("CREATE", {
-    model: "PurchaseOrder",
-    recordId: createdPo.id,
-    userId: auditUser.userId,
-    userName: auditUser.userName,
-    changes: createdPo,
-  });
-
-  return createdPo;
+  // If the loop completes without success, throw the last captured error
+  throw new Error(`Failed to create purchase order after ${maxRetries} attempts. Last error: ${lastError}`);
 }
 
 export async function updatePOStatus(id: string, status: POStatus, session: Session) {
