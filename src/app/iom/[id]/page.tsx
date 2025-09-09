@@ -5,6 +5,10 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { IOM, IOMStatus } from "@/types/iom";
+import PageLayout from "@/components/PageLayout";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ErrorDisplay from "@/components/ErrorDisplay";
+import { getIOMStatusColor } from "@/lib/utils";
 
 export default function IOMDetailPage() {
   const params = useParams();
@@ -59,18 +63,6 @@ export default function IOMDetailPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "DRAFT": return "bg-gray-100 text-gray-800";
-      case "SUBMITTED": return "bg-blue-100 text-blue-800";
-      case "UNDER_REVIEW": return "bg-yellow-100 text-yellow-800";
-      case "APPROVED": return "bg-green-100 text-green-800";
-      case "REJECTED": return "bg-red-100 text-red-800";
-      case "COMPLETED": return "bg-purple-100 text-purple-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
   const getAvailableStatusActions = (currentStatus: IOMStatus) => {
     const actions: { status: IOMStatus; label: string; color: string }[] = [];
     
@@ -104,47 +96,46 @@ export default function IOMDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <PageLayout title="Loading IOM...">
+        <LoadingSpinner />
+      </PageLayout>
     );
   }
 
   if (!iom) {
     return (
-      <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">IOM Not Found</h1>
-            <Link href="/iom" className="text-blue-600 hover:text-blue-800 mt-4 inline-block">
-              Back to IOM List
-            </Link>
-          </div>
+      <PageLayout title="IOM Not Found">
+        <ErrorDisplay
+          title="IOM Not Found"
+          message={`Could not find an IOM with the ID: ${params.id}`}
+        />
+        <div className="mt-6 text-center">
+          <Link href="/iom" className="text-blue-600 hover:text-blue-800">
+            &larr; Back to IOM List
+          </Link>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   const statusActions = getAvailableStatusActions(iom.status as IOMStatus);
 
   return (
-    <div className="max-w-6xl mx-auto py-6 sm:px-6 lg:px-8">
-      <div className="px-4 py-6 sm:px-0">
-        {/* Header */}
-        <div className="mb-6">
-          <Link href="/iom" className="text-blue-600 hover:text-blue-800">
-            &larr; Back to IOM List
-          </Link>
-          <div className="flex justify-between items-start mt-2">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{iom.title}</h1>
-              <p className="text-lg text-gray-600">{iom.iomNumber}</p>
-            </div>
-            <div className="text-right">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(iom.status)}`}>
-                {iom.status.replace("_", " ")}
-              </span>
-              <p className="text-sm text-gray-500 mt-1">
+    <PageLayout title={iom.title}>
+      <div className="mb-6">
+        <Link href="/iom" className="text-blue-600 hover:text-blue-800">
+          &larr; Back to IOM List
+        </Link>
+      </div>
+      <div className="flex justify-between items-start mt-2 mb-6">
+        <div>
+          <p className="text-lg text-gray-600">{iom.iomNumber}</p>
+        </div>
+        <div className="text-right">
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getIOMStatusColor(iom.status)}`}>
+            {iom.status.replace("_", " ")}
+          </span>
+          <p className="text-sm text-gray-500 mt-1">
                 Created: {new Date(iom.createdAt!).toLocaleDateString()}
               </p>
             </div>
@@ -322,7 +313,6 @@ export default function IOMDetailPage() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </PageLayout>
   );
 }

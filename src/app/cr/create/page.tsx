@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { PurchaseOrder } from "@/types/po";
 import { PaymentMethod } from "@/types/cr";
+import PageLayout from "@/components/PageLayout";
 
 interface FormData {
   title: string;
@@ -113,14 +114,11 @@ export default function CreateCRPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-      <div className="px-4 py-6 sm:px-0">
-        <div className="mb-6">
-          <BackButton href="/cr" />
-          <h1 className="text-3xl font-bold text-gray-900 mt-2">Create Check Request</h1>
-        </div>
-
-        <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
+    <PageLayout title="Create Check Request">
+      <div className="mb-6">
+        <BackButton href="/cr" />
+      </div>
+      <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
           {/* PO Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Select Purchase Order</label>
@@ -283,7 +281,6 @@ export default function CreateCRPage() {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </PageLayout>
   );
 }

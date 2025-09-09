@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageLayout from "@/components/PageLayout";
 
 interface IOMItem {
   itemName: string;
@@ -86,16 +87,13 @@ export default function CreateIOMPage() {
   const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
   return (
-    <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-      <div className="px-4 py-6 sm:px-0">
-        <div className="mb-6">
-          <Link href="/iom" className="text-blue-600 hover:text-blue-800">
-            &larr; Back to IOM List
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mt-2">Create New IOM</h1>
-        </div>
-
-        <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
+    <PageLayout title="Create New IOM">
+      <div className="mb-6">
+        <Link href="/iom" className="text-blue-600 hover:text-blue-800">
+          &larr; Back to IOM List
+        </Link>
+      </div>
+      <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
           {/* Basic IOM Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -245,7 +243,6 @@ export default function CreateIOMPage() {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </PageLayout>
   );
 }

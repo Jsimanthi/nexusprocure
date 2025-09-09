@@ -5,6 +5,10 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckRequest, CRStatus, PaymentMethod } from "@/types/cr";
+import PageLayout from "@/components/PageLayout";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ErrorDisplay from "@/components/ErrorDisplay";
+import { getCRStatusColor, formatCurrency } from "@/lib/utils";
 
 export default function CRDetailPage() {
   const params = useParams();
@@ -59,25 +63,6 @@ export default function CRDetailPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "DRAFT": return "bg-gray-100 text-gray-800";
-      case "PENDING_APPROVAL": return "bg-blue-100 text-blue-800";
-      case "APPROVED": return "bg-green-100 text-green-800";
-      case "REJECTED": return "bg-red-100 text-red-800";
-      case "PROCESSED": return "bg-purple-100 text-purple-800";
-      case "CANCELLED": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-    }).format(amount);
-  };
-
   const getPaymentMethodLabel = (method: PaymentMethod) => {
     switch (method) {
       case PaymentMethod.CHEQUE: return "Cheque";
@@ -116,52 +101,51 @@ export default function CRDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <PageLayout title="Loading Check Request...">
+        <LoadingSpinner />
+      </PageLayout>
     );
   }
 
   if (!cr) {
     return (
-      <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">CR Not Found</h1>
-            <Link href="/cr" className="text-blue-600 hover:text-blue-800 mt-4 inline-block">
-              Back to CR List
-            </Link>
-          </div>
+      <PageLayout title="Check Request Not Found">
+        <ErrorDisplay
+          title="CR Not Found"
+          message={`Could not find a Check Request with the ID: ${params.id}`}
+        />
+        <div className="mt-6 text-center">
+          <Link href="/cr" className="text-blue-600 hover:text-blue-800">
+            &larr; Back to CR List
+          </Link>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   const statusActions = getAvailableStatusActions(cr.status as CRStatus);
 
   return (
-    <div className="max-w-6xl mx-auto py-6 sm:px-6 lg:px-8">
-      <div className="px-4 py-6 sm:px-0">
-        {/* Header */}
-        <div className="mb-6">
-          <Link href="/cr" className="text-blue-600 hover:text-blue-800">
-            &larr; Back to CR List
-          </Link>
-          <div className="flex justify-between items-start mt-2">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{cr.title}</h1>
-              <p className="text-lg text-gray-600">{cr.crNumber}</p>
-              {cr.po && (
-                <p className="text-sm text-gray-500">
-                  Linked to PO: {cr.po.poNumber}
-                </p>
-              )}
-            </div>
-            <div className="text-right">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(cr.status)}`}>
-                {cr.status.replace("_", " ")}
-              </span>
-              <p className="text-sm text-gray-500 mt-1">
+    <PageLayout title={cr.title}>
+      <div className="mb-6">
+        <Link href="/cr" className="text-blue-600 hover:text-blue-800">
+          &larr; Back to CR List
+        </Link>
+      </div>
+      <div className="flex justify-between items-start mt-2 mb-6">
+        <div>
+          <p className="text-lg text-gray-600">{cr.crNumber}</p>
+          {cr.po && (
+            <p className="text-sm text-gray-500">
+              Linked to PO: {cr.po.poNumber}
+            </p>
+          )}
+        </div>
+        <div className="text-right">
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getCRStatusColor(cr.status)}`}>
+            {cr.status.replace("_", " ")}
+          </span>
+          <p className="text-sm text-gray-500 mt-1">
                 Created: {new Date(cr.createdAt!).toLocaleDateString()}
               </p>
             </div>
@@ -338,7 +322,6 @@ export default function CRDetailPage() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </PageLayout>
   );
 }

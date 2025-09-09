@@ -5,6 +5,10 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PurchaseOrder, POStatus } from "@/types/po";
+import PageLayout from "@/components/PageLayout";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ErrorDisplay from "@/components/ErrorDisplay";
+import { getPOStatusColor, formatCurrency } from "@/lib/utils";
 
 export default function PODetailPage() {
   const params = useParams();
@@ -80,27 +84,6 @@ export default function PODetailPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "DRAFT": return "bg-gray-100 text-gray-800";
-      case "PENDING_APPROVAL": return "bg-blue-100 text-blue-800";
-      case "APPROVED": return "bg-green-100 text-green-800";
-      case "REJECTED": return "bg-red-100 text-red-800";
-      case "ORDERED": return "bg-purple-100 text-purple-800";
-      case "DELIVERED": return "bg-teal-100 text-teal-800";
-      case "CANCELLED": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
-
   const getAvailableStatusActions = (currentStatus: POStatus) => {
     const actions: { status: POStatus; label: string; color: string }[] = [];
     
@@ -139,52 +122,51 @@ export default function PODetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <PageLayout title="Loading Purchase Order...">
+        <LoadingSpinner />
+      </PageLayout>
     );
   }
 
   if (!po) {
     return (
-      <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">PO Not Found</h1>
-            <Link href="/po" className="text-blue-600 hover:text-blue-800 mt-4 inline-block">
-              Back to PO List
-            </Link>
-          </div>
+      <PageLayout title="Purchase Order Not Found">
+        <ErrorDisplay
+          title="PO Not Found"
+          message={`Could not find a Purchase Order with the ID: ${params.id}`}
+        />
+        <div className="mt-6 text-center">
+          <Link href="/po" className="text-blue-600 hover:text-blue-800">
+            &larr; Back to PO List
+          </Link>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   const statusActions = getAvailableStatusActions(po.status as POStatus);
 
   return (
-    <div className="max-w-6xl mx-auto py-6 sm:px-6 lg:px-8">
-      <div className="px-4 py-6 sm:px-0">
-        {/* Header */}
-        <div className="mb-6">
-          <Link href="/po" className="text-blue-600 hover:text-blue-800">
-            &larr; Back to PO List
-          </Link>
-          <div className="flex justify-between items-start mt-2">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{po.title}</h1>
-              <p className="text-lg text-gray-600">{po.poNumber}</p>
-              {po.iom && (
-                <p className="text-sm text-gray-500">
-                  Created from IOM: {po.iom.iomNumber}
-                </p>
-              )}
-            </div>
-            <div className="text-right">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(po.status)}`}>
-                {po.status.replace("_", " ")}
-              </span>
-              <p className="text-sm text-gray-500 mt-1">
+    <PageLayout title={po.title}>
+      <div className="mb-6">
+        <Link href="/po" className="text-blue-600 hover:text-blue-800">
+          &larr; Back to PO List
+        </Link>
+      </div>
+      <div className="flex justify-between items-start mt-2 mb-6">
+        <div>
+          <p className="text-lg text-gray-600">{po.poNumber}</p>
+          {po.iom && (
+            <p className="text-sm text-gray-500">
+              Created from IOM: {po.iom.iomNumber}
+            </p>
+          )}
+        </div>
+        <div className="text-right">
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPOStatusColor(po.status)}`}>
+            {po.status.replace("_", " ")}
+          </span>
+          <p className="text-sm text-gray-500 mt-1">
                 Created: {new Date(po.createdAt!).toLocaleDateString()}
               </p>
             </div>
@@ -427,7 +409,6 @@ export default function PODetailPage() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </PageLayout>
   );
 }
