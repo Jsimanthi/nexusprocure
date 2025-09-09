@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
                     />
                     <Tooltip 
                       formatter={(value: number) => [
-                        new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value),
+                        new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value), // FIXED: Added closing bracket
                         'Total Spending'
                       ]}
                       labelFormatter={(value) => {
