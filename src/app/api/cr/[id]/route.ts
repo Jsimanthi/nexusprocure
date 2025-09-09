@@ -1,6 +1,6 @@
 // src/app/api/cr/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@/lib/auth-server";
 import { getCRById, updateCRStatus } from "@/lib/cr";
 import { CRStatus } from "@/types/cr";
 

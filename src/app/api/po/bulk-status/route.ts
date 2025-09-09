@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@/lib/auth-server";
 import { updatePOStatus } from "@/lib/po";
 import { POStatus } from "@/types/po";
 import { z } from "zod";

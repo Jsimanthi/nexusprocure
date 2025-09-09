@@ -1,6 +1,6 @@
 // src/app/api/cr/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@/lib/auth-server";
 import { createCheckRequest, getCRsByUser } from "@/lib/cr";
 import { createCrSchema } from "@/lib/schemas";
 

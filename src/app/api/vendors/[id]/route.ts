@@ -1,6 +1,6 @@
 // src/app/api/vendors/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@/lib/auth-server";
 import { getVendorById, updateVendor, deleteVendor } from "@/lib/po";
 import { updateVendorSchema } from "@/lib/schemas";
 
