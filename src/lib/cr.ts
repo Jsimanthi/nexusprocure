@@ -11,6 +11,7 @@ import { Session } from "next-auth";
 import { authorize } from "./auth-utils";
 import { Role } from "@/types/auth";
 import { logAudit, getAuditUser } from "./audit";
+import { Prisma } from "@prisma/client";
 
 export async function generateCRNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -101,35 +102,66 @@ type CreateCrData = z.infer<typeof createCrSchema> & {
 };
 
 export async function createCheckRequest(data: CreateCrData, session: Session) {
-  const crNumber = await generateCRNumber();
+  // Financial Validation
+  if (data.poId) {
+    const po = await prisma.purchaseOrder.findUnique({
+      where: { id: data.poId },
+      select: { grandTotal: true },
+    });
+    if (!po) {
+      throw new Error("Associated Purchase Order not found.");
+    }
+    if (data.grandTotal > po.grandTotal) {
+      throw new Error(`Check Request total (${data.grandTotal}) cannot exceed Purchase Order total (${po.grandTotal}).`);
+    }
+  }
 
-  const createdCr = await prisma.checkRequest.create({
-    data: {
+  const maxRetries = 3;
+  let lastError: unknown;
+
+  for (let i = 0; i < maxRetries; i++) {
+    const crNumber = await generateCRNumber();
+    const crData = {
       ...data,
       crNumber,
       status: CRStatus.DRAFT,
-    },
-    include: {
-      po: {
+    };
+
+    try {
+      const createdCr = await prisma.checkRequest.create({
+        data: crData,
         include: {
-          vendor: true
+          po: {
+            include: {
+              vendor: true
+            }
+          },
+          preparedBy: { select: { name: true, email: true } },
+          requestedBy: { select: { name: true, email: true } },
         }
-      },
-      preparedBy: { select: { name: true, email: true } },
-      requestedBy: { select: { name: true, email: true } },
+      });
+
+      const auditUser = getAuditUser(session);
+      await logAudit("CREATE", {
+        model: "CheckRequest",
+        recordId: createdCr.id,
+        userId: auditUser.userId,
+        userName: auditUser.userName,
+        changes: createdCr,
+      });
+
+      return createdCr;
+    } catch (error) {
+      lastError = error;
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        console.warn(`Unique constraint violation for CR number. Retrying... (${i + 1}/${maxRetries})`);
+        continue;
+      }
+      throw error;
     }
-  });
+  }
 
-  const auditUser = getAuditUser(session);
-  await logAudit("CREATE", {
-    model: "CheckRequest",
-    recordId: createdCr.id,
-    userId: auditUser.userId,
-    userName: auditUser.userName,
-    changes: createdCr,
-  });
-
-  return createdCr;
+  throw new Error(`Failed to create Check Request after ${maxRetries} attempts. Last error: ${lastError}`);
 }
 
 export async function updateCRStatus(id: string, status: CRStatus, session: Session) {

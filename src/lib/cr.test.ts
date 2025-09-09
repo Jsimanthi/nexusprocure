@@ -4,6 +4,7 @@ import { prisma } from './prisma';
 import { CRStatus } from '@/types/cr';
 import { Role } from '@/types/auth';
 import { Session } from 'next-auth';
+import { Prisma } from '@prisma/client';
 
 import { logAudit, getAuditUser } from './audit';
 
@@ -36,6 +37,67 @@ describe('Check Request (CR) Functions', () => {
 
       expect(prisma.checkRequest.create).toHaveBeenCalled();
       expect(logAudit).toHaveBeenCalledWith("CREATE", expect.any(Object));
+    });
+
+    it('should retry creating a CR if a unique constraint violation occurs', async () => {
+      const crData = { title: 'Test Retry CR', paymentTo: 'Vendor', paymentDate: new Date(), purpose: 'Testing', preparedById: 'user-1' };
+      const session = mockUserSession(Role.USER);
+      const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        { code: 'P2002', clientVersion: 'test' }
+      );
+
+      // @ts-ignore
+      prisma.checkRequest.count.mockResolvedValue(0);
+      // @ts-ignore
+      prisma.checkRequest.create
+        .mockRejectedValueOnce(uniqueConstraintError)
+        .mockResolvedValue({ id: 'new-cr-id', ...crData });
+
+      await createCheckRequest(crData, session);
+
+      expect(prisma.checkRequest.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('should throw an error if the CR total exceeds the PO total', async () => {
+      const poId = 'po-123';
+      const crData = {
+        title: 'Test CR',
+        poId,
+        grandTotal: 1500,
+        paymentTo: 'Vendor',
+        paymentDate: new Date(),
+        purpose: 'Testing',
+        preparedById: 'user-1'
+      };
+      const session = mockUserSession(Role.USER);
+      // @ts-ignore
+      prisma.purchaseOrder.findUnique.mockResolvedValue({ grandTotal: 1000 });
+
+      await expect(createCheckRequest(crData, session)).rejects.toThrow(
+        'Check Request total (1500) cannot exceed Purchase Order total (1000).'
+      );
+    });
+
+    it('should succeed if the CR total is less than or equal to the PO total', async () => {
+      const poId = 'po-123';
+      const crData = {
+        title: 'Test CR',
+        poId,
+        grandTotal: 900,
+        paymentTo: 'Vendor',
+        paymentDate: new Date(),
+        purpose: 'Testing',
+        preparedById: 'user-1'
+      };
+      const session = mockUserSession(Role.USER);
+      // @ts-ignore
+      prisma.purchaseOrder.findUnique.mockResolvedValue({ grandTotal: 1000 });
+      // @ts-ignore
+      prisma.checkRequest.create.mockResolvedValue({ id: 'new-cr-id', ...crData });
+
+      await expect(createCheckRequest(crData, session)).resolves.not.toThrow();
+      expect(prisma.checkRequest.create).toHaveBeenCalled();
     });
   });
 
