@@ -44,24 +44,23 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const body = await request.json();
     const validation = createIomSchema.safeParse(body);
-
     if (!validation.success) {
       return NextResponse.json(
         { error: "Invalid input", details: validation.error.flatten() },
         { status: 400 }
       );
     }
-
+    
+    // Set both preparedBy and requestedBy from the session user ID
     const iom = await createIOM({
       ...validation.data,
       preparedById: session.user.id,
+      requestedById: session.user.id, // [!code ++]
     });
 
     return NextResponse.json(iom, { status: 201 });

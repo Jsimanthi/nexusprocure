@@ -1,3 +1,5 @@
+// src/components/FileUpload.tsx
+
 "use client";
 
 import { useState, useCallback } from 'react';
@@ -5,18 +7,23 @@ import { useDropzone } from 'react-dropzone';
 import { UploadCloud, File as FileIcon, X } from 'lucide-react';
 import type { PutBlobResult } from '@vercel/blob';
 
+// 1. Define and export a new type that includes the `size` property
+export type UploadedFileResult = PutBlobResult & { size: number };
+
 interface FileUploadProps {
-  onUploadComplete: (blobs: PutBlobResult[]) => void;
+  // 2. Update the prop to use the new type
+  onUploadComplete: (blobs: UploadedFileResult[]) => void;
 }
 
 export default function FileUpload({ onUploadComplete }: FileUploadProps) {
-  const [uploadedFiles, setUploadedFiles] = useState<PutBlobResult[]>([]);
+  // 3. Update the state to use the new type
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFileResult[]>([]);
   const [uploading, setUploading] = useState(false);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       setUploading(true);
-      const newBlobs: PutBlobResult[] = [];
+      const newBlobs: UploadedFileResult[] = [];
 
       for (const file of acceptedFiles) {
         try {
@@ -33,11 +40,12 @@ export default function FileUpload({ onUploadComplete }: FileUploadProps) {
           }
 
           const newBlob = (await response.json()) as PutBlobResult;
-          newBlobs.push(newBlob);
+          
+          // 4. Combine the upload result with the original file's size
+          newBlobs.push({ ...newBlob, size: file.size });
 
         } catch (error) {
           console.error('Error uploading file:', file.name, error);
-          // Optionally, handle and display the error to the user
         }
       }
 
@@ -55,9 +63,6 @@ export default function FileUpload({ onUploadComplete }: FileUploadProps) {
   });
 
   const removeFile = (urlToRemove: string) => {
-    // Note: This only removes the file from the local list.
-    // Deleting from Vercel Blob would require another API endpoint and call.
-    // For this implementation, we assume files are not deleted once uploaded during the form session.
     const updatedFiles = uploadedFiles.filter(file => file.url !== urlToRemove);
     setUploadedFiles(updatedFiles);
     onUploadComplete(updatedFiles);
