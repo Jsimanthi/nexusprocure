@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FileUpload from "@/components/FileUpload";
 import type { PutBlobResult } from '@vercel/blob';
+import PageLayout from "@/components/PageLayout";
 
 interface POItem {
     itemName: string;
@@ -244,16 +245,13 @@ export default function CreatePOPage() {
     const grandTotal = subtotal + totalTax;
 
     return (
-        <div className="max-w-6xl mx-auto py-6 sm:px-6 lg:px-8">
-            <div className="px-4 py-6 sm:px-0">
-                <div className="mb-6">
-                    <Link href="/po" className="text-blue-600 hover:text-blue-800">
-                        &larr; Back to PO List
-                    </Link>
-                    <h1 className="text-3xl font-bold text-gray-900 mt-2">Create Purchase Order</h1>
-                </div>
-
-                <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
+    <PageLayout title="Create Purchase Order">
+      <div className="mb-6">
+        <Link href="/po" className="text-blue-600 hover:text-blue-800">
+          &larr; Back to PO List
+        </Link>
+      </div>
+      <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
                     {/* IOM Selection */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Select Approved IOM (Optional)</label>
@@ -523,7 +521,6 @@ export default function CreatePOPage() {
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+    </PageLayout>
     );
 }

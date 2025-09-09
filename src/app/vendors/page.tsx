@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Vendor } from "@/types/po";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import SearchAndFilter from "@/components/SearchAndFilter";
+import PageLayout from "@/components/PageLayout";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ErrorDisplay from "@/components/ErrorDisplay";
 
 const fetchVendors = async (page = 1, pageSize = 10) => {
   const response = await fetch(`/api/vendors?page=${page}&pageSize=${pageSize}`);
@@ -101,50 +104,32 @@ export default function VendorsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        </div>
-      </div>
+      <PageLayout title="Vendor Management">
+        <LoadingSpinner />
+      </PageLayout>
     );
   }
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-              <svg className="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Vendors</h3>
-              <p className="text-red-700">{error.message}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageLayout title="Vendor Management">
+        <ErrorDisplay
+          title="Error Loading Vendors"
+          message={error.message}
+          onRetry={() => window.location.reload()}
+        />
+      </PageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <h1 className="text-3xl font-bold text-gray-900">Vendor Management</h1>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link
-                href="/po"
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors text-center"
+    <PageLayout title="Vendor Management">
+      <>
+        <div className="flex justify-end mb-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Link
+              href="/po"
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors text-center"
               >
                 Back to POs
               </Link>
@@ -381,8 +366,7 @@ export default function VendorsPage() {
               </div>
             </div>
           )}
-        </div>
-      </div>
-    </div>
+      </>
+    </PageLayout>
   );
 }
