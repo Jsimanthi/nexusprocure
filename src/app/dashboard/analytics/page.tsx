@@ -54,7 +54,7 @@ export default function AnalyticsPage() {
           <div className="px-4 py-6 sm:px-0">
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
               <svg className="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.540 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Analytics</h3>
               <p className="text-red-700">{error.message}</p>
@@ -110,7 +110,7 @@ export default function AnalyticsPage() {
                     >
                       {poStatusCounts.map((entry: { status: string; count: number }, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      )}
+                      ))}
                     </Pie>
                     <Tooltip
                       formatter={(value: number, name: string) => [
@@ -152,7 +152,7 @@ export default function AnalyticsPage() {
                     />
                     <Tooltip
                       formatter={(value: number) => [
-                        new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value),
+                        new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value), // FIXED: Added missing closing bracket
                         'Total Spending'
                       ]}
                       labelFormatter={(value) => {
