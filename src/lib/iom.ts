@@ -9,9 +9,8 @@ import { createIomSchema } from "./schemas";
 import * as React from "react";
 import { Session } from "next-auth";
 import { authorize } from "./auth-utils";
-import { Role } from "@/types/auth";
 import { logAudit, getAuditUser } from "./audit";
-import { Prisma } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 
 export async function generateIOMNumber(): Promise<string> {
   const year = new Date().getFullYear();

@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createPurchaseOrder, updatePOStatus, createVendor, updateVendor, deleteVendor } from './po';
 import { prisma } from './prisma';
 import { POStatus } from '@/types/po';
-import { Role } from '@/types/auth';
 import { Session } from 'next-auth';
-import { Prisma } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 
 // Mock external dependencies
 vi.mock('@/lib/prisma');

@@ -10,8 +10,7 @@ import { logAudit, getAuditUser } from "./audit";
 import { Session } from "next-auth";
 import * as React from "react";
 import { authorize } from "./auth-utils";
-import { Role } from "@/types/auth";
-import { Prisma } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 
 export async function generatePONumber(): Promise<string> {
   const year = new Date().getFullYear();

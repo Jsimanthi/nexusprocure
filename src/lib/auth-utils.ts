@@ -1,5 +1,13 @@
 import { Session } from 'next-auth';
-import { Role, roleHierarchy } from '@/types/auth';
+import { Role } from '@prisma/client';
+
+// Define a role hierarchy for authorization checks.
+// Higher number means more permissions.
+const roleHierarchy = {
+  [Role.USER]: 1,
+  [Role.MANAGER]: 2,
+  [Role.ADMIN]: 3,
+};
 
 /**
  * Checks if a user is authorized based on their role.
