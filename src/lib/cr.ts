@@ -7,6 +7,10 @@ import { sendEmail } from "./email";
 import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
 import { createCrSchema } from "./schemas";
 import * as React from "react";
+import { Session } from "next-auth";
+import { authorize } from "./auth-utils";
+import { Role } from "@/types/auth";
+import { logAudit, getAuditUser } from "./audit";
 
 export async function generateCRNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -96,10 +100,10 @@ type CreateCrData = z.infer<typeof createCrSchema> & {
   preparedById: string;
 };
 
-export async function createCheckRequest(data: CreateCrData) {
+export async function createCheckRequest(data: CreateCrData, session: Session) {
   const crNumber = await generateCRNumber();
 
-  return await prisma.checkRequest.create({
+  const createdCr = await prisma.checkRequest.create({
     data: {
       ...data,
       crNumber,
@@ -115,16 +119,30 @@ export async function createCheckRequest(data: CreateCrData) {
       requestedBy: { select: { name: true, email: true } },
     }
   });
+
+  const auditUser = getAuditUser(session);
+  await logAudit("CREATE", {
+    model: "CheckRequest",
+    recordId: createdCr.id,
+    userId: auditUser.userId,
+    userName: auditUser.userName,
+    changes: createdCr,
+  });
+
+  return createdCr;
 }
 
-export async function updateCRStatus(id: string, status: CRStatus, userId?: string) {
+export async function updateCRStatus(id: string, status: CRStatus, session: Session) {
+  authorize(session, Role.MANAGER);
   const updateData: any = { status };
-  
+  const userId = session.user.id;
+
   const cr = await prisma.checkRequest.findUnique({
     where: { id },
     select: {
       preparedById: true,
       crNumber: true,
+      status: true, // For audit log
       preparedBy: {
         select: { name: true, email: true }
       }
@@ -135,9 +153,9 @@ export async function updateCRStatus(id: string, status: CRStatus, userId?: stri
     throw new Error("Check Request or originator not found.");
   }
 
-  if (status === CRStatus.PENDING_APPROVAL && userId) {
+  if (status === CRStatus.PENDING_APPROVAL) {
     updateData.reviewedById = userId;
-  } else if (status === CRStatus.APPROVED && userId) {
+  } else if (status === CRStatus.APPROVED) {
     updateData.approvedById = userId;
   }
   
@@ -172,6 +190,18 @@ export async function updateCRStatus(id: string, status: CRStatus, userId?: stri
     to: cr.preparedBy.email,
     subject: `Status Update for CR: ${cr.crNumber}`,
     react: emailComponent,
+  });
+
+  const auditUser = getAuditUser(session);
+  await logAudit("STATUS_CHANGE", {
+    model: "CheckRequest",
+    recordId: id,
+    userId: auditUser.userId,
+    userName: auditUser.userName,
+    changes: {
+      from: cr.status,
+      to: status,
+    },
   });
 
   return updatedCr;

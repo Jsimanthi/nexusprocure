@@ -9,6 +9,8 @@ import { createPoSchema, createVendorSchema, updateVendorSchema } from "./schema
 import { logAudit, getAuditUser } from "./audit";
 import { Session } from "next-auth";
 import * as React from "react";
+import { authorize } from "./auth-utils";
+import { Role } from "@/types/auth";
 
 export async function generatePONumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -115,20 +117,23 @@ export async function getVendorById(id: string) {
 type CreateVendorData = z.infer<typeof createVendorSchema>;
 type UpdateVendorData = z.infer<typeof updateVendorSchema>;
 
-export async function createVendor(data: CreateVendorData) {
+export async function createVendor(data: CreateVendorData, session: Session) {
+  authorize(session, Role.ADMIN);
   return await prisma.vendor.create({
     data
   });
 }
 
-export async function updateVendor(id: string, data: UpdateVendorData) {
+export async function updateVendor(id: string, data: UpdateVendorData, session: Session) {
+  authorize(session, Role.ADMIN);
   return await prisma.vendor.update({
     where: { id },
     data
   });
 }
 
-export async function deleteVendor(id: string) {
+export async function deleteVendor(id: string, session: Session) {
+  authorize(session, Role.ADMIN);
   return await prisma.vendor.delete({
     where: { id }
   });
@@ -216,6 +221,7 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
 }
 
 export async function updatePOStatus(id: string, status: POStatus, session: Session) {
+  authorize(session, Role.MANAGER);
   const updateData: any = { status };
   const userId = session.user.id;
   

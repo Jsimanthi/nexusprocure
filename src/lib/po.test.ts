@@ -1,18 +1,29 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createPurchaseOrder } from './po';
+import { createPurchaseOrder, updatePOStatus, createVendor, updateVendor, deleteVendor } from './po';
 import { prisma } from './prisma';
 import { POStatus } from '@/types/po';
+import { Role } from '@/types/auth';
+import { Session } from 'next-auth';
 
 // Mock external dependencies
 vi.mock('@/lib/prisma');
 vi.mock('@/lib/email');
 vi.mock('@/lib/notification');
+vi.mock('@/lib/audit');
+import { getAuditUser } from './audit';
+
+const mockUserSession = (role: Role): Session => ({
+  user: { id: `user-${role.toLowerCase()}-id`, name: `${role} User`, role },
+  expires: '2099-01-01T00:00:00.000Z',
+});
 
 describe('Purchase Order Functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01'));
+    // @ts-ignore
+    vi.mocked(getAuditUser).mockReturnValue({ userId: 'mock-user-id', userName: 'Mock User' });
   });
 
   afterEach(() => {
@@ -36,7 +47,7 @@ describe('Purchase Order Functions', () => {
         requestedById: 'user-requested-id',
         attachments: [], // Explicitly empty
       };
-      const session = { user: { id: 'user-prepared-id', name: 'Test User' } } as any;
+      const session = mockUserSession(Role.USER);
 
       // @ts-ignore
       prisma.purchaseOrder.count.mockResolvedValue(0);
@@ -72,7 +83,7 @@ describe('Purchase Order Functions', () => {
           { url: 'http://example.com/file1.pdf', filename: 'file1.pdf', filetype: 'application/pdf', size: 12345 },
         ],
       };
-      const session = { user: { id: 'user-prepared-id', name: 'Test User' } } as any;
+      const session = mockUserSession(Role.USER);
 
       // @ts-ignore
       prisma.purchaseOrder.count.mockResolvedValue(0);
@@ -94,6 +105,82 @@ describe('Purchase Order Functions', () => {
           }),
         })
       );
+    });
+  });
+
+  describe('updatePOStatus', () => {
+    const poId = 'po-123';
+    const userSession = mockUserSession(Role.USER);
+    const managerSession = mockUserSession(Role.MANAGER);
+    const adminSession = mockUserSession(Role.ADMIN);
+
+    beforeEach(() => {
+      // @ts-ignore
+      prisma.purchaseOrder.findUnique.mockResolvedValue({
+        id: poId,
+        preparedById: 'user-prepared-id',
+        poNumber: 'PO-2024-0001',
+        status: POStatus.DRAFT,
+        preparedBy: { name: 'Test User', email: 'test@example.com' },
+      });
+      // @ts-ignore
+      prisma.purchaseOrder.update.mockResolvedValue({});
+    });
+
+    it('should throw an error if a USER tries to approve a PO', async () => {
+      await expect(
+        updatePOStatus(poId, POStatus.APPROVED, userSession)
+      ).rejects.toThrow('Not authorized to perform this action.');
+    });
+
+    it('should allow a MANAGER to approve a PO', async () => {
+      await expect(
+        updatePOStatus(poId, POStatus.APPROVED, managerSession)
+      ).resolves.not.toThrow();
+      expect(prisma.purchaseOrder.update).toHaveBeenCalled();
+    });
+
+    it('should allow an ADMIN to approve a PO', async () => {
+      await expect(
+        updatePOStatus(poId, POStatus.APPROVED, adminSession)
+      ).resolves.not.toThrow();
+      expect(prisma.purchaseOrder.update).toHaveBeenCalled();
+    });
+  });
+
+  describe('Vendor Functions', () => {
+    const userSession = mockUserSession(Role.USER);
+    const managerSession = mockUserSession(Role.MANAGER);
+    const adminSession = mockUserSession(Role.ADMIN);
+    const vendorData = { name: 'New Vendor', address: '123 Vendor St', contactInfo: 'info', email: 'v@e.com', phone: '123' };
+    const vendorId = 'vendor-123';
+
+    it('should prevent USER from creating a vendor', async () => {
+      await expect(createVendor(vendorData, userSession)).rejects.toThrow('Not authorized to perform this action.');
+    });
+
+    it('should prevent MANAGER from creating a vendor', async () => {
+      await expect(createVendor(vendorData, managerSession)).rejects.toThrow('Not authorized to perform this action.');
+    });
+
+    it('should allow ADMIN to create a vendor', async () => {
+      await expect(createVendor(vendorData, adminSession)).resolves.not.toThrow();
+    });
+
+    it('should prevent USER from updating a vendor', async () => {
+      await expect(updateVendor(vendorId, vendorData, userSession)).rejects.toThrow('Not authorized to perform this action.');
+    });
+
+    it('should allow ADMIN to update a vendor', async () => {
+      await expect(updateVendor(vendorId, vendorData, adminSession)).resolves.not.toThrow();
+    });
+
+    it('should prevent MANAGER from deleting a vendor', async () => {
+      await expect(deleteVendor(vendorId, managerSession)).rejects.toThrow('Not authorized to perform this action.');
+    });
+
+    it('should allow ADMIN to delete a vendor', async () => {
+      await expect(deleteVendor(vendorId, adminSession)).resolves.not.toThrow();
     });
   });
 });
