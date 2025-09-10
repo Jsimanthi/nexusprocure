@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
 import { getPOById } from "@/lib/po";
 import { createCheckRequest } from "@/lib/cr";
-import { CRStatus } from "@/types/cr";
+import { CRStatus, PaymentMethod } from "@/types/cr";
 
 export async function POST(
   request: NextRequest,
@@ -33,11 +33,25 @@ export async function POST(
       );
     }
 
+    const body = await request.json();
+
+    const paymentMethodValues = Object.values(PaymentMethod);
+    if (!body.paymentMethod || !paymentMethodValues.includes(body.paymentMethod as PaymentMethod)) {
+      return NextResponse.json(
+        { error: `Invalid or missing paymentMethod. Must be one of: ${paymentMethodValues.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
     const cr = await createCheckRequest({
       title: `CR for ${po.title}`,
       poId: po.id,
       paymentTo: po.vendor?.name || 'N/A',
       grandTotal: po.grandTotal,
+      totalAmount: po.totalAmount,
+      taxAmount: po.taxAmount,
+      paymentMethod: body.paymentMethod,
+      paymentDate: new Date(),
       preparedById: session.user.id,
       requestedById: po.requestedById,
       purpose: `Payment for PO #${po.poNumber}`,
