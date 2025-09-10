@@ -23,6 +23,8 @@ When working with the AI, the project is configured to use SQLite out of the box
 
 When you are ready to run the application on your local machine or deploy it to a production server, you will use your existing PostgreSQL database. Here is the correct sequence of steps to get the application running with PostgreSQL.
 
+**A Note on How This Works:** The project uses the main `prisma/schema.prisma` (configured for SQLite) as the single source of truth. The `npm run build` command automatically generates a temporary, PostgreSQL-compatible schema. The migration files in `prisma/migrations` are generated from the base SQLite schema, but because they contain standard SQL, they are compatible with PostgreSQL and can be safely applied to your production database.
+
 ### Step 1: Configure Environment Variables
 In your target environment (either your local machine or production server), create a `.env` file or set the environment variables directly. The most important variable is `DATABASE_URL`, which must point to your PostgreSQL instance.
 
