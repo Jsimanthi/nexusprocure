@@ -194,15 +194,20 @@ describe('Check Request (CR) Functions', () => {
     const managerSession = mockUserSession(Role.MANAGER);
 
     beforeEach(() => {
+      const managerUser = { id: 'user-manager-id', name: 'Manager User', email: 'manager@example.com' };
       vi.mocked(prisma.checkRequest.findUnique).mockResolvedValue({
         ...mockCheckRequest,
         id: crId,
         status: CRStatus.DRAFT,
+        preparedBy: managerUser,
+        preparedById: managerUser.id,
       });
       vi.mocked(prisma.checkRequest.update).mockResolvedValue({
         ...mockCheckRequest,
         id: crId,
         status: CRStatus.APPROVED,
+        preparedBy: managerUser,
+        preparedById: managerUser.id,
       });
     });
 

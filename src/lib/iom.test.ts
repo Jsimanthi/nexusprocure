@@ -81,12 +81,14 @@ describe('IOM Functions', () => {
     const adminSession = mockUserSession(Role.ADMIN);
 
     beforeEach(() => {
+      const managerUser = { id: 'user-manager-id', name: 'Manager User', email: 'manager@example.com' };
       // @ts-expect-error - We're providing a partial mock object
       vi.mocked(prisma.iOM.findUnique).mockResolvedValue({
         id: iomId,
         preparedById: 'user-prepared-id',
         iomNumber: 'IOM-2024-0001',
         status: IOMStatus.DRAFT,
+        preparedBy: managerUser,
       });
       // @ts-expect-error - We're providing a partial mock object
       vi.mocked(prisma.iOM.update).mockResolvedValue({});

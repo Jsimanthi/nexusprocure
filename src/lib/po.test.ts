@@ -153,12 +153,14 @@ describe('Purchase Order Functions', () => {
     const adminSession = mockUserSession(Role.ADMIN);
 
     beforeEach(() => {
+      const managerUser = { id: 'user-manager-id', name: 'Manager User', email: 'manager@example.com' };
       // @ts-expect-error - We are providing a partial mock object
       vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
         id: poId,
         preparedById: 'user-prepared-id',
         poNumber: 'PO-2024-0001',
         status: POStatus.DRAFT,
+        preparedBy: managerUser,
       });
       // @ts-expect-error - We are providing a partial mock object
       vi.mocked(prisma.purchaseOrder.update).mockResolvedValue({});
