@@ -125,7 +125,7 @@ type CreateCrData = z.infer<typeof createCrSchema> & {
 };
 
 export async function createCheckRequest(data: CreateCrData, session: Session) {
-  await authorize(session, 'CREATE_CR');
+  authorize(session, 'CREATE_CR');
   if (data.poId) {
     const po = await prisma.purchaseOrder.findUnique({
       where: { id: data.poId },
@@ -191,13 +191,13 @@ export async function createCheckRequest(data: CreateCrData, session: Session) {
 export async function updateCRStatus(id: string, status: CRStatus, session: Session) {
   switch (status) {
     case CRStatus.APPROVED:
-      await authorize(session, 'APPROVE_CR');
+      authorize(session, 'APPROVE_CR');
       break;
     case CRStatus.REJECTED:
-      await authorize(session, 'REJECT_CR');
+      authorize(session, 'REJECT_CR');
       break;
     default:
-      await authorize(session, 'UPDATE_CR');
+      authorize(session, 'UPDATE_CR');
       break;
   }
   

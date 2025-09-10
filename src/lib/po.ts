@@ -140,7 +140,7 @@ type CreateVendorData = z.infer<typeof createVendorSchema>;
 type UpdateVendorData = z.infer<typeof updateVendorSchema>;
 
 export async function createVendor(data: CreateVendorData, session: Session) {
-  await authorize(session, 'MANAGE_VENDORS');
+  authorize(session, 'MANAGE_VENDORS');
   return await prisma.vendor.create({
     data,
   });
@@ -151,7 +151,7 @@ export async function updateVendor(
   data: UpdateVendorData,
   session: Session
 ) {
-  await authorize(session, 'MANAGE_VENDORS');
+  authorize(session, 'MANAGE_VENDORS');
   return await prisma.vendor.update({
     where: { id },
     data,
@@ -159,7 +159,7 @@ export async function updateVendor(
 }
 
 export async function deleteVendor(id: string, session: Session) {
-  await authorize(session, 'MANAGE_VENDORS');
+  authorize(session, 'MANAGE_VENDORS');
   return await prisma.vendor.delete({
     where: { id },
   });
@@ -171,7 +171,7 @@ type CreatePoData = z.infer<typeof createPoSchema> & {
 };
 
 export async function createPurchaseOrder(data: CreatePoData, session: Session) {
-  await authorize(session, 'CREATE_PO');
+  authorize(session, 'CREATE_PO');
   const { items, attachments, ...restOfData } = data;
 
   let totalAmount = 0;
@@ -264,13 +264,13 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
 export async function updatePOStatus(id: string, status: POStatus, session: Session) {
   switch (status) {
     case POStatus.APPROVED:
-      await authorize(session, 'APPROVE_PO');
+      authorize(session, 'APPROVE_PO');
       break;
     case POStatus.REJECTED:
-      await authorize(session, 'REJECT_PO');
+      authorize(session, 'REJECT_PO');
       break;
     default:
-      await authorize(session, 'UPDATE_PO');
+      authorize(session, 'UPDATE_PO');
       break;
   }
   

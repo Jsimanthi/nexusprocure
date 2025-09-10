@@ -116,7 +116,7 @@ type CreateIomData = z.infer<typeof createIomSchema> & {
 };
 
 export async function createIOM(data: CreateIomData, session: Session) {
-  await authorize(session, 'CREATE_IOM');
+  authorize(session, 'CREATE_IOM');
   const { items, ...restOfData } = data;
   const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
@@ -179,13 +179,13 @@ export async function updateIOMStatus(id: string, status: IOMStatus, session: Se
   // Different permissions are required for different status updates
   switch (status) {
     case IOMStatus.APPROVED:
-      await authorize(session, 'APPROVE_IOM');
+      authorize(session, 'APPROVE_IOM');
       break;
     case IOMStatus.REJECTED:
-      await authorize(session, 'REJECT_IOM');
+      authorize(session, 'REJECT_IOM');
       break;
     default:
-      await authorize(session, 'UPDATE_IOM');
+      authorize(session, 'UPDATE_IOM');
       break;
   }
   
@@ -265,7 +265,7 @@ export async function updateIOMStatus(id: string, status: IOMStatus, session: Se
 }
 
 export async function deleteIOM(id: string, session: Session) {
-  await authorize(session, 'DELETE_IOM');
+  authorize(session, 'DELETE_IOM');
   const iomToDelete = await prisma.iOM.findUnique({ where: { id } });
 
   if (iomToDelete) {

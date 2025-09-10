@@ -6,6 +6,8 @@ const permissions = [
   // User Permissions
   'MANAGE_USERS',
   'MANAGE_ROLES',
+  // Dashboard / Analytics
+  'VIEW_ANALYTICS',
   // Vendor Permissions
   'MANAGE_VENDORS',
   // IOM Permissions
@@ -44,6 +46,7 @@ const roles = {
     'APPROVE_CR',
     'REJECT_CR',
     'MANAGE_VENDORS',
+    'VIEW_ANALYTICS',
   ],
   USER: [
     'CREATE_IOM',

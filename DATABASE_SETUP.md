@@ -40,7 +40,13 @@ If this is a fresh checkout, install all the necessary dependencies:
 npm install
 ```
 
-### Step 3: Build the Application for Production
+### Step 3: Seed the Database (First-Time Setup)
+After installing dependencies, you must seed the database with the initial Roles and Permissions. This is a one-time setup step.
+```bash
+npx prisma db seed
+```
+
+### Step 4: Build the Application for Production
 This is a critical step. The build command prepares the application to connect to PostgreSQL.
 
 ```bash

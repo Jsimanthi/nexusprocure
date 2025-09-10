@@ -65,12 +65,29 @@ export const authOptions: NextAuthConfig = {
           return null;
         }
 
-        // Return user with roleId
+        // Fetch permissions for the role
+        let permissions: string[] = [];
+        if (user.roleId) {
+          const roleWithPermissions = await prisma.role.findUnique({
+            where: { id: user.roleId },
+            include: {
+              permissions: { include: { permission: true } },
+            },
+          });
+          if (roleWithPermissions) {
+            permissions = roleWithPermissions.permissions.map(
+              (p) => p.permission.name
+            );
+          }
+        }
+
+        // Return user with roleId and permissions
         return {
           id: user.id,
           email: user.email,
           name: user.name || "User",
           roleId: user.roleId,
+          permissions,
         };
       },
     }),
@@ -79,12 +96,14 @@ export const authOptions: NextAuthConfig = {
     async jwt({ token, user }) {
       if (user) {
         token.roleId = user.roleId;
+        token.permissions = user.permissions;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.roleId = token.roleId;
+        session.user.permissions = token.permissions;
         session.user.id = token.sub as string;
       }
       return session;
