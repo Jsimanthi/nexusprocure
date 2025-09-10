@@ -5,10 +5,11 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PurchaseOrder, POStatus } from "@/types/po";
+import { PaymentMethod } from "@/types/cr";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
-import { getPOStatusColor} from "@/lib/utils";
+import { getPOStatusColor } from "@/lib/utils";
 
 export default function PODetailPage() {
   const params = useParams();
@@ -17,6 +18,9 @@ export default function PODetailPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
+    PaymentMethod.CHEQUE
+  );
 
   useEffect(() => {
     if (params.id) {
@@ -67,18 +71,25 @@ export default function PODetailPage() {
   const convertToCR = async () => {
     setConverting(true);
     try {
-      const response = await fetch(`/api/cr/po/${params.id}`, {
+      const response = await fetch(`/api/po/${params.id}/convert`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ paymentMethod }),
       });
 
       if (response.ok) {
         const cr = await response.json();
         router.push(`/cr/${cr.id}`);
       } else {
-        console.error("Failed to convert PO to CR");
+        const errorData = await response.json();
+        console.error("Failed to convert PO to CR:", errorData.error);
+        alert(`Failed to convert PO to CR: ${errorData.error}`);
       }
     } catch (error) {
       console.error("Error converting PO to CR:", error);
+       alert("An unexpected error occurred while converting the PO to a CR.");
     } finally {
       setConverting(false);
     }
@@ -329,7 +340,32 @@ export default function PODetailPage() {
             {/* Convert to CR Button */}
             {canConvertToCR(po.status) && (
               <div className="bg-white shadow rounded-lg p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Payment Processing</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Payment Processing
+                </h3>
+                <div className="mb-4">
+                  <label
+                    htmlFor="paymentMethod"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Payment Method
+                  </label>
+                  <select
+                    id="paymentMethod"
+                    name="paymentMethod"
+                    value={paymentMethod}
+                    onChange={(e) =>
+                      setPaymentMethod(e.target.value as PaymentMethod)
+                    }
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                  >
+                    {Object.values(PaymentMethod).map((method) => (
+                      <option key={method} value={method}>
+                        {method.replace("_", " ")}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <button
                   onClick={convertToCR}
                   disabled={converting}
