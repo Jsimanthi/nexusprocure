@@ -4,11 +4,12 @@ import { auth } from "@/lib/auth-server";
 import { getIOMById } from "@/lib/iom";
 import { createPurchaseOrder } from "@/lib/po";
 
-interface RouteParams {
-  params: { id: string };
-}
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth();
     
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     
     // Get the IOM to convert
-    const iom = await getIOMById(params.id);
+    const iom = await getIOMById(id);
     
     if (!iom) {
       return NextResponse.json({ error: "IOM not found" }, { status: 404 });
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       items: poItems,
       preparedById: session.user.id,
       requestedById: iom.requestedById,
-    });
+    }, session); // <-- Add session as second argument
 
     return NextResponse.json(po, { status: 201 });
   } catch (error) {

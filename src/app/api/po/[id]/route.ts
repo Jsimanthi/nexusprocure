@@ -8,7 +8,12 @@ interface RouteParams {
   params: { id: string };
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+
   try {
     const session = await auth();
     
@@ -16,7 +21,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const po = await getPOById(params.id);
+    const po = await getPOById(id);
     
     if (!po) {
       return NextResponse.json({ error: "PO not found" }, { status: 404 });
@@ -44,7 +49,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+
   try {
     const session = await auth();
     
@@ -70,7 +80,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const po = await updatePOStatus(params.id, body.status, session);
+    const po = await updatePOStatus(id, body.status, session);
     
     if (!po) {
       return NextResponse.json({ error: "PO not found" }, { status: 404 });

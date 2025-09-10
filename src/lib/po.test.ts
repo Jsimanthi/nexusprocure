@@ -1,9 +1,15 @@
+// src/lib/po.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createPurchaseOrder, updatePOStatus, createVendor, updateVendor, deleteVendor } from './po';
 import { prisma } from './prisma';
 import { POStatus } from '@/types/po';
 import { Session } from 'next-auth';
 import { Prisma, Role } from '@prisma/client';
+import { createVendorSchema } from './schemas';
+import { z } from 'zod';
+
+// Define the type from the Zod schema
+type CreateVendorData = z.infer<typeof createVendorSchema>;
 
 // Mock external dependencies
 vi.mock('@/lib/prisma');
@@ -13,7 +19,7 @@ vi.mock('@/lib/audit');
 import { getAuditUser } from './audit';
 
 const mockUserSession = (role: Role): Session => ({
-  user: { id: `user-${role.toLowerCase()}-id`, name: `${role} User`, role },
+  user: { id: `user-${role.toLowerCase()}-id`, name: `${role} User`, role, email: `${role.toLowerCase()}@example.com` },
   expires: '2099-01-01T00:00:00.000Z',
 });
 
@@ -22,7 +28,6 @@ describe('Purchase Order Functions', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01'));
-    // @ts-ignore
     vi.mocked(getAuditUser).mockReturnValue({ userId: 'mock-user-id', userName: 'Mock User' });
   });
 
@@ -49,10 +54,9 @@ describe('Purchase Order Functions', () => {
       };
       const session = mockUserSession(Role.USER);
 
-      // @ts-ignore
-      prisma.purchaseOrder.count.mockResolvedValue(0);
-      // @ts-ignore
-      prisma.purchaseOrder.create.mockResolvedValue({ id: 'po-123', ...inputData });
+      vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
+      // @ts-expect-error - We are providing a partial mock object to resolve the promise
+      vi.mocked(prisma.purchaseOrder.create).mockResolvedValue({ id: 'po-123', ...inputData });
 
       // Act
       await createPurchaseOrder(inputData, session);
@@ -85,10 +89,9 @@ describe('Purchase Order Functions', () => {
       };
       const session = mockUserSession(Role.USER);
 
-      // @ts-ignore
-      prisma.purchaseOrder.count.mockResolvedValue(0);
-      // @ts-ignore
-      prisma.purchaseOrder.create.mockResolvedValue({ id: 'po-124', ...inputData });
+      vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
+      // @ts-expect-error - We are providing a partial mock object to resolve the promise
+      vi.mocked(prisma.purchaseOrder.create).mockResolvedValue({ id: 'po-124', ...inputData });
 
       // Act
       await createPurchaseOrder(inputData, session);
@@ -129,11 +132,10 @@ describe('Purchase Order Functions', () => {
         { code: 'P2002', clientVersion: 'test' }
       );
 
-      // @ts-ignore
-      prisma.purchaseOrder.count.mockResolvedValue(0);
-      // @ts-ignore
-      prisma.purchaseOrder.create
+      vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
+      vi.mocked(prisma.purchaseOrder.create)
         .mockRejectedValueOnce(uniqueConstraintError) // Fail first time
+        // @ts-expect-error - We are providing a partial mock object to resolve the promise
         .mockResolvedValue({ id: 'po-125', ...inputData }); // Succeed second time
 
       // Act
@@ -151,16 +153,15 @@ describe('Purchase Order Functions', () => {
     const adminSession = mockUserSession(Role.ADMIN);
 
     beforeEach(() => {
-      // @ts-ignore
-      prisma.purchaseOrder.findUnique.mockResolvedValue({
+      // @ts-expect-error - We are providing a partial mock object
+      vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
         id: poId,
         preparedById: 'user-prepared-id',
         poNumber: 'PO-2024-0001',
         status: POStatus.DRAFT,
-        preparedBy: { name: 'Test User', email: 'test@example.com' },
       });
-      // @ts-ignore
-      prisma.purchaseOrder.update.mockResolvedValue({});
+      // @ts-expect-error - We are providing a partial mock object
+      vi.mocked(prisma.purchaseOrder.update).mockResolvedValue({});
     });
 
     it('should throw an error if a USER tries to approve a PO', async () => {
@@ -188,7 +189,7 @@ describe('Purchase Order Functions', () => {
     const userSession = mockUserSession(Role.USER);
     const managerSession = mockUserSession(Role.MANAGER);
     const adminSession = mockUserSession(Role.ADMIN);
-    const vendorData = { name: 'New Vendor', address: '123 Vendor St', contactInfo: 'info', email: 'v@e.com', phone: '123' };
+    const vendorData: CreateVendorData = { name: 'New Vendor', address: '123 Vendor St', contactInfo: 'info', email: 'v@e.com', phone: '123', currency: 'USD' };
     const vendorId = 'vendor-123';
 
     it('should prevent USER from creating a vendor', async () => {

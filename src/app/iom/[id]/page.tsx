@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { IOM, IOMStatus } from "@/types/iom";
 import PageLayout from "@/components/PageLayout";
@@ -12,7 +12,7 @@ import { getIOMStatusColor } from "@/lib/utils";
 
 export default function IOMDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  // const router = useRouter();
   const [iom, setIom] = useState<IOM | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);

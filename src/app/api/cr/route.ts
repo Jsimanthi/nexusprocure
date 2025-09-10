@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
 import { createCheckRequest, getCRsByUser } from "@/lib/cr";
 import { createCrSchema } from "@/lib/schemas";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { fromZodError } from "zod-validation-error";
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,22 +57,26 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid input", details: validation.error.flatten() },
+        { error: fromZodError(validation.error).message },
         { status: 400 }
       );
     }
-
-    const cr = await createCheckRequest(
-      {
-        ...validation.data,
-        preparedById: session.user.id,
-      },
-      session
-    );
+    
+    const crData = {
+      ...validation.data,
+      preparedById: session.user.id,
+    };
+    
+    // FIX: Pass the full data object and the session object as separate arguments.
+    // The previous code had the `preparedById` addition inside the function call, which may have confused TypeScript.
+    const cr = await createCheckRequest(crData, session);
 
     return NextResponse.json(cr, { status: 201 });
   } catch (error) {
     console.error("Error creating CR:", error);
+    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+        return NextResponse.json({ error: "A check request with this number already exists." }, { status: 409 });
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

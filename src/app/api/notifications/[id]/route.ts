@@ -6,14 +6,19 @@ interface RouteParams {
   params: { id: string };
 }
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const notification = await markNotificationAsRead(params.id, session.user.id);
+    const notification = await markNotificationAsRead(id, session.user.id);
     return NextResponse.json(notification);
   } catch (error) {
     console.error("Error marking notification as read:", error);

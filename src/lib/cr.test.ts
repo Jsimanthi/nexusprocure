@@ -2,9 +2,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createCheckRequest, updateCRStatus } from './cr';
 import { prisma } from './prisma';
-import { CRStatus, CreateCrData, CheckRequest } from '@/types/cr';
+import { CRStatus, CreateCrData, CheckRequest, PaymentMethod } from '@/types/cr';
 import { Session } from 'next-auth';
-import { Prisma, Role } from '@prisma/client';
+import { Prisma, Role, POStatus } from '@prisma/client';
 
 import { logAudit, getAuditUser } from './audit';
 
@@ -34,13 +34,43 @@ const mockCheckRequest: CheckRequest = {
   paymentTo: 'Vendor',
   paymentDate: new Date(),
   purpose: 'Testing',
-  paymentMethod: 'CASH',
+  paymentMethod: PaymentMethod.CASH,
   bankAccount: null,
   referenceNumber: null,
   preparedById: 'user-1',
   requestedById: 'user-1',
   reviewedById: null,
   approvedById: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+// A complete mock object for the Purchase Order
+const mockPurchaseOrder = {
+  id: 'po-123',
+  poNumber: 'PO-2024-001',
+  iomId: null,
+  title: 'Test PO',
+  status: POStatus.DRAFT,
+  totalAmount: 900,
+  taxRate: 0,
+  taxAmount: 0,
+  grandTotal: 1000,
+  currency: 'USD',
+  exchangeRate: 1,
+  notes: null,
+  vendorId: 'vendor-1',
+  vendorName: 'Test Vendor',
+  vendorContact: 'contact@example.com',
+  preparedById: 'user-1',
+  requestedById: 'user-1',
+  reviewedById: null,
+  approvedById: null,
+  companyId: 'company-1',
+  companyName: 'Test Company',
+  companyAddress: '123 Main St',
+  companyContact: 'company@example.com',
+  vendorAddress: '456 Vendor St',
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -58,7 +88,7 @@ describe('Check Request (CR) Functions', () => {
         paymentTo: 'Vendor',
         paymentDate: new Date(),
         purpose: 'Testing',
-        paymentMethod: 'CASH',
+        paymentMethod: PaymentMethod.CASH,
         totalAmount: 100,
         taxAmount: 10,
         grandTotal: 110,
@@ -80,7 +110,7 @@ describe('Check Request (CR) Functions', () => {
         paymentTo: 'Vendor',
         paymentDate: new Date(),
         purpose: 'Testing',
-        paymentMethod: 'CASH',
+        paymentMethod: PaymentMethod.CASH,
         totalAmount: 100,
         taxAmount: 10,
         grandTotal: 110,
@@ -112,7 +142,7 @@ describe('Check Request (CR) Functions', () => {
         paymentTo: 'Vendor',
         paymentDate: new Date(),
         purpose: 'Testing',
-        paymentMethod: 'CASH',
+        paymentMethod: PaymentMethod.CASH,
         totalAmount: 1400,
         taxAmount: 100,
         preparedById: 'user-1',
@@ -120,9 +150,9 @@ describe('Check Request (CR) Functions', () => {
       };
       const session = mockUserSession(Role.USER);
       vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
-        ...mockCheckRequest,
+        ...mockPurchaseOrder,
         id: 'po-123',
-        grandTotal: 1000
+        grandTotal: 1000,
       });
 
       await expect(createCheckRequest(crData, session)).rejects.toThrow(
@@ -139,7 +169,7 @@ describe('Check Request (CR) Functions', () => {
         paymentTo: 'Vendor',
         paymentDate: new Date(),
         purpose: 'Testing',
-        paymentMethod: 'CASH',
+        paymentMethod: PaymentMethod.CASH,
         totalAmount: 850,
         taxAmount: 50,
         preparedById: 'user-1',
@@ -147,7 +177,7 @@ describe('Check Request (CR) Functions', () => {
       };
       const session = mockUserSession(Role.USER);
       vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
-        ...mockCheckRequest,
+        ...mockPurchaseOrder,
         id: 'po-123',
         grandTotal: 1000
       });
@@ -167,12 +197,12 @@ describe('Check Request (CR) Functions', () => {
       vi.mocked(prisma.checkRequest.findUnique).mockResolvedValue({
         ...mockCheckRequest,
         id: crId,
-        preparedBy: { name: 'Test User', email: 'test@example.com', id: 'user-prepared-id', role: Role.USER }
+        status: CRStatus.DRAFT,
       });
       vi.mocked(prisma.checkRequest.update).mockResolvedValue({
         ...mockCheckRequest,
         id: crId,
-        preparedBy: { name: 'Test User', email: 'test@example.com', id: 'user-prepared-id', role: Role.USER }
+        status: CRStatus.APPROVED,
       });
     });
 

@@ -3,12 +3,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
 import { getVendorById, updateVendor, deleteVendor } from "@/lib/po";
 import { updateVendorSchema } from "@/lib/schemas";
+import { Prisma } from "@prisma/client";
 
 interface RouteParams {
   params: { id: string };
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+
   try {
     const session = await auth();
     
@@ -16,7 +22,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const vendor = await getVendorById(params.id);
+    const vendor = await getVendorById(id);
     
     if (!vendor) {
       return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
@@ -32,7 +38,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+
   try {
     const session = await auth();
     
@@ -50,7 +61,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const vendor = await updateVendor(params.id, validation.data);
+    // FIX: Pass the session as the third argument
+    const vendor = await updateVendor(id, validation.data, session);
     
     if (!vendor) {
       return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
@@ -59,6 +71,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json(vendor);
   } catch (error) {
     console.error("Error updating vendor:", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: "A vendor with this name or email already exists." }, { status: 409 });
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -66,7 +81,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+
   try {
     const session = await auth();
     
@@ -74,11 +94,15 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await deleteVendor(params.id);
+    // FIX: Pass the session as the second argument
+    await deleteVendor(id, session);
     
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting vendor:", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2001') {
+      return NextResponse.json({ error: "Vendor not found." }, { status: 404 });
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

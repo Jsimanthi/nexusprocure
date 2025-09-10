@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// src/lib/iom.test.ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createIOM, updateIOMStatus, deleteIOM } from './iom';
 import { prisma } from './prisma';
 import { IOMStatus } from '@/types/iom';
@@ -14,23 +15,30 @@ vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
 
 const mockUserSession = (role: Role): Session => ({
-  user: { id: `user-${role.toLowerCase()}-id`, name: `${role} User`, role },
+  user: { id: `user-${role.toLowerCase()}-id`, name: `${role} User`, role, email: `${role.toLowerCase()}@example.com` },
   expires: '2099-01-01T00:00:00.000Z',
 });
 
 describe('IOM Functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // @ts-ignore
     vi.mocked(getAuditUser).mockReturnValue({ userId: 'mock-user-id', userName: 'Mock User' });
   });
 
   describe('createIOM', () => {
     it('should create an IOM and log the audit trail', async () => {
-      const iomData = { title: 'Test IOM', from: 'Dept A', to: 'Dept B', subject: 'Test', preparedById: 'user-1', items: [] };
+      const iomData = {
+        title: 'Test IOM',
+        from: 'Dept A',
+        to: 'Dept B',
+        subject: 'Test',
+        preparedById: 'user-1',
+        requestedById: 'user-1',
+        items: []
+      };
       const session = mockUserSession(Role.USER);
-      // @ts-ignore
-      prisma.iOM.create.mockResolvedValue({ id: 'new-iom-id', ...iomData });
+      // @ts-expect-error - We're providing a partial mock object
+      vi.mocked(prisma.iOM.create).mockResolvedValue({ id: 'new-iom-id', ...iomData });
 
       await createIOM(iomData, session);
 
@@ -39,18 +47,25 @@ describe('IOM Functions', () => {
     });
 
     it('should retry creating an IOM if a unique constraint violation occurs', async () => {
-      const iomData = { title: 'Test Retry IOM', from: 'Dept A', to: 'Dept B', subject: 'Test', preparedById: 'user-1', items: [] };
+      const iomData = {
+        title: 'Test Retry IOM',
+        from: 'Dept A',
+        to: 'Dept B',
+        subject: 'Test',
+        preparedById: 'user-1',
+        requestedById: 'user-1',
+        items: []
+      };
       const session = mockUserSession(Role.USER);
       const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed',
         { code: 'P2002', clientVersion: 'test' }
       );
 
-      // @ts-ignore
-      prisma.iOM.count.mockResolvedValue(0);
-      // @ts-ignore
-      prisma.iOM.create
+      vi.mocked(prisma.iOM.count).mockResolvedValue(0);
+      vi.mocked(prisma.iOM.create)
         .mockRejectedValueOnce(uniqueConstraintError)
+        // @ts-expect-error - We're providing a partial mock object
         .mockResolvedValue({ id: 'new-iom-id', ...iomData });
 
       await createIOM(iomData, session);
@@ -66,16 +81,15 @@ describe('IOM Functions', () => {
     const adminSession = mockUserSession(Role.ADMIN);
 
     beforeEach(() => {
-      // @ts-ignore
-      prisma.iOM.findUnique.mockResolvedValue({
+      // @ts-expect-error - We're providing a partial mock object
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue({
         id: iomId,
         preparedById: 'user-prepared-id',
         iomNumber: 'IOM-2024-0001',
         status: IOMStatus.DRAFT,
-        preparedBy: { name: 'Test User', email: 'test@example.com' },
       });
-      // @ts-ignore
-      prisma.iOM.update.mockResolvedValue({});
+      // @ts-expect-error - We're providing a partial mock object
+      vi.mocked(prisma.iOM.update).mockResolvedValue({});
     });
 
     it('should throw an error if a USER tries to approve an IOM', async () => {
@@ -105,8 +119,8 @@ describe('IOM Functions', () => {
     it('should delete an IOM and log the audit trail', async () => {
       const iomId = 'iom-to-delete';
       const session = mockUserSession(Role.MANAGER);
-      // @ts-ignore
-      prisma.iOM.findUnique.mockResolvedValue({ id: iomId, title: 'IOM to Delete' });
+      // @ts-expect-error - We're providing a partial mock object
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue({ id: iomId, title: 'IOM to Delete' });
 
       await deleteIOM(iomId, session);
 

@@ -2,7 +2,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
 import { createIOM, getIOMsByUser } from "@/lib/iom";
+// FIX: Correct the schema import name
 import { createIomSchema } from "@/lib/schemas";
+import { fromZodError } from "zod-validation-error";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,24 +51,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const body = await request.json();
+    
+    // FIX: Use the correct schema name
     const validation = createIomSchema.safeParse(body);
     if (!validation.success) {
+      // FIX: Return a more descriptive validation error
       return NextResponse.json(
-        { error: "Invalid input", details: validation.error.flatten() },
+        { error: fromZodError(validation.error).message },
         { status: 400 }
       );
     }
     
-    // Set both preparedBy and requestedBy from the session user ID
-    const iom = await createIOM({
+    const iomData = {
       ...validation.data,
       preparedById: session.user.id,
-      requestedById: session.user.id, // [!code ++]
-    });
+      requestedById: session.user.id,
+    };
+    
+    // FIX: Pass the session as the second argument to createIOM
+    const iom = await createIOM(iomData, session);
 
     return NextResponse.json(iom, { status: 201 });
   } catch (error) {
     console.error("Error creating IOM:", error);
+    // FIX: Add more specific error handling for Prisma errors
+    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+        return NextResponse.json({ error: "An IOM with this number already exists." }, { status: 409 });
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -16,7 +16,7 @@ export interface CreateCrData {
   requestedById: string;
   bankAccount?: string;
   referenceNumber?: string;
-  preparedById: string; // Add this field
+  preparedById: string;
 }
 
 export interface UserRef {
@@ -34,5 +34,7 @@ export interface PORef {
   vendorName: string;
 }
 
-// Re-export the types and enums from Prisma
-export type { CheckRequest, CRStatus, PaymentMethod };
+// Re-exporting the types and enums from Prisma for use in other files.
+// This allows them to be used as both types and values.
+export { CRStatus, PaymentMethod };
+export type { CheckRequest };

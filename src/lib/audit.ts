@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { User } from "@prisma/client";
+
 
 interface AuditLogData {
   model: string;

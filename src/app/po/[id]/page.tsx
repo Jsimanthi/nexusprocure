@@ -8,7 +8,7 @@ import { PurchaseOrder, POStatus } from "@/types/po";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
-import { getPOStatusColor, formatCurrency } from "@/lib/utils";
+import { getPOStatusColor} from "@/lib/utils";
 
 export default function PODetailPage() {
   const params = useParams();

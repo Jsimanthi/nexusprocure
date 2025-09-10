@@ -4,11 +4,13 @@ import { auth } from "@/lib/auth-server";
 import { getCRById, updateCRStatus } from "@/lib/cr";
 import { CRStatus } from "@/types/cr";
 
-interface RouteParams {
-  params: { id: string };
-}
+// Corrected GET handler function signature
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth();
 
@@ -16,7 +18,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const cr = await getCRById(params.id);
+    const cr = await getCRById(id);
 
     if (!cr) {
       return NextResponse.json({ error: "CR not found" }, { status: 404 });
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       cr.preparedById,
       cr.requestedById,
       cr.reviewedById,
-      cr.approvedById
+      cr.approvedById,
     ].includes(session.user.id);
 
     if (!hasAccess) {
@@ -44,7 +46,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+// Corrected PATCH handler function signature
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+
   try {
     const session = await auth();
 
@@ -70,8 +78,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Corrected line
-    const cr = await updateCRStatus(params.id, body.status, session);
+    const cr = await updateCRStatus(id, body.status, session);
 
     if (!cr) {
       return NextResponse.json({ error: "CR not found" }, { status: 404 });

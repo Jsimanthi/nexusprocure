@@ -8,7 +8,12 @@ interface RouteParams {
   params: { id: string };
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+
   try {
     const session = await auth();
     
@@ -16,7 +21,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const iom = await getIOMById(params.id);
+    const iom = await getIOMById(id);
     
     if (!iom) {
       return NextResponse.json({ error: "IOM not found" }, { status: 404 });
@@ -44,7 +49,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
+
   try {
     const session = await auth();
     
@@ -70,7 +80,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const iom = await updateIOMStatus(params.id, body.status, session.user.id);
+    const iom = await updateIOMStatus(id, body.status, session);
     
     if (!iom) {
       return NextResponse.json({ error: "IOM not found" }, { status: 404 });

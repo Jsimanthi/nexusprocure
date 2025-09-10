@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
 import { getVendors, createVendor } from "@/lib/po";
 import { createVendorSchema } from "@/lib/schemas";
+import { Prisma } from "@prisma/client";
+import { fromZodError } from "zod-validation-error";
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,17 +48,22 @@ export async function POST(request: NextRequest) {
     const validation = createVendorSchema.safeParse(body);
 
     if (!validation.success) {
+      // Return a more descriptive validation error
       return NextResponse.json(
-        { error: "Invalid input", details: validation.error.flatten() },
+        { error: fromZodError(validation.error).message },
         { status: 400 }
       );
     }
 
-    const vendor = await createVendor(validation.data);
+    // FIX: Pass the session as the second argument to createVendor
+    const vendor = await createVendor(validation.data, session);
 
     return NextResponse.json(vendor, { status: 201 });
   } catch (error) {
     console.error("Error creating vendor:", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return NextResponse.json({ error: "A vendor with this email or name already exists." }, { status: 409 });
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

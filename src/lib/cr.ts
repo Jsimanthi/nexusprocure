@@ -1,16 +1,16 @@
 // src/lib/cr.ts
 import { prisma } from "./prisma";
-import { CRStatus, PaymentMethod } from "@/types/cr";
+import { CRStatus } from "@/types/cr";
 import { z } from "zod";
 import { createNotification } from "./notification";
 import { sendEmail } from "./email";
-import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail"; // Corrected import path
+import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
 import { createCrSchema } from "./schemas";
 import * as React from "react";
 import { Session } from "next-auth";
 import { authorize } from "./auth-utils";
 import { logAudit, getAuditUser } from "./audit";
-import { Prisma, Role } from "@prisma/client"; // Corrected Prisma import
+import { Prisma, Role } from "@prisma/client";
 
 export async function generateCRNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -53,11 +53,11 @@ export async function getCRsByUser(
   if (search) {
     (where.AND as Prisma.CheckRequestWhereInput[]).push({
       OR: [
-        { crNumber: { contains: search } }, // Removed mode: 'insensitive'
-        { title: { contains: search } }, // Removed mode: 'insensitive'
-        { paymentTo: { contains: search } }, // Removed mode: 'insensitive'
-        { purpose: { contains: search } }, // Removed mode: 'insensitive'
-        { po: { poNumber: { contains: search } } }, // Removed mode: 'insensitive'
+        { crNumber: { contains: search } },
+        { title: { contains: search } },
+        { paymentTo: { contains: search } },
+        { purpose: { contains: search } },
+        { po: { poNumber: { contains: search } } },
       ],
     });
   }
@@ -67,10 +67,11 @@ export async function getCRsByUser(
       where,
       skip: (page - 1) * pageSize,
       take: pageSize,
+      // FIX: Add this 'include' to fetch the related PO data
       include: {
         po: {
-          include: {
-            vendor: true,
+          select: {
+            poNumber: true,
           },
         },
         preparedBy: { select: { name: true, email: true } },
@@ -159,6 +160,7 @@ export async function createCheckRequest(data: CreateCrData, session: Session) {
           },
           preparedBy: { select: { name: true, email: true } },
           requestedBy: { select: { name: true, email: true } },
+          reviewedBy: { select: { name: true, email: true } },
         }
       });
 

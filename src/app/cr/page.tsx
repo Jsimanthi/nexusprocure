@@ -128,9 +128,9 @@ export default function CRListPage() {
                           <div className="sm:flex">
                             <p className="flex items-center text-sm text-gray-500">
                               Payment to: {cr.paymentTo}
-                              {cr.po && (
+                              {cr.poId && (
                                 <span className="ml-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                  PO: {cr.po.poNumber}
+                                  PO: {cr.poId}
                                 </span>
                               )}
                             </p>
