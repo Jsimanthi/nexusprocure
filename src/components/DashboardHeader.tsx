@@ -7,20 +7,25 @@ import Notifications from "./Notifications";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useHasPermission } from "@/hooks/useHasPermission";
 
 export default function DashboardHeader() {
   const { data: session } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const canManageUsers = useHasPermission('MANAGE_USERS');
 
   const navLinks = [
-    { href: "/dashboard", text: "Dashboard" },
-    { href: "/dashboard/analytics", text: "Analytics" },
-    { href: "/iom", text: "IOMs" },
-    { href: "/po", text: "POs" },
-    { href: "/cr", text: "CRs" },
-    { href: "/vendors", text: "Vendors" },
+    { href: "/dashboard", text: "Dashboard", show: true },
+    { href: "/dashboard/analytics", text: "Analytics", show: useHasPermission('VIEW_ANALYTICS') },
+    { href: "/iom", text: "IOMs", show: true },
+    { href: "/po", text: "POs", show: true },
+    { href: "/cr", text: "CRs", show: true },
+    { href: "/vendors", text: "Vendors", show: true },
+    { href: "/dashboard/users", text: "Users", show: canManageUsers },
   ];
+
+  const visibleNavLinks = navLinks.filter(link => link.show);
 
   return (
     <header className="bg-white shadow-sm">
@@ -31,7 +36,7 @@ export default function DashboardHeader() {
             
             {/* Desktop Navigation */}
             <nav className="hidden md:flex ml-8 space-x-4">
-              {navLinks.map((link) => (
+              {visibleNavLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -74,7 +79,7 @@ export default function DashboardHeader() {
         {isMobileMenuOpen && (
           <div className="md:hidden pb-4">
             <nav className="grid grid-cols-2 gap-2">
-              {navLinks.map((link) => (
+              {visibleNavLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}

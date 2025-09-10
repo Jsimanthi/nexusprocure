@@ -1,0 +1,102 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth-server';
+import { authorize } from '@/lib/auth-utils';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+
+const updateRoleSchema = z.object({
+  roleId: z.string().cuid(),
+});
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    authorize(session, 'MANAGE_USERS');
+
+    const user = await prisma.user.findUnique({
+      where: { id: params.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(user);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Not authorized')) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    console.error('Error fetching user:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    authorize(session, 'MANAGE_USERS');
+
+    const userId = params.id;
+    const body = await request.json();
+
+    const { roleId } = updateRoleSchema.parse(body);
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { roleId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(updatedUser);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.errors }, { status: 400 });
+    }
+    if (error instanceof Error && error.message.includes('Not authorized')) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    console.error('Error updating user role:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
