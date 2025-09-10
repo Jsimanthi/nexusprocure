@@ -27,7 +27,7 @@ This project uses a hybrid database setup:
 
 The project is configured to handle this automatically. When you run `npm install`, the environment is set up for SQLite. When you run `npm run build`, the application is prepared for a PostgreSQL database.
 
--   **For detailed instructions** on how to set up and connect to your PostgreSQL database for production, please see the **[Database Setup Guide](./MIGRATION_GUIDE.md)**.
+-   **For detailed instructions** on how to set up and connect to your PostgreSQL database for production, please see the **[Database Setup Guide](./DATABASE_SETUP.md)**.
 
 ### 4. Configure Environment Variables
 
