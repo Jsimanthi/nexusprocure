@@ -1,100 +1,63 @@
-# Migration Guide: From SQLite to PostgreSQL
+# Database Setup Guide
 
-This guide provides step-by-step instructions to migrate the NexusProcure application database from SQLite to PostgreSQL.
+This project uses a hybrid database setup to facilitate development in different environments.
 
-## The Importance of Environment Parity
+-   **Development Environment (AI-assisted):** Uses **SQLite** for simplicity and ease of setup.
+-   **Your Environment (Local/Production):** Uses **PostgreSQL** for robustness and performance.
 
-Using SQLite for development and PostgreSQL for production can lead to subtle bugs that are difficult to diagnose. Each database has different features, constraints, and behaviors. By using PostgreSQL for both development and production, you ensure that the application behaves identically in both environments. This principle, known as "environment parity," is a best practice for building reliable, world-class applications.
-
-This guide will help you set up a local PostgreSQL instance using Docker, which is a simple and effective way to achieve environment parity.
-
-## Prerequisites
-
-- **Docker Desktop:** Make sure you have Docker Desktop installed and running on your machine. You can download it from the [official Docker website](https://www.docker.com/products/docker-desktop/).
+This guide explains how to work with this setup.
 
 ---
 
-## Step 1: Set Up PostgreSQL with Docker
+## Development Environment (AI)
 
-The easiest way to run a local PostgreSQL database is with Docker.
+When working with the AI, the project is configured to use SQLite out of the box.
+- The `prisma/schema.prisma` file is set to use the `sqlite` provider.
+- The `DATABASE_URL` in your `.env` file should point to a local database file, for example:
+  `DATABASE_URL="file:./dev.db"`
+- No further setup is required. The `npm install` command will automatically generate the correct Prisma client for SQLite.
 
-1.  **Create a `docker-compose.yml` file** in the root directory of the project with the following content:
+---
 
-    ```yml
-    version: '3.8'
-    services:
-      db:
-        image: postgres:15
-        restart: always
-        environment:
-          - POSTGRES_USER=nexususer
-          - POSTGRES_PASSWORD=nexuspassword
-          - POSTGRES_DB=nexusprocure
-        ports:
-          - '5432:5432'
-        volumes:
-          - postgres_data:/var/lib/postgresql/data
+## Production & Local PostgreSQL Setup (Your Environment)
 
-    volumes:
-      postgres_data:
-    ```
+When you are ready to run the application on your local machine or deploy it to your company's server, you will use your existing PostgreSQL database. The project is designed to make this transition seamless.
 
-2.  **Start the database container** by running the following command in your terminal from the project root:
+### How It Works
+You do **not** need to manually change any code to switch databases.
+- The `npm run build` command automatically triggers a script that creates a production-ready Prisma schema configured for **PostgreSQL**.
+- The build process then uses this new schema to generate the correct Prisma client for your production application.
 
-    ```bash
-    docker-compose up -d
-    ```
+### Step 1: Configure Your Database Connection
+In your production environment (or on your local machine), set the `DATABASE_URL` environment variable to point to your PostgreSQL instance.
 
-    This command will download the PostgreSQL image and start a container in the background. Your local PostgreSQL database is now running.
+**Example:**
+```
+DATABASE_URL="postgresql://YOUR_USER:YOUR_PASSWORD@YOUR_HOST:5432/YOUR_DATABASE?schema=public"
+```
+Replace the placeholders with your actual database credentials.
 
-## Step 2: Configure Environment Variables
+### Step 2: Run Production Migrations
+Before you run the application for the first time, you need to create the database tables in your PostgreSQL database.
 
-The application connects to the database using a URL specified in an environment variable.
+Run the following command in your terminal:
+```bash
+npx prisma migrate deploy --schema=prisma/schema.prod.prisma
+```
+This command will apply all existing migrations to your PostgreSQL database.
 
-1.  **Create a `.env` file** in the project root. This file is listed in `.gitignore`, so it will not be committed to version control.
-
-2.  **Add the database connection URL** to your new `.env` file. This URL must match the credentials you set in the `docker-compose.yml` file.
-
-    ```env
-    DATABASE_URL="postgresql://nexususer:nexuspassword@localhost:5432/nexusprocure?schema=public"
-    ```
-
-## Step 3: How the Database Schema is Handled
-
-This project is configured to use **SQLite** for local development and **PostgreSQL** for production. This is handled automatically by the build process.
-
--   **For Development:** The `prisma/schema.prisma` file is configured for SQLite. When you run `npm install`, the `postinstall` script automatically generates the correct Prisma Client for SQLite.
--   **For Production:** When you run `npm run build`, a script automatically generates a production-ready schema (`prisma/schema.prod.prisma`) with the provider set to `postgresql`. The build process then uses this schema to generate the correct Prisma Client for PostgreSQL.
-
-You do **not** need to manually edit the schema file.
-
-## Step 4: Run the Production Database Migration
-
-To set up your PostgreSQL database for the first time (for testing a production build locally or for deployment), you need to run a migration against it.
-
-1.  Make sure your `.env` file has the correct `DATABASE_URL` for your PostgreSQL instance.
-2.  Run the `prisma db push` or `prisma migrate deploy` command against the production schema. For a first-time setup, you can use:
-
-    ```bash
-    npx prisma migrate dev --schema=prisma/schema.prod.prisma --name init-postgres
-    ```
-    For subsequent production deployments, you should use:
-    ```bash
-    npx prisma migrate deploy --schema=prisma/schema.prod.prisma
-    ```
-
-## Step 5: Build and Start the Application
-
-To run the application in a production-like mode connected to your PostgreSQL database:
-
+### Step 3: Build and Run the Application
 1.  **Build the application:**
     ```bash
     npm run build
     ```
+    This command prepares the app for production, including generating the PostgreSQL-compatible Prisma client.
+
 2.  **Start the server:**
+    ```bash
+    npm start
+    ```
+The application will now be running connected to your PostgreSQL database.
 
-```bash
-npm run dev
-```
-
-The application will now connect to your local PostgreSQL database. You have successfully migrated your environment and achieved parity with a production-like setup.
+---
+*Note: You do not need to use Docker for this setup, as you are using your own existing PostgreSQL instances.*

@@ -27,7 +27,7 @@ This project uses a hybrid database setup:
 
 The project is configured to handle this automatically. When you run `npm install`, the environment is set up for SQLite. When you run `npm run build`, the application is prepared for a PostgreSQL database.
 
--   **For detailed instructions** on how to set up a PostgreSQL database for production or for testing a production build locally, please see the **[Migration Guide](./MIGRATION_GUIDE.md)**.
+-   **For detailed instructions** on how to set up and connect to your PostgreSQL database for production, please see the **[Database Setup Guide](./MIGRATION_GUIDE.md)**.
 
 ### 4. Configure Environment Variables
 
@@ -37,7 +37,7 @@ You need to create a `.env` file to store your local environment variables.
     ```bash
     cp .env.example .env
     ```
-2.  Open the `.env` file and fill in the required values for your environment (e.g., `NEXTAUTH_SECRET`, `PUSHER_SECRET`, etc.). The `DATABASE_URL` should already be configured for the local Docker setup.
+2.  Open the `.env` file and fill in the required values for your environment (e.g., `NEXTAUTH_SECRET`, `PUSHER_SECRET`, etc.). For development, the `DATABASE_URL` should point to the local SQLite file (e.g., `file:./dev.db`).
 
 ### 5. Run the Development Server
 
