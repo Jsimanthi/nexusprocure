@@ -10,7 +10,7 @@ import * as React from "react";
 import { Session } from "next-auth";
 import { authorize } from "./auth-utils";
 import { logAudit, getAuditUser } from "./audit";
-import { Prisma, Role } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 export async function generateIOMNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -116,6 +116,7 @@ type CreateIomData = z.infer<typeof createIomSchema> & {
 };
 
 export async function createIOM(data: CreateIomData, session: Session) {
+  await authorize(session, 'CREATE_IOM');
   const { items, ...restOfData } = data;
   const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
@@ -175,7 +176,18 @@ export async function createIOM(data: CreateIomData, session: Session) {
 }
 
 export async function updateIOMStatus(id: string, status: IOMStatus, session: Session) {
-  authorize(session, Role.MANAGER);
+  // Different permissions are required for different status updates
+  switch (status) {
+    case IOMStatus.APPROVED:
+      await authorize(session, 'APPROVE_IOM');
+      break;
+    case IOMStatus.REJECTED:
+      await authorize(session, 'REJECT_IOM');
+      break;
+    default:
+      await authorize(session, 'UPDATE_IOM');
+      break;
+  }
   
   // Use a more specific type instead of 'any'
   interface UpdateData {
@@ -253,7 +265,7 @@ export async function updateIOMStatus(id: string, status: IOMStatus, session: Se
 }
 
 export async function deleteIOM(id: string, session: Session) {
-  authorize(session, Role.MANAGER);
+  await authorize(session, 'DELETE_IOM');
   const iomToDelete = await prisma.iOM.findUnique({ where: { id } });
 
   if (iomToDelete) {

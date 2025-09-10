@@ -8,14 +8,17 @@ import { Prisma, Role, POStatus } from '@prisma/client';
 
 import { logAudit, getAuditUser } from './audit';
 
+import { authorize } from './auth-utils';
+
 // Mock external dependencies
 vi.mock('@/lib/prisma');
 vi.mock('@/lib/email');
 vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
+vi.mock('@/lib/auth-utils');
 
-const mockUserSession = (role: Role): Session => ({
-  user: { id: `user-${role.toLowerCase()}-id`, name: `${role} User`, role, email: `${role.toLowerCase()}@example.com` },
+const mockUserSession = (roleId = 'user-role-id'): Session => ({
+  user: { id: 'user-id', name: 'Test User', roleId, email: `test@example.com` },
   expires: '2099-01-01T00:00:00.000Z',
 });
 
@@ -95,10 +98,13 @@ describe('Check Request (CR) Functions', () => {
         preparedById: 'user-1',
         requestedById: 'user-1'
       };
-      const session = mockUserSession(Role.USER);
+      const session = mockUserSession();
+      vi.mocked(authorize).mockResolvedValue(true);
       vi.mocked(prisma.checkRequest.create).mockResolvedValue(mockCheckRequest);
 
       await createCheckRequest(crData, session);
+
+      expect(authorize).toHaveBeenCalledWith(session, 'CREATE_CR');
 
       expect(prisma.checkRequest.create).toHaveBeenCalled();
       expect(logAudit).toHaveBeenCalledWith("CREATE", expect.any(Object));
@@ -117,7 +123,8 @@ describe('Check Request (CR) Functions', () => {
         preparedById: 'user-1',
         requestedById: 'user-1'
       };
-      const session = mockUserSession(Role.USER);
+      const session = mockUserSession();
+      vi.mocked(authorize).mockResolvedValue(true);
       const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed',
         { code: 'P2002', clientVersion: 'test', meta: {} }
@@ -148,7 +155,8 @@ describe('Check Request (CR) Functions', () => {
         preparedById: 'user-1',
         requestedById: 'user-1'
       };
-      const session = mockUserSession(Role.USER);
+      const session = mockUserSession();
+      vi.mocked(authorize).mockResolvedValue(true);
       vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
         ...mockPurchaseOrder,
         id: 'po-123',
@@ -175,7 +183,8 @@ describe('Check Request (CR) Functions', () => {
         preparedById: 'user-1',
         requestedById: 'user-1'
       };
-      const session = mockUserSession(Role.USER);
+      const session = mockUserSession();
+      vi.mocked(authorize).mockResolvedValue(true);
       vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
         ...mockPurchaseOrder,
         id: 'po-123',
@@ -190,37 +199,44 @@ describe('Check Request (CR) Functions', () => {
 
   describe('updateCRStatus', () => {
     const crId = 'cr-123';
-    const userSession = mockUserSession(Role.USER);
-    const managerSession = mockUserSession(Role.MANAGER);
+    const session = mockUserSession();
 
     beforeEach(() => {
-      const managerUser = { id: 'user-manager-id', name: 'Manager User', email: 'manager@example.com' };
+      const user = { id: 'user-id', name: 'Test User', email: 'test@example.com' };
       vi.mocked(prisma.checkRequest.findUnique).mockResolvedValue({
         ...mockCheckRequest,
         id: crId,
         status: CRStatus.DRAFT,
-        preparedBy: managerUser,
-        preparedById: managerUser.id,
+        preparedBy: user,
+        preparedById: user.id,
       });
       vi.mocked(prisma.checkRequest.update).mockResolvedValue({
         ...mockCheckRequest,
         id: crId,
         status: CRStatus.APPROVED,
-        preparedBy: managerUser,
-        preparedById: managerUser.id,
+        preparedBy: user,
+        preparedById: user.id,
       });
     });
 
-    it('should throw an error if a USER tries to approve a CR', async () => {
+    it('should throw an error if user does not have APPROVE_CR permission', async () => {
+      const authError = new Error('Not authorized. Missing required permission: APPROVE_CR');
+      vi.mocked(authorize).mockRejectedValue(authError);
+
       await expect(
-        updateCRStatus(crId, CRStatus.APPROVED, userSession)
-      ).rejects.toThrow('Not authorized to perform this action.');
-      expect(logAudit).not.toHaveBeenCalled();
+        updateCRStatus(crId, CRStatus.APPROVED, session)
+      ).rejects.toThrow(authError);
+
+      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_CR');
+      expect(prisma.checkRequest.update).not.toHaveBeenCalled();
     });
 
-    it('should allow a MANAGER to approve a CR and log the action', async () => {
-      await updateCRStatus(crId, CRStatus.APPROVED, managerSession);
+    it('should allow a user with APPROVE_CR permission to approve a CR', async () => {
+      vi.mocked(authorize).mockResolvedValue(true);
 
+      await updateCRStatus(crId, CRStatus.APPROVED, session);
+
+      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_CR');
       expect(prisma.checkRequest.update).toHaveBeenCalled();
       expect(logAudit).toHaveBeenCalledWith("STATUS_CHANGE", expect.objectContaining({
         recordId: crId,
