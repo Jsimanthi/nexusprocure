@@ -1,24 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NexusProcure - IT Procurement Management System
+
+This is a comprehensive IT procurement management system built with Next.js, Prisma, and PostgreSQL.
 
 ## Getting Started
 
-First, run the development server:
+Follow these steps to get your local development environment set up and running.
+
+### 1. Clone the Repository
+
+```bash
+git clone <repository-url>
+cd nexusprocure
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Set Up the Database
+
+This project uses a hybrid database setup:
+-   **SQLite** is used for local development within this AI-assisted environment.
+-   **PostgreSQL** is used for production.
+
+The project is configured to handle this automatically. When you run `npm install`, the environment is set up for SQLite. When you run `npm run build`, the application is prepared for a PostgreSQL database.
+
+-   **For detailed instructions** on how to set up a PostgreSQL database for production or for testing a production build locally, please see the **[Migration Guide](./MIGRATION_GUIDE.md)**.
+
+### 4. Configure Environment Variables
+
+You need to create a `.env` file to store your local environment variables.
+
+1.  Make a copy of the example file:
+    ```bash
+    cp .env.example .env
+    ```
+2.  Open the `.env` file and fill in the required values for your environment (e.g., `NEXTAUTH_SECRET`, `PUSHER_SECRET`, etc.). The `DATABASE_URL` should already be configured for the local Docker setup.
+
+### 5. Run the Development Server
+
+Once your database is running and your `.env` file is configured, you can start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More
 
