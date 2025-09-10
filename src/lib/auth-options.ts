@@ -86,7 +86,7 @@ export const authOptions: NextAuthConfig = {
           id: user.id,
           email: user.email,
           name: user.name || "User",
-          roleId: user.roleId,
+          roleId: user.roleId || undefined,
           permissions,
         };
       },
