@@ -51,13 +51,15 @@ npm run build
 2.  It runs `prisma generate` using this temporary schema to create a PostgreSQL-compatible Prisma Client.
 3.  It builds the Next.js application.
 
-### Step 4: Run Database Migrations
-After the build is complete, the necessary files exist to run migrations against your PostgreSQL database.
+### Step 4: Create Database Schema
+After the build is complete, you can create the tables in your PostgreSQL database. For an initial setup, the simplest command is `prisma db push`.
 
 ```bash
-npx prisma migrate deploy --schema=prisma/schema.prod.prisma
+npx prisma db push --schema=prisma/schema.prod.prisma
 ```
-This command applies all pending migrations to the database specified in your `DATABASE_URL`, creating all the necessary tables.
+This command will inspect the production schema file and make your database schema match it. This is the recommended approach for the first-time setup of your database.
+
+**Important Note:** The `db push` command is best for prototyping and initial setup. For updating a database that already contains important data in production, you should use a proper migration strategy with `prisma migrate`. However, that requires generating migrations against a PostgreSQL database, which is outside the scope of the current AI-assisted workflow.
 
 ### Step 5: Start the Application
 Now you can start the application server, which will use the production-ready build and connect to your PostgreSQL database.
