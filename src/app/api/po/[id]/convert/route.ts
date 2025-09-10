@@ -25,10 +25,11 @@ export async function POST(
       return NextResponse.json({ error: "Purchase Order not found" }, { status: 404 });
     }
 
-    // Validate that PO is approved
-    if (po.status !== 'APPROVED') {
+    // Validate that PO status allows for CR conversion
+    const allowedStatuses = ['APPROVED', 'ORDERED', 'DELIVERED'];
+    if (!allowedStatuses.includes(po.status)) {
       return NextResponse.json(
-        { error: "Purchase Order must be approved before converting to Check Request" },
+        { error: `Purchase Order status must be one of: ${allowedStatuses.join(', ')} to be converted.` },
         { status: 400 }
       );
     }
