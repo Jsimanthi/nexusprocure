@@ -221,7 +221,9 @@ describe('Check Request (CR) Functions', () => {
 
     it('should throw an error if user does not have APPROVE_CR permission', async () => {
       const authError = new Error('Not authorized. Missing required permission: APPROVE_CR');
-      vi.mocked(authorize).mockRejectedValue(authError);
+      vi.mocked(authorize).mockImplementation(() => {
+        throw authError;
+      });
 
       await expect(
         updateCRStatus(crId, CRStatus.APPROVED, session)

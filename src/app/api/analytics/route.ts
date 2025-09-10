@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
 import { prisma } from "@/lib/prisma";
 import { POStatus } from "@/types/po";
+import { authorize } from "@/lib/auth-utils";
 
 export async function GET(_request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
-      // Assuming only ADMINs can see analytics
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    // Use the new permission-based authorization
+    authorize(session, 'VIEW_ANALYTICS');
 
     // 1. Document Counts
     const poCount = await prisma.purchaseOrder.count();

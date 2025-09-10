@@ -172,7 +172,9 @@ describe('Purchase Order Functions', () => {
 
     it('should throw an error if user lacks APPROVE_PO permission', async () => {
       const authError = new Error('Not authorized');
-      vi.mocked(authorize).mockRejectedValue(authError);
+      vi.mocked(authorize).mockImplementation(() => {
+        throw authError;
+      });
       await expect(
         updatePOStatus(poId, POStatus.APPROVED, session)
       ).rejects.toThrow(authError);
@@ -196,7 +198,9 @@ describe('Purchase Order Functions', () => {
 
     it('should prevent creating a vendor if user lacks permission', async () => {
       const authError = new Error('Not authorized');
-      vi.mocked(authorize).mockRejectedValue(authError);
+      vi.mocked(authorize).mockImplementation(() => {
+        throw authError;
+      });
       await expect(createVendor(vendorData, session)).rejects.toThrow(authError);
       expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });
@@ -209,8 +213,12 @@ describe('Purchase Order Functions', () => {
 
     it('should prevent updating a vendor if user lacks permission', async () => {
       const authError = new Error('Not authorized');
-      vi.mocked(authorize).mockRejectedValue(authError);
-      await expect(updateVendor(vendorId, vendorData, session)).rejects.toThrow(authError);
+      vi.mocked(authorize).mockImplementation(() => {
+        throw authError;
+      });
+      await expect(updateVendor(vendorId, vendorData, session)).rejects.toThrow(
+        authError
+      );
       expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });
 
@@ -222,7 +230,9 @@ describe('Purchase Order Functions', () => {
 
     it('should prevent deleting a vendor if user lacks permission', async () => {
       const authError = new Error('Not authorized');
-      vi.mocked(authorize).mockRejectedValue(authError);
+      vi.mocked(authorize).mockImplementation(() => {
+        throw authError;
+      });
       await expect(deleteVendor(vendorId, session)).rejects.toThrow(authError);
       expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });

@@ -7,7 +7,8 @@ declare module 'next-auth' {
       id: string;
       email: string;
       name: string;
-      roleId?: string; // Add roleId to the session user
+      roleId?: string;
+      permissions?: string[]; // Add permissions to the session user
     };
   }
 
@@ -15,12 +16,14 @@ declare module 'next-auth' {
     id: string;
     email: string;
     name?: string | null;
-    roleId?: string; // Add roleId to the User model
+    roleId?: string;
+    permissions?: string[]; // Add permissions to the User model for the callback
   }
 }
 
 declare module 'next-auth/jwt' {
   interface JWT {
-    roleId?: string; // Add roleId to the JWT
+    roleId?: string;
+    permissions?: string[]; // Add permissions to the JWT
   }
 }

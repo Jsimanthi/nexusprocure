@@ -101,7 +101,9 @@ describe('IOM Functions', () => {
 
     it('should throw an error if user lacks APPROVE_IOM permission', async () => {
       const authError = new Error('Not authorized');
-      vi.mocked(authorize).mockRejectedValue(authError);
+      vi.mocked(authorize).mockImplementation(() => {
+        throw authError;
+      });
       await expect(
         updateIOMStatus(iomId, IOMStatus.APPROVED, session)
       ).rejects.toThrow(authError);
