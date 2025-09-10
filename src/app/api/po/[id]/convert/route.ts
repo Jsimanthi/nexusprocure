@@ -41,7 +41,6 @@ export async function POST(
       preparedById: session.user.id,
       requestedById: po.requestedById,
       purpose: `Payment for PO #${po.poNumber}`,
-      status: CRStatus.DRAFT,
     }, session);
 
     return NextResponse.json(cr, { status: 201 });
