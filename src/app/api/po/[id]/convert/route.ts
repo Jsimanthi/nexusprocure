@@ -40,9 +40,6 @@ export async function POST(
       grandTotal: po.grandTotal,
       preparedById: session.user.id,
       requestedById: po.requestedById,
-      companyName: po.companyName,
-      companyAddress: po.companyAddress,
-      companyContact: po.companyContact,
       purpose: `Payment for PO #${po.poNumber}`,
       status: CRStatus.DRAFT,
     }, session);
