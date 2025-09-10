@@ -37,7 +37,11 @@
     "zod-validation-error": "^4.0.1",
     "zustand": "^5.0.8"
   },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  },
   "devDependencies": {
+    "ts-node": "^10.9.2",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.8.0",

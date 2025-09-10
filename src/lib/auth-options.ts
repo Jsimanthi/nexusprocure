@@ -5,11 +5,6 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 
-// Define a custom user type that includes the 'role' field
-interface ExtendedUser extends User {
-  role?: string;
-}
-
 const DEMO_PASSWORD = "password123";
 
 export const authOptions: NextAuthConfig = {
@@ -36,12 +31,18 @@ export const authOptions: NextAuthConfig = {
         // Create demo user if not exists
         if (!user) {
           const hashedPassword = await bcrypt.hash(DEMO_PASSWORD, 12);
+          const adminRole = await prisma.role.findUnique({
+            where: { name: 'ADMIN' },
+          });
+          if (!adminRole) {
+            throw new Error('ADMIN role not found. Please seed the database.');
+          }
           user = await prisma.user.create({
             data: {
               email: email,
               name: "Demo User",
               password: hashedPassword,
-              role: "ADMIN",
+              roleId: adminRole.id,
             },
           });
         }
@@ -64,26 +65,26 @@ export const authOptions: NextAuthConfig = {
           return null;
         }
 
-        // Return user with role
+        // Return user with roleId
         return {
           id: user.id,
           email: user.email,
           name: user.name || "User",
-          role: user.role || "USER",
+          roleId: user.roleId,
         };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user: ExtendedUser | undefined }) {
+    async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
+        token.roleId = user.roleId;
       }
       return token;
     },
-    async session({ session, token }: { session: Session; token: JWT }) {
+    async session({ session, token }) {
       if (session.user) {
-        session.user.role = token.role as string;
+        session.user.roleId = token.roleId;
         session.user.id = token.sub as string;
       }
       return session;

@@ -10,7 +10,7 @@ import * as React from "react";
 import { Session } from "next-auth";
 import { authorize } from "./auth-utils";
 import { logAudit, getAuditUser } from "./audit";
-import { Prisma, Role } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 export async function generateCRNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -125,6 +125,7 @@ type CreateCrData = z.infer<typeof createCrSchema> & {
 };
 
 export async function createCheckRequest(data: CreateCrData, session: Session) {
+  await authorize(session, 'CREATE_CR');
   if (data.poId) {
     const po = await prisma.purchaseOrder.findUnique({
       where: { id: data.poId },
@@ -188,7 +189,17 @@ export async function createCheckRequest(data: CreateCrData, session: Session) {
 }
 
 export async function updateCRStatus(id: string, status: CRStatus, session: Session) {
-  authorize(session, Role.MANAGER);
+  switch (status) {
+    case CRStatus.APPROVED:
+      await authorize(session, 'APPROVE_CR');
+      break;
+    case CRStatus.REJECTED:
+      await authorize(session, 'REJECT_CR');
+      break;
+    default:
+      await authorize(session, 'UPDATE_CR');
+      break;
+  }
   
   interface UpdateData {
     status: CRStatus;

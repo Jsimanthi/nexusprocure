@@ -10,7 +10,7 @@ import { logAudit, getAuditUser } from "./audit";
 import { Session } from "next-auth";
 import * as React from "react";
 import { authorize } from "./auth-utils";
-import { Prisma, Role } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 export async function generatePONumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -140,24 +140,28 @@ type CreateVendorData = z.infer<typeof createVendorSchema>;
 type UpdateVendorData = z.infer<typeof updateVendorSchema>;
 
 export async function createVendor(data: CreateVendorData, session: Session) {
-  authorize(session, Role.ADMIN);
+  await authorize(session, 'MANAGE_VENDORS');
   return await prisma.vendor.create({
-    data
+    data,
   });
 }
 
-export async function updateVendor(id: string, data: UpdateVendorData, session: Session) {
-  authorize(session, Role.ADMIN);
+export async function updateVendor(
+  id: string,
+  data: UpdateVendorData,
+  session: Session
+) {
+  await authorize(session, 'MANAGE_VENDORS');
   return await prisma.vendor.update({
     where: { id },
-    data
+    data,
   });
 }
 
 export async function deleteVendor(id: string, session: Session) {
-  authorize(session, Role.ADMIN);
+  await authorize(session, 'MANAGE_VENDORS');
   return await prisma.vendor.delete({
-    where: { id }
+    where: { id },
   });
 }
 
@@ -167,6 +171,7 @@ type CreatePoData = z.infer<typeof createPoSchema> & {
 };
 
 export async function createPurchaseOrder(data: CreatePoData, session: Session) {
+  await authorize(session, 'CREATE_PO');
   const { items, attachments, ...restOfData } = data;
 
   let totalAmount = 0;
@@ -257,7 +262,17 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
 }
 
 export async function updatePOStatus(id: string, status: POStatus, session: Session) {
-  authorize(session, Role.MANAGER);
+  switch (status) {
+    case POStatus.APPROVED:
+      await authorize(session, 'APPROVE_PO');
+      break;
+    case POStatus.REJECTED:
+      await authorize(session, 'REJECT_PO');
+      break;
+    default:
+      await authorize(session, 'UPDATE_PO');
+      break;
+  }
   
   interface UpdateData {
     status: POStatus;

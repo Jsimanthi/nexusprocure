@@ -11,15 +11,18 @@ import { z } from 'zod';
 // Define the type from the Zod schema
 type CreateVendorData = z.infer<typeof createVendorSchema>;
 
+import { authorize } from './auth-utils';
+
 // Mock external dependencies
 vi.mock('@/lib/prisma');
 vi.mock('@/lib/email');
 vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
+vi.mock('@/lib/auth-utils');
 import { getAuditUser } from './audit';
 
-const mockUserSession = (role: Role): Session => ({
-  user: { id: `user-${role.toLowerCase()}-id`, name: `${role} User`, role, email: `${role.toLowerCase()}@example.com` },
+const mockUserSession = (roleId = 'user-role-id'): Session => ({
+  user: { id: 'user-id', name: 'Test User', roleId, email: `test@example.com` },
   expires: '2099-01-01T00:00:00.000Z',
 });
 
@@ -52,8 +55,8 @@ describe('Purchase Order Functions', () => {
         requestedById: 'user-requested-id',
         attachments: [], // Explicitly empty
       };
-      const session = mockUserSession(Role.USER);
-
+      const session = mockUserSession();
+      vi.mocked(authorize).mockResolvedValue(true);
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
       // @ts-expect-error - We are providing a partial mock object to resolve the promise
       vi.mocked(prisma.purchaseOrder.create).mockResolvedValue({ id: 'po-123', ...inputData });
@@ -62,6 +65,7 @@ describe('Purchase Order Functions', () => {
       await createPurchaseOrder(inputData, session);
 
       // Assert
+      expect(authorize).toHaveBeenCalledWith(session, 'CREATE_PO');
       expect(prisma.purchaseOrder.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.not.objectContaining({ attachments: expect.any(Object) }),
@@ -87,8 +91,8 @@ describe('Purchase Order Functions', () => {
           { url: 'http://example.com/file1.pdf', filename: 'file1.pdf', filetype: 'application/pdf', size: 12345 },
         ],
       };
-      const session = mockUserSession(Role.USER);
-
+      const session = mockUserSession();
+      vi.mocked(authorize).mockResolvedValue(true);
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
       // @ts-expect-error - We are providing a partial mock object to resolve the promise
       vi.mocked(prisma.purchaseOrder.create).mockResolvedValue({ id: 'po-124', ...inputData });
@@ -97,6 +101,7 @@ describe('Purchase Order Functions', () => {
       await createPurchaseOrder(inputData, session);
 
       // Assert
+      expect(authorize).toHaveBeenCalledWith(session, 'CREATE_PO');
       expect(prisma.purchaseOrder.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -126,7 +131,8 @@ describe('Purchase Order Functions', () => {
         requestedById: 'user-requested-id',
         attachments: [],
       };
-      const session = mockUserSession(Role.USER);
+      const session = mockUserSession();
+      vi.mocked(authorize).mockResolvedValue(true);
       const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed',
         { code: 'P2002', clientVersion: 'test' }
@@ -148,78 +154,83 @@ describe('Purchase Order Functions', () => {
 
   describe('updatePOStatus', () => {
     const poId = 'po-123';
-    const userSession = mockUserSession(Role.USER);
-    const managerSession = mockUserSession(Role.MANAGER);
-    const adminSession = mockUserSession(Role.ADMIN);
+    const session = mockUserSession();
 
     beforeEach(() => {
-      const managerUser = { id: 'user-manager-id', name: 'Manager User', email: 'manager@example.com' };
+      const user = { id: 'user-id', name: 'Test User', email: 'test@example.com' };
       // @ts-expect-error - We are providing a partial mock object
       vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
         id: poId,
         preparedById: 'user-prepared-id',
         poNumber: 'PO-2024-0001',
         status: POStatus.DRAFT,
-        preparedBy: managerUser,
+        preparedBy: user,
       });
       // @ts-expect-error - We are providing a partial mock object
       vi.mocked(prisma.purchaseOrder.update).mockResolvedValue({});
     });
 
-    it('should throw an error if a USER tries to approve a PO', async () => {
+    it('should throw an error if user lacks APPROVE_PO permission', async () => {
+      const authError = new Error('Not authorized');
+      vi.mocked(authorize).mockRejectedValue(authError);
       await expect(
-        updatePOStatus(poId, POStatus.APPROVED, userSession)
-      ).rejects.toThrow('Not authorized to perform this action.');
+        updatePOStatus(poId, POStatus.APPROVED, session)
+      ).rejects.toThrow(authError);
+      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_PO');
     });
 
-    it('should allow a MANAGER to approve a PO', async () => {
+    it('should allow a user with APPROVE_PO permission to approve', async () => {
+      vi.mocked(authorize).mockResolvedValue(true);
       await expect(
-        updatePOStatus(poId, POStatus.APPROVED, managerSession)
+        updatePOStatus(poId, POStatus.APPROVED, session)
       ).resolves.not.toThrow();
-      expect(prisma.purchaseOrder.update).toHaveBeenCalled();
-    });
-
-    it('should allow an ADMIN to approve a PO', async () => {
-      await expect(
-        updatePOStatus(poId, POStatus.APPROVED, adminSession)
-      ).resolves.not.toThrow();
+      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_PO');
       expect(prisma.purchaseOrder.update).toHaveBeenCalled();
     });
   });
 
   describe('Vendor Functions', () => {
-    const userSession = mockUserSession(Role.USER);
-    const managerSession = mockUserSession(Role.MANAGER);
-    const adminSession = mockUserSession(Role.ADMIN);
+    const session = mockUserSession();
     const vendorData: CreateVendorData = { name: 'New Vendor', address: '123 Vendor St', contactInfo: 'info', email: 'v@e.com', phone: '123', currency: 'USD' };
     const vendorId = 'vendor-123';
 
-    it('should prevent USER from creating a vendor', async () => {
-      await expect(createVendor(vendorData, userSession)).rejects.toThrow('Not authorized to perform this action.');
+    it('should prevent creating a vendor if user lacks permission', async () => {
+      const authError = new Error('Not authorized');
+      vi.mocked(authorize).mockRejectedValue(authError);
+      await expect(createVendor(vendorData, session)).rejects.toThrow(authError);
+      expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });
 
-    it('should prevent MANAGER from creating a vendor', async () => {
-      await expect(createVendor(vendorData, managerSession)).rejects.toThrow('Not authorized to perform this action.');
+    it('should allow creating a vendor if user has permission', async () => {
+      vi.mocked(authorize).mockResolvedValue(true);
+      await expect(createVendor(vendorData, session)).resolves.not.toThrow();
+      expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });
 
-    it('should allow ADMIN to create a vendor', async () => {
-      await expect(createVendor(vendorData, adminSession)).resolves.not.toThrow();
+    it('should prevent updating a vendor if user lacks permission', async () => {
+      const authError = new Error('Not authorized');
+      vi.mocked(authorize).mockRejectedValue(authError);
+      await expect(updateVendor(vendorId, vendorData, session)).rejects.toThrow(authError);
+      expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });
 
-    it('should prevent USER from updating a vendor', async () => {
-      await expect(updateVendor(vendorId, vendorData, userSession)).rejects.toThrow('Not authorized to perform this action.');
+    it('should allow updating a vendor if user has permission', async () => {
+      vi.mocked(authorize).mockResolvedValue(true);
+      await expect(updateVendor(vendorId, vendorData, session)).resolves.not.toThrow();
+      expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });
 
-    it('should allow ADMIN to update a vendor', async () => {
-      await expect(updateVendor(vendorId, vendorData, adminSession)).resolves.not.toThrow();
+    it('should prevent deleting a vendor if user lacks permission', async () => {
+      const authError = new Error('Not authorized');
+      vi.mocked(authorize).mockRejectedValue(authError);
+      await expect(deleteVendor(vendorId, session)).rejects.toThrow(authError);
+      expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });
 
-    it('should prevent MANAGER from deleting a vendor', async () => {
-      await expect(deleteVendor(vendorId, managerSession)).rejects.toThrow('Not authorized to perform this action.');
-    });
-
-    it('should allow ADMIN to delete a vendor', async () => {
-      await expect(deleteVendor(vendorId, adminSession)).resolves.not.toThrow();
+    it('should allow deleting a vendor if user has permission', async () => {
+      vi.mocked(authorize).mockResolvedValue(true);
+      await expect(deleteVendor(vendorId, session)).resolves.not.toThrow();
+      expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });
   });
 });

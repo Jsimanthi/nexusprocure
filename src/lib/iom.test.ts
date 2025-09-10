@@ -8,14 +8,17 @@ import { Prisma, Role } from '@prisma/client';
 
 import { logAudit, getAuditUser } from './audit';
 
+import { authorize } from './auth-utils';
+
 // Mock external dependencies
 vi.mock('@/lib/prisma');
 vi.mock('@/lib/email');
 vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
+vi.mock('@/lib/auth-utils');
 
-const mockUserSession = (role: Role): Session => ({
-  user: { id: `user-${role.toLowerCase()}-id`, name: `${role} User`, role, email: `${role.toLowerCase()}@example.com` },
+const mockUserSession = (roleId = 'user-role-id'): Session => ({
+  user: { id: 'user-id', name: 'Test User', roleId, email: `test@example.com` },
   expires: '2099-01-01T00:00:00.000Z',
 });
 
@@ -36,11 +39,14 @@ describe('IOM Functions', () => {
         requestedById: 'user-1',
         items: []
       };
-      const session = mockUserSession(Role.USER);
+      const session = mockUserSession();
+      vi.mocked(authorize).mockResolvedValue(true);
       // @ts-expect-error - We're providing a partial mock object
       vi.mocked(prisma.iOM.create).mockResolvedValue({ id: 'new-iom-id', ...iomData });
 
       await createIOM(iomData, session);
+
+      expect(authorize).toHaveBeenCalledWith(session, 'CREATE_IOM');
 
       expect(prisma.iOM.create).toHaveBeenCalled();
       expect(logAudit).toHaveBeenCalledWith("CREATE", expect.any(Object));
@@ -56,7 +62,8 @@ describe('IOM Functions', () => {
         requestedById: 'user-1',
         items: []
       };
-      const session = mockUserSession(Role.USER);
+      const session = mockUserSession();
+      vi.mocked(authorize).mockResolvedValue(true);
       const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed',
         { code: 'P2002', clientVersion: 'test' }
@@ -76,56 +83,55 @@ describe('IOM Functions', () => {
 
   describe('updateIOMStatus', () => {
     const iomId = 'iom-123';
-    const userSession = mockUserSession(Role.USER);
-    const managerSession = mockUserSession(Role.MANAGER);
-    const adminSession = mockUserSession(Role.ADMIN);
+    const session = mockUserSession();
 
     beforeEach(() => {
-      const managerUser = { id: 'user-manager-id', name: 'Manager User', email: 'manager@example.com' };
+      const user = { id: 'user-id', name: 'Test User', email: 'test@example.com' };
       // @ts-expect-error - We're providing a partial mock object
       vi.mocked(prisma.iOM.findUnique).mockResolvedValue({
         id: iomId,
         preparedById: 'user-prepared-id',
         iomNumber: 'IOM-2024-0001',
         status: IOMStatus.DRAFT,
-        preparedBy: managerUser,
+        preparedBy: user,
       });
       // @ts-expect-error - We're providing a partial mock object
       vi.mocked(prisma.iOM.update).mockResolvedValue({});
     });
 
-    it('should throw an error if a USER tries to approve an IOM', async () => {
+    it('should throw an error if user lacks APPROVE_IOM permission', async () => {
+      const authError = new Error('Not authorized');
+      vi.mocked(authorize).mockRejectedValue(authError);
       await expect(
-        updateIOMStatus(iomId, IOMStatus.APPROVED, userSession)
-      ).rejects.toThrow('Not authorized to perform this action.');
-      expect(logAudit).not.toHaveBeenCalled();
+        updateIOMStatus(iomId, IOMStatus.APPROVED, session)
+      ).rejects.toThrow(authError);
+      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_IOM');
     });
 
-    it('should allow a MANAGER to approve an IOM and log the action', async () => {
-      await updateIOMStatus(iomId, IOMStatus.APPROVED, managerSession);
+    it('should allow a user with APPROVE_IOM permission to approve', async () => {
+      vi.mocked(authorize).mockResolvedValue(true);
+      await updateIOMStatus(iomId, IOMStatus.APPROVED, session);
 
+      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_IOM');
       expect(prisma.iOM.update).toHaveBeenCalled();
       expect(logAudit).toHaveBeenCalledWith("STATUS_CHANGE", expect.objectContaining({
         recordId: iomId,
         changes: { from: IOMStatus.DRAFT, to: IOMStatus.APPROVED }
       }));
     });
-
-    it('should allow an ADMIN to approve an IOM', async () => {
-      await updateIOMStatus(iomId, IOMStatus.APPROVED, adminSession);
-      expect(logAudit).toHaveBeenCalled();
-    });
   });
 
   describe('deleteIOM', () => {
-    it('should delete an IOM and log the audit trail', async () => {
+    it('should delete an IOM if user has DELETE_IOM permission', async () => {
       const iomId = 'iom-to-delete';
-      const session = mockUserSession(Role.MANAGER);
+      const session = mockUserSession();
+      vi.mocked(authorize).mockResolvedValue(true);
       // @ts-expect-error - We're providing a partial mock object
       vi.mocked(prisma.iOM.findUnique).mockResolvedValue({ id: iomId, title: 'IOM to Delete' });
 
       await deleteIOM(iomId, session);
 
+      expect(authorize).toHaveBeenCalledWith(session, 'DELETE_IOM');
       expect(prisma.iOM.delete).toHaveBeenCalledWith({ where: { id: iomId } });
       expect(logAudit).toHaveBeenCalledWith("DELETE", expect.any(Object));
     });
