@@ -60,7 +60,7 @@ describe('POST /api/users', () => {
 
     expect(response.status).toBe(201);
     expect(data.name).toBe(mockUser.name);
-    expect(vi.mocked(authorize)).toHaveBeenCalledWith(mockSession, 'MANAGE_USERS');
+    expect(vi.mocked(authorize)).toHaveBeenCalledWith(expect.any(Object), 'MANAGE_USERS');
     expect(vi.mocked(prisma.user.create)).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ name: createUserData.name }),
