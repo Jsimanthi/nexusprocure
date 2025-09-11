@@ -40,6 +40,7 @@ const roles = {
   ADMIN: permissions, // Admin gets all permissions
   MANAGER: [
     'READ_IOM',
+    'UPDATE_IOM',
     'APPROVE_IOM',
     'REJECT_IOM',
     'READ_PO',

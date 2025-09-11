@@ -64,7 +64,7 @@ export default function IOMDetailPage() {
     }
   };
 
-  const updateStatus = async (newStatus: IOMStatus, approverId?: string) => {
+  const updateStatus = async (newStatus?: IOMStatus, approverId?: string) => {
     setUpdating(true);
     try {
       const body: { status?: IOMStatus; approverId?: string } = {};
@@ -95,7 +95,7 @@ export default function IOMDetailPage() {
 
   const handleApproverSubmit = () => {
     if (selectedApprover) {
-      updateStatus(IOMStatus.SUBMITTED, selectedApprover);
+      updateStatus(undefined, selectedApprover);
     }
   };
 
