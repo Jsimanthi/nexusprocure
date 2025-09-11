@@ -9,6 +9,15 @@ vi.mock('next/navigation', () => ({
   })),
 }));
 
+const mockFetch = (ok: boolean, data: Record<string, unknown>) => {
+  global.fetch = vi.fn(() =>
+    Promise.resolve({
+      ok,
+      json: () => Promise.resolve(data),
+    } as Response)
+  );
+};
+
 describe('CreateUserForm', () => {
   const roles = [
     { id: 'clxmil0n500003b6le21w24g0', name: 'Admin' },
@@ -25,13 +34,8 @@ describe('CreateUserForm', () => {
 
   it('should submit the form with valid data', async () => {
     const push = vi.fn();
-    vi.mocked(useRouter).mockReturnValue({ push } as any);
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      })
-    ) as any;
+    vi.mocked(useRouter).mockReturnValue({ push });
+    mockFetch(true, {});
 
     render(<CreateUserForm roles={roles} />);
 
@@ -49,12 +53,7 @@ describe('CreateUserForm', () => {
   });
 
   it('should display an error message on failed submission', async () => {
-    global.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: false,
-        json: () => Promise.resolve({ error: 'Failed to create user' }),
-      })
-    ) as any;
+    mockFetch(false, { error: 'Failed to create user' });
 
     render(<CreateUserForm roles={roles} />);
 
