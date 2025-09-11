@@ -29,7 +29,7 @@ describe('POST /api/users', () => {
     const { authorize } = await import('@/lib/auth-utils');
 
     vi.mocked(auth).mockResolvedValue({ user: { id: '1' } } as any);
-    vi.mocked(authorize).mockReturnValue(undefined);
+    vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
     vi.mocked(prisma.user.create).mockResolvedValue(mockUser as any);
 
@@ -55,7 +55,7 @@ describe('POST /api/users', () => {
     const { auth } = await import('@/lib/auth-server');
     const { authorize } = await import('@/lib/auth-utils');
     vi.mocked(auth).mockResolvedValue({ user: { id: '1' } } as any);
-    vi.mocked(authorize).mockReturnValue(undefined);
+    vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
 
     const req = new Request('http://localhost/api/users', {
@@ -71,7 +71,7 @@ describe('POST /api/users', () => {
     const { auth } = await import('@/lib/auth-server');
     const { authorize } = await import('@/lib/auth-utils');
     vi.mocked(auth).mockResolvedValue({ user: { id: '1' } } as any);
-    vi.mocked(authorize).mockReturnValue(undefined);
+    vi.mocked(authorize).mockReturnValue(true);
 
     const req = new Request('http://localhost/api/users', {
       method: 'POST',
