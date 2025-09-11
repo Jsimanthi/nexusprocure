@@ -26,22 +26,36 @@ export async function generateCRNumber(): Promise<string> {
   return `CR-${year}-${(count + 1).toString().padStart(4, '0')}`;
 }
 
-export async function getCRsByUser(
-  userId: string,
-  { page = 1, pageSize = 10, search = "", status = "" }: { page?: number; pageSize?: number, search?: string, status?: string }
+export async function getCRs(
+  session: Session,
+  {
+    page = 1,
+    pageSize = 10,
+    search = "",
+    status = "",
+  }: { page?: number; pageSize?: number; search?: string; status?: string }
 ) {
+  const user = session.user;
   const where: Prisma.CheckRequestWhereInput = {
-    AND: [
-      {
-        OR: [
-          { preparedById: userId },
-          { requestedById: userId },
-          { reviewedById: userId },
-          { approvedById: userId },
-        ],
-      },
-    ],
+    AND: [],
   };
+
+  if (user.role.name === "ADMIN") {
+    // Admin sees all CRs
+  } else if (user.role.name === "MANAGER") {
+    (where.AND as Prisma.CheckRequestWhereInput[]).push({
+      OR: [{ approvedById: user.id }, { preparedById: user.id }],
+    });
+  } else if (user.role.name === "REVIEWER") {
+    (where.AND as Prisma.CheckRequestWhereInput[]).push({
+      OR: [{ reviewedById: user.id }, { preparedById: user.id }],
+    });
+  } else {
+    // Regular user sees only their own CRs
+    (where.AND as Prisma.CheckRequestWhereInput[]).push({
+      preparedById: user.id,
+    });
+  }
 
   if (status) {
     const statuses = status.split(',') as CRStatus[];

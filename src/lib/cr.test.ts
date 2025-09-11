@@ -1,6 +1,6 @@
 // src/lib/cr.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createCheckRequest, updateCRStatus } from './cr';
+import { getCRs, createCheckRequest, updateCRStatus } from './cr';
 import { prisma } from './prisma';
 import { CRStatus, CreateCrData, CheckRequest, PaymentMethod } from '@/types/cr';
 import { Session } from 'next-auth';
@@ -17,8 +17,13 @@ vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
 vi.mock('@/lib/auth-utils');
 
-const mockUserSession = (roleId = 'user-role-id'): Session => ({
-  user: { id: 'user-id', name: 'Test User', roleId, email: `test@example.com` },
+const mockUserSession = (roleName = 'USER'): Session => ({
+  user: {
+    id: 'user-id',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: { id: 'role-id', name: roleName },
+  },
   expires: '2099-01-01T00:00:00.000Z',
 });
 
@@ -244,6 +249,71 @@ describe('Check Request (CR) Functions', () => {
         recordId: crId,
         changes: { from: CRStatus.DRAFT, to: CRStatus.APPROVED }
       }));
+    });
+  });
+
+  describe('getCRs', () => {
+    beforeEach(() => {
+      vi.mocked(prisma.checkRequest.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.checkRequest.count).mockResolvedValue(0);
+      vi.mocked(prisma.$transaction).mockImplementation(async (promises) => {
+        const [findManyResult, countResult] = await Promise.all(promises);
+        return [findManyResult, countResult];
+      });
+    });
+
+    it('should filter by preparedById for USER role', async () => {
+      const session = mockUserSession('USER');
+      await getCRs(session, {});
+      expect(prisma.checkRequest.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: expect.arrayContaining([
+              expect.objectContaining({ preparedById: session.user.id }),
+            ]),
+          },
+        })
+      );
+    });
+
+    it('should filter by reviewedById for REVIEWER role', async () => {
+      const session = mockUserSession('REVIEWER');
+      await getCRs(session, {});
+      expect(prisma.checkRequest.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: expect.arrayContaining([
+              { OR: [{ reviewedById: session.user.id }, { preparedById: session.user.id }] },
+            ]),
+          },
+        })
+      );
+    });
+
+    it('should filter by approvedById for MANAGER role', async () => {
+      const session = mockUserSession('MANAGER');
+      await getCRs(session, {});
+      expect(prisma.checkRequest.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: expect.arrayContaining([
+              { OR: [{ approvedById: session.user.id }, { preparedById: session.user.id }] },
+            ]),
+          },
+        })
+      );
+    });
+
+    it('should not apply any user-based filters for ADMIN role', async () => {
+      const session = mockUserSession('ADMIN');
+      await getCRs(session, {});
+      expect(prisma.checkRequest.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: [],
+          },
+        })
+      );
     });
   });
 });

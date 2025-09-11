@@ -1,7 +1,7 @@
 // src/app/api/po/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
-import { createPurchaseOrder, getPOsByUser } from "@/lib/po";
+import { createPurchaseOrder, getPOs } from "@/lib/po";
 import { createPoSchema } from "@/lib/schemas";
 
 export async function GET(request: NextRequest) {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
 
-    const { purchaseOrders, total } = await getPOsByUser(session.user.id, {
+    const { purchaseOrders, total } = await getPOs(session, {
       page,
       pageSize,
       search,

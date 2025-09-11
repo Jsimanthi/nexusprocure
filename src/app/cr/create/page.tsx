@@ -8,6 +8,11 @@ import { PurchaseOrder } from "@/types/po";
 import { PaymentMethod } from "@/types/cr";
 import PageLayout from "@/components/PageLayout";
 
+interface User {
+  id: string;
+  name: string;
+}
+
 interface FormData {
   title: string;
   poId: string;
@@ -27,6 +32,7 @@ export default function CreateCRPage() {
   const [loading, setLoading] = useState(false);
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null);
+  const [reviewers, setReviewers] = useState<User[]>([]);
   const [formData, setFormData] = useState<FormData>({
     title: "",
     poId: "",
@@ -39,11 +45,25 @@ export default function CreateCRPage() {
     totalAmount: 0,
     taxAmount: 0,
     grandTotal: 0,
+    reviewedById: "",
   });
 
   useEffect(() => {
     fetchPOs();
+    fetchReviewers();
   }, []);
+
+  const fetchReviewers = async () => {
+    try {
+      const response = await fetch("/api/users/role/REVIEWER");
+      if (response.ok) {
+        const data = await response.json();
+        setReviewers(data);
+      }
+    } catch (error) {
+      console.error("Error fetching reviewers:", error);
+    }
+  };
 
   const fetchPOs = async () => {
     try {
@@ -90,7 +110,8 @@ export default function CreateCRPage() {
       // Prepare data for API - convert empty poId to undefined
       const submitData = {
         ...formData,
-        poId: formData.poId || undefined
+        poId: formData.poId || undefined,
+        ...(formData.reviewedById && { reviewedById: formData.reviewedById }),
       };
 
       const response = await fetch("/api/cr", {
@@ -165,6 +186,25 @@ export default function CreateCRPage() {
                 <option value={PaymentMethod.BANK_TRANSFER}>Bank Transfer</option>
                 <option value={PaymentMethod.CASH}>Cash</option>
                 <option value={PaymentMethod.ONLINE_PAYMENT}>Online Payment</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Assign Reviewer
+              </label>
+              <select
+                value={formData.reviewedById}
+                onChange={(e) =>
+                  setFormData({ ...formData, reviewedById: e.target.value })
+                }
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value="">Select a reviewer</option>
+                {reviewers.map((reviewer) => (
+                  <option key={reviewer.id} value={reviewer.id}>
+                    {reviewer.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
