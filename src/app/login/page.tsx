@@ -38,8 +38,9 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-6 shadow-md">
-        <div>
-          <h1 className="text-2xl font-bold">NexusProcure</h1>
+        <div className="text-center">
+          <img src="https://i.postimg.cc/Kctw8crn/sblt-logo.png" alt="NexusProcure Logo" className="h-12 w-auto mx-auto" />
+          <h1 className="text-2xl font-bold mt-4">NexusProcure</h1>
           <p className="mt-2 text-gray-600">Sign in to your account</p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
