@@ -190,28 +190,44 @@ export async function createIOM(data: CreateIomData, session: Session) {
   throw new Error(`Failed to create IOM after ${maxRetries} attempts. Last error: ${lastError}`);
 }
 
-export async function updateIOMStatus(id: string, status: IOMStatus, session: Session) {
-  // Different permissions are required for different status updates
-  switch (status) {
-    case IOMStatus.APPROVED:
-      authorize(session, 'APPROVE_IOM');
-      break;
-    case IOMStatus.REJECTED:
-      authorize(session, 'REJECT_IOM');
-      break;
-    default:
-      authorize(session, 'UPDATE_IOM');
-      break;
+export async function updateIOMStatus(
+  id: string,
+  status: IOMStatus | undefined,
+  session: Session,
+  approverId?: string
+) {
+  if (status) {
+    switch (status) {
+      case IOMStatus.APPROVED:
+        authorize(session, 'APPROVE_IOM');
+        break;
+      case IOMStatus.REJECTED:
+        authorize(session, 'REJECT_IOM');
+        break;
+      default:
+        authorize(session, 'UPDATE_IOM');
+        break;
+    }
+  } else if (approverId) {
+    authorize(session, 'UPDATE_IOM');
+  } else {
+    throw new Error("Either status or approverId must be provided.");
   }
   
-  // Use a more specific type instead of 'any'
   interface UpdateData {
-    status: IOMStatus;
+    status?: IOMStatus;
     reviewedById?: string;
     approvedById?: string;
   }
   
-  const updateData: UpdateData = { status };
+  const updateData: UpdateData = {};
+  if (status) {
+    updateData.status = status;
+  }
+  if (approverId) {
+    updateData.approvedById = approverId;
+  }
+
   const userId = session.user.id;
 
   const iom = await prisma.iOM.findUnique({
@@ -248,31 +264,33 @@ export async function updateIOMStatus(id: string, status: IOMStatus, session: Se
     }
   });
 
-  const message = `The status of your IOM ${iom.iomNumber} has been updated to ${status}.`;
-  await createNotification(iom.preparedById, message);
+  if (status) {
+    const message = `The status of your IOM ${iom.iomNumber} has been updated to ${status}.`;
+    await createNotification(iom.preparedById, message);
 
-  const emailComponent = React.createElement(StatusUpdateEmail, {
-    userName: iom.preparedBy.name || 'User',
-    documentType: 'IOM',
-    documentNumber: iom.iomNumber,
-    newStatus: status,
-  });
+    const emailComponent = React.createElement(StatusUpdateEmail, {
+      userName: iom.preparedBy.name || 'User',
+      documentType: 'IOM',
+      documentNumber: iom.iomNumber,
+      newStatus: status,
+    });
 
-  await sendEmail({
-    to: iom.preparedBy.email,
-    subject: `Status Update for IOM: ${iom.iomNumber}`,
-    react: emailComponent,
-  });
+    await sendEmail({
+      to: iom.preparedBy.email,
+      subject: `Status Update for IOM: ${iom.iomNumber}`,
+      react: emailComponent,
+    });
+  }
 
   const auditUser = getAuditUser(session);
-  await logAudit("STATUS_CHANGE", {
+  await logAudit("UPDATE", {
     model: "IOM",
     recordId: id,
     userId: auditUser.userId,
     userName: auditUser.userName,
     changes: {
-      from: iom.status,
-      to: status,
+      from: { status: iom.status },
+      to: { status, approverId },
     },
   });
 

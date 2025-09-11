@@ -121,9 +121,12 @@ describe('IOM Functions', () => {
 
       expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_IOM');
       expect(prisma.iOM.update).toHaveBeenCalled();
-      expect(logAudit).toHaveBeenCalledWith("STATUS_CHANGE", expect.objectContaining({
+      expect(logAudit).toHaveBeenCalledWith("UPDATE", expect.objectContaining({
         recordId: iomId,
-        changes: { from: IOMStatus.DRAFT, to: IOMStatus.APPROVED }
+        changes: {
+          from: { status: IOMStatus.DRAFT },
+          to: { status: IOMStatus.APPROVED, approverId: undefined }
+        }
       }));
     });
   });
