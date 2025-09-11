@@ -82,3 +82,10 @@ export const createCrSchema = z.object({
 });
 
 export const updateCrSchema = createCrSchema.partial();
+
+export const createUserSchema = z.object({
+  name: z.string().min(1, 'Name is required.'),
+  email: z.string().email('Invalid email address.'),
+  password: z.string().min(8, 'Password must be at least 8 characters long.'),
+  roleId: z.string().cuid('Invalid role.'),
+});
