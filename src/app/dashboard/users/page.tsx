@@ -60,6 +60,15 @@ export default function UserManagementPage() {
 
   return (
     <PageLayout title="User Management">
+      <div className="flex justify-end mb-4">
+        {canManageUsers && (
+          <Link href="/dashboard/users/create">
+            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+              Create User
+            </button>
+          </Link>
+        )}
+      </div>
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <ul role="list" className="divide-y divide-gray-200">
           {users?.map((user) => (

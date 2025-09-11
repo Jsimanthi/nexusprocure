@@ -10,8 +10,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only users with permission to manage roles can access this
-    authorize(session, 'MANAGE_ROLES');
+    // Only users who can manage users should be able to see the roles
+    authorize(session, 'MANAGE_USERS');
 
     const roles = await prisma.role.findMany({
       orderBy: {
