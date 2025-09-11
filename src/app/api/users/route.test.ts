@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
 import { prisma } from '@/lib/prisma';
-import { NextRequest } from 'next/server';
+import { Session } from 'next-auth';
+import { User } from '@prisma/client';
 
 vi.mock('@/lib/prisma');
 vi.mock('@/lib/auth-server', () => ({
@@ -11,31 +12,47 @@ vi.mock('@/lib/auth-utils', () => ({
   authorize: vi.fn(),
 }));
 
+const mockSession: Session = {
+  user: { id: '1', name: 'Test User', email: 'test@example.com' },
+  expires: '2025-01-01T00:00:00.000Z',
+};
+
 describe('POST /api/users', () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
 
-  const mockUser = {
+  const mockUser: User = {
     id: '1',
+    name: 'Test User',
+    email: 'test@example.com',
+    password: 'hashedpassword',
+    roleId: 'clxmil0n500003b6le21w24g0',
+    emailVerified: null,
+    image: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const createUserData = {
     name: 'Test User',
     email: 'test@example.com',
     password: 'password123',
     roleId: 'clxmil0n500003b6le21w24g0',
-  };
+  }
 
   it('should create a new user successfully', async () => {
     const { auth } = await import('@/lib/auth-server');
     const { authorize } = await import('@/lib/auth-utils');
 
-    vi.mocked(auth).mockResolvedValue({ user: { id: '1' } } as any);
+    vi.mocked(auth).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
-    vi.mocked(prisma.user.create).mockResolvedValue(mockUser as any);
+    vi.mocked(prisma.user.create).mockResolvedValue(mockUser);
 
     const req = new Request('http://localhost/api/users', {
       method: 'POST',
-      body: JSON.stringify(mockUser),
+      body: JSON.stringify(createUserData),
     });
 
     const response = await POST(req);
@@ -43,10 +60,10 @@ describe('POST /api/users', () => {
 
     expect(response.status).toBe(201);
     expect(data.name).toBe(mockUser.name);
-    expect(vi.mocked(authorize)).toHaveBeenCalledWith(expect.any(Object), 'MANAGE_USERS');
+    expect(vi.mocked(authorize)).toHaveBeenCalledWith(mockSession, 'MANAGE_USERS');
     expect(vi.mocked(prisma.user.create)).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ name: mockUser.name }),
+        data: expect.objectContaining({ name: createUserData.name }),
       })
     );
   });
@@ -54,13 +71,13 @@ describe('POST /api/users', () => {
   it('should return 409 if user already exists', async () => {
     const { auth } = await import('@/lib/auth-server');
     const { authorize } = await import('@/lib/auth-utils');
-    vi.mocked(auth).mockResolvedValue({ user: { id: '1' } } as any);
+    vi.mocked(auth).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
-    vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
 
     const req = new Request('http://localhost/api/users', {
       method: 'POST',
-      body: JSON.stringify(mockUser),
+      body: JSON.stringify(createUserData),
     });
 
     const response = await POST(req);
@@ -70,12 +87,12 @@ describe('POST /api/users', () => {
   it('should return 400 for invalid data', async () => {
     const { auth } = await import('@/lib/auth-server');
     const { authorize } = await import('@/lib/auth-utils');
-    vi.mocked(auth).mockResolvedValue({ user: { id: '1' } } as any);
+    vi.mocked(auth).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
 
     const req = new Request('http://localhost/api/users', {
       method: 'POST',
-      body: JSON.stringify({ ...mockUser, email: 'not-an-email' }),
+      body: JSON.stringify({ ...createUserData, email: 'not-an-email' }),
     });
 
     const response = await POST(req);
@@ -85,14 +102,14 @@ describe('POST /api/users', () => {
   it('should return 403 for unauthorized users', async () => {
     const { auth } = await import('@/lib/auth-server');
     const { authorize } = await import('@/lib/auth-utils');
-    vi.mocked(auth).mockResolvedValue({ user: { id: '1' } } as any);
+    vi.mocked(auth).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockImplementation(() => {
       throw new Error('Not authorized');
     });
 
     const req = new Request('http://localhost/api/users', {
       method: 'POST',
-      body: JSON.stringify(mockUser),
+      body: JSON.stringify(createUserData),
     });
 
     const response = await POST(req);

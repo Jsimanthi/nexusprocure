@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { createUserSchema } from '@/lib/schemas';
 import bcrypt from 'bcryptjs';
 import { ZodError } from 'zod';
+import { fromZodError } from 'zod-validation-error';
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +17,16 @@ export async function POST(req: Request) {
     authorize(session, 'MANAGE_USERS');
 
     const body = await req.json();
-    const { name, email, password, roleId } = createUserSchema.parse(body);
+    const validation = createUserSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: fromZodError(validation.error).message },
+        { status: 400 }
+      );
+    }
+
+    const { name, email, password, roleId } = validation.data;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -37,7 +47,7 @@ export async function POST(req: Request) {
     return NextResponse.json(user, { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
+      return NextResponse.json({ error: fromZodError(error).message }, { status: 400 });
     }
     if (error instanceof Error && error.message.includes('Not authorized')) {
       return NextResponse.json({ error: error.message }, { status: 403 });
