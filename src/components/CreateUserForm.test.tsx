@@ -2,11 +2,19 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import CreateUserForm from './CreateUserForm';
 import { useRouter } from 'next/navigation';
+import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+
+const mockRouter: Partial<AppRouterInstance> = {
+  push: vi.fn(),
+  back: vi.fn(),
+  forward: vi.fn(),
+  refresh: vi.fn(),
+  replace: vi.fn(),
+  prefetch: vi.fn(),
+};
 
 vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(() => ({
-    push: vi.fn(),
-  })),
+  useRouter: () => mockRouter,
 }));
 
 const mockFetch = (ok: boolean, data: Record<string, unknown>) => {
@@ -24,6 +32,10 @@ describe('CreateUserForm', () => {
     { id: 'clxmil0n500003b6le21w24g1', name: 'User' },
   ];
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('should render the form correctly', () => {
     render(<CreateUserForm roles={roles} />);
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
@@ -33,8 +45,6 @@ describe('CreateUserForm', () => {
   });
 
   it('should submit the form with valid data', async () => {
-    const push = vi.fn();
-    vi.mocked(useRouter).mockReturnValue({ push });
     mockFetch(true, {});
 
     render(<CreateUserForm roles={roles} />);
@@ -48,7 +58,7 @@ describe('CreateUserForm', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/users', expect.any(Object));
-      expect(push).toHaveBeenCalledWith('/dashboard/users');
+      expect(mockRouter.push).toHaveBeenCalledWith('/dashboard/users');
     });
   });
 
