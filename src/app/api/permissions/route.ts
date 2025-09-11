@@ -10,21 +10,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only users with permission to manage roles can access this
     authorize(session, 'MANAGE_ROLES');
 
-    const roles = await prisma.role.findMany({
+    const permissions = await prisma.permission.findMany({
       orderBy: {
         name: 'asc',
       },
     });
 
-    return NextResponse.json(roles);
+    return NextResponse.json(permissions);
   } catch (error) {
     if (error instanceof Error && error.message.includes('Not authorized')) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
-    console.error('Error fetching roles:', error);
+    console.error('Error fetching permissions:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

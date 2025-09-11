@@ -14,6 +14,7 @@ export default function DashboardHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const canManageUsers = useHasPermission('MANAGE_USERS');
+  const canManageRoles = useHasPermission('MANAGE_ROLES');
 
   const navLinks = [
     { href: "/dashboard", text: "Dashboard", show: true },
@@ -23,6 +24,7 @@ export default function DashboardHeader() {
     { href: "/cr", text: "CRs", show: true },
     { href: "/vendors", text: "Vendors", show: true },
     { href: "/dashboard/users", text: "Users", show: canManageUsers },
+    { href: "/dashboard/roles", text: "Roles", show: canManageRoles },
   ];
 
   const visibleNavLinks = navLinks.filter(link => link.show);
