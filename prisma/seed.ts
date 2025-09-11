@@ -54,6 +54,7 @@ const roles = {
   REVIEWER: [
     'READ_IOM',
     'REVIEW_IOM',
+    'UPDATE_IOM',
     'READ_PO',
     'REVIEW_PO',
     'READ_CR',

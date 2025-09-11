@@ -63,24 +63,26 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    
-    if (!body.status) {
+    const { status, approverId } = body;
+
+    if (!status && !approverId) {
       return NextResponse.json(
-        { error: "Status is required" },
+        { error: "At least one of status or approverId is required" },
         { status: 400 }
       );
     }
 
-    // Validate status
-    const validStatuses = Object.values(IOMStatus);
-    if (!validStatuses.includes(body.status)) {
-      return NextResponse.json(
-        { error: "Invalid status" },
-        { status: 400 }
-      );
+    if (status) {
+      const validStatuses = Object.values(IOMStatus);
+      if (!validStatuses.includes(status)) {
+        return NextResponse.json(
+          { error: "Invalid status" },
+          { status: 400 }
+        );
+      }
     }
 
-    const iom = await updateIOMStatus(id, body.status, session);
+    const iom = await updateIOMStatus(id, status, session, approverId);
     
     if (!iom) {
       return NextResponse.json({ error: "IOM not found" }, { status: 404 });
@@ -89,6 +91,9 @@ export async function PATCH(
     return NextResponse.json(iom);
   } catch (error) {
     console.error("Error updating IOM:", error);
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
