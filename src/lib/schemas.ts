@@ -30,6 +30,7 @@ export const createPoSchema = z.object({
   items: z.array(createPoItemSchema).min(1, 'At least one item is required.'),
   requestedById: z.string().cuid().optional(),
   attachments: z.array(attachmentSchema).optional(),
+  reviewedById: z.string().cuid().optional(),
 });
 
 const currencyEnum = z.enum(['INR', 'USD', 'EUR', 'GBP', 'JPY']);
@@ -62,6 +63,7 @@ export const createIomSchema = z.object({
   content: z.string().optional(),
   items: z.array(createIomItemSchema).min(1, 'At least one item is required.'),
   requestedById: z.string().cuid(),
+  reviewedById: z.string().cuid().optional(),
 });
 
 export const updateIomSchema = createIomSchema.partial();
@@ -79,6 +81,7 @@ export const createCrSchema = z.object({
   taxAmount: z.number().nonnegative(),
   grandTotal: z.number().nonnegative(),
   requestedById: z.string().cuid(),
+  reviewedById: z.string().cuid().optional(),
 });
 
 export const updateCrSchema = createCrSchema.partial();

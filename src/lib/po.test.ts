@@ -1,6 +1,6 @@
 // src/lib/po.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createPurchaseOrder, updatePOStatus, createVendor, updateVendor, deleteVendor } from './po';
+import { getPOs, createPurchaseOrder, updatePOStatus, createVendor, updateVendor, deleteVendor } from './po';
 import { prisma } from './prisma';
 import { POStatus } from '@/types/po';
 import { Session } from 'next-auth';
@@ -21,8 +21,13 @@ vi.mock('@/lib/audit');
 vi.mock('@/lib/auth-utils');
 import { getAuditUser } from './audit';
 
-const mockUserSession = (roleId = 'user-role-id'): Session => ({
-  user: { id: 'user-id', name: 'Test User', roleId, email: `test@example.com` },
+const mockUserSession = (roleName = 'USER'): Session => ({
+  user: {
+    id: 'user-id',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: { id: 'role-id', name: roleName },
+  },
   expires: '2099-01-01T00:00:00.000Z',
 });
 
@@ -241,6 +246,71 @@ describe('Purchase Order Functions', () => {
       vi.mocked(authorize).mockResolvedValue(true);
       await expect(deleteVendor(vendorId, session)).resolves.not.toThrow();
       expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
+    });
+  });
+
+  describe('getPOs', () => {
+    beforeEach(() => {
+      vi.mocked(prisma.purchaseOrder.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
+      vi.mocked(prisma.$transaction).mockImplementation(async (promises) => {
+        const [findManyResult, countResult] = await Promise.all(promises);
+        return [findManyResult, countResult];
+      });
+    });
+
+    it('should filter by preparedById for USER role', async () => {
+      const session = mockUserSession('USER');
+      await getPOs(session, {});
+      expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: expect.arrayContaining([
+              expect.objectContaining({ preparedById: session.user.id }),
+            ]),
+          },
+        })
+      );
+    });
+
+    it('should filter by reviewedById for REVIEWER role', async () => {
+      const session = mockUserSession('REVIEWER');
+      await getPOs(session, {});
+      expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: expect.arrayContaining([
+              { OR: [{ reviewedById: session.user.id }, { preparedById: session.user.id }] },
+            ]),
+          },
+        })
+      );
+    });
+
+    it('should filter by approvedById for MANAGER role', async () => {
+      const session = mockUserSession('MANAGER');
+      await getPOs(session, {});
+      expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: expect.arrayContaining([
+              { OR: [{ approvedById: session.user.id }, { preparedById: session.user.id }] },
+            ]),
+          },
+        })
+      );
+    });
+
+    it('should not apply any user-based filters for ADMIN role', async () => {
+      const session = mockUserSession('ADMIN');
+      await getPOs(session, {});
+      expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: [],
+          },
+        })
+      );
     });
   });
 });

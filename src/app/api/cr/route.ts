@@ -1,7 +1,7 @@
 // src/app/api/cr/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
-import { createCheckRequest, getCRsByUser } from "@/lib/cr";
+import { createCheckRequest, getCRs } from "@/lib/cr";
 import { createCrSchema } from "@/lib/schemas";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { fromZodError } from "zod-validation-error";
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
 
-    const { checkRequests, total } = await getCRsByUser(session.user.id, {
+    const { checkRequests, total } = await getCRs(session, {
       page,
       pageSize,
       search,

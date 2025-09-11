@@ -1,7 +1,7 @@
 // src/app/iom/create/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
@@ -15,6 +15,11 @@ interface IOMItem {
   totalPrice: number;
 }
 
+interface User {
+  id: string;
+  name: string;
+}
+
 export default function CreateIOMPage() {
   const router = useRouter();
   const { data: session } = useSession();
@@ -25,10 +30,29 @@ export default function CreateIOMPage() {
     to: "",
     subject: "",
     content: "",
+    reviewedById: "",
   });
   const [items, setItems] = useState<IOMItem[]>([
     { itemName: "", description: "", quantity: 1, unitPrice: 0, totalPrice: 0 },
   ]);
+  const [reviewers, setReviewers] = useState<User[]>([]);
+
+  useEffect(() => {
+    async function fetchReviewers() {
+      try {
+        const response = await fetch("/api/users/role/REVIEWER");
+        if (response.ok) {
+          const data = await response.json();
+          setReviewers(data);
+        } else {
+          console.error("Failed to fetch reviewers");
+        }
+      } catch (error) {
+        console.error("Error fetching reviewers:", error);
+      }
+    }
+    fetchReviewers();
+  }, []);
 
   const addItem = () => {
     setItems([
@@ -67,7 +91,7 @@ export default function CreateIOMPage() {
     setLoading(true);
 
     try {
-      const payload = {
+      const payload: any = {
         ...formData,
         items: items.map((item) => ({
           itemName: item.itemName,
@@ -78,6 +102,10 @@ export default function CreateIOMPage() {
         preparedById: session.user.id,
         requestedById: session.user.id,
       };
+
+      if (formData.reviewedById) {
+        payload.reviewedById = formData.reviewedById;
+      }
 
       const response = await fetch("/api/iom", {
         method: "POST",
@@ -151,6 +179,25 @@ export default function CreateIOMPage() {
               onChange={(e) => setFormData({ ...formData, to: e.target.value })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Assign Reviewer
+            </label>
+            <select
+              value={formData.reviewedById}
+              onChange={(e) =>
+                setFormData({ ...formData, reviewedById: e.target.value })
+              }
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            >
+              <option value="">Select a reviewer</option>
+              {reviewers.map((reviewer) => (
+                <option key={reviewer.id} value={reviewer.id}>
+                  {reviewer.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

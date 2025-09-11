@@ -17,6 +17,7 @@ const permissions = [
   'DELETE_IOM',
   'APPROVE_IOM',
   'REJECT_IOM',
+  'REVIEW_IOM',
   // PO Permissions
   'CREATE_PO',
   'READ_PO',
@@ -24,6 +25,7 @@ const permissions = [
   'DELETE_PO',
   'APPROVE_PO',
   'REJECT_PO',
+  'REVIEW_PO',
   // CR Permissions
   'CREATE_CR',
   'READ_CR',
@@ -31,6 +33,7 @@ const permissions = [
   'DELETE_CR',
   'APPROVE_CR',
   'REJECT_CR',
+  'REVIEW_CR',
 ];
 
 const roles = {
@@ -47,6 +50,14 @@ const roles = {
     'REJECT_CR',
     'MANAGE_VENDORS',
     'VIEW_ANALYTICS',
+  ],
+  REVIEWER: [
+    'READ_IOM',
+    'REVIEW_IOM',
+    'READ_PO',
+    'REVIEW_PO',
+    'READ_CR',
+    'REVIEW_CR',
   ],
   USER: [
     'CREATE_IOM',

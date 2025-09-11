@@ -1,6 +1,6 @@
 // src/lib/iom.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createIOM, updateIOMStatus, deleteIOM } from './iom';
+import { getIOMs, createIOM, updateIOMStatus, deleteIOM } from './iom';
 import { prisma } from './prisma';
 import { IOMStatus } from '@/types/iom';
 import { Session } from 'next-auth';
@@ -17,8 +17,13 @@ vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
 vi.mock('@/lib/auth-utils');
 
-const mockUserSession = (roleId = 'user-role-id'): Session => ({
-  user: { id: 'user-id', name: 'Test User', roleId, email: `test@example.com` },
+const mockUserSession = (roleName = 'USER'): Session => ({
+  user: {
+    id: 'user-id',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: { id: 'role-id', name: roleName },
+  },
   expires: '2099-01-01T00:00:00.000Z',
 });
 
@@ -136,6 +141,71 @@ describe('IOM Functions', () => {
       expect(authorize).toHaveBeenCalledWith(session, 'DELETE_IOM');
       expect(prisma.iOM.delete).toHaveBeenCalledWith({ where: { id: iomId } });
       expect(logAudit).toHaveBeenCalledWith("DELETE", expect.any(Object));
+    });
+  });
+
+  describe('getIOMs', () => {
+    beforeEach(() => {
+      vi.mocked(prisma.iOM.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.iOM.count).mockResolvedValue(0);
+      vi.mocked(prisma.$transaction).mockImplementation(async (promises) => {
+        const [findManyResult, countResult] = await Promise.all(promises);
+        return [findManyResult, countResult];
+      });
+    });
+
+    it('should filter by preparedById for USER role', async () => {
+      const session = mockUserSession('USER');
+      await getIOMs(session, {});
+      expect(prisma.iOM.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: expect.arrayContaining([
+              expect.objectContaining({ preparedById: session.user.id }),
+            ]),
+          },
+        })
+      );
+    });
+
+    it('should filter by reviewedById for REVIEWER role', async () => {
+      const session = mockUserSession('REVIEWER');
+      await getIOMs(session, {});
+      expect(prisma.iOM.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: expect.arrayContaining([
+              { OR: [{ reviewedById: session.user.id }, { preparedById: session.user.id }] },
+            ]),
+          },
+        })
+      );
+    });
+
+    it('should filter by approvedById for MANAGER role', async () => {
+      const session = mockUserSession('MANAGER');
+      await getIOMs(session, {});
+      expect(prisma.iOM.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: expect.arrayContaining([
+              { OR: [{ approvedById: session.user.id }, { preparedById: session.user.id }] },
+            ]),
+          },
+        })
+      );
+    });
+
+    it('should not apply any user-based filters for ADMIN role', async () => {
+      const session = mockUserSession('ADMIN');
+      await getIOMs(session, {});
+      expect(prisma.iOM.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: [],
+          },
+        })
+      );
     });
   });
 });

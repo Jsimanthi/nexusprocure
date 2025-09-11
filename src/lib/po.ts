@@ -26,23 +26,36 @@ export async function generatePONumber(): Promise<string> {
   return `PO-${year}-${(count + 1).toString().padStart(4, '0')}`;
 }
 
-export async function getPOsByUser(
-  userId: string,
-  { page = 1, pageSize = 10, search = "", status = "" }: { page?: number; pageSize?: number, search?: string, status?: string }
+export async function getPOs(
+  session: Session,
+  {
+    page = 1,
+    pageSize = 10,
+    search = "",
+    status = "",
+  }: { page?: number; pageSize?: number; search?: string; status?: string }
 ) {
-  const userClause = {
-    OR: [
-      { preparedById: userId },
-      { requestedById: userId },
-      { reviewedById: userId },
-      { approvedById: userId },
-    ],
+  const user = session.user;
+  const where: Prisma.PurchaseOrderWhereInput = {
+    AND: [],
   };
 
-  // Correctly initialize AND as an array
-  const where: Prisma.PurchaseOrderWhereInput = {
-    AND: [userClause],
-  };
+  if (user.role.name === "ADMIN") {
+    // Admin sees all POs
+  } else if (user.role.name === "MANAGER") {
+    (where.AND as Prisma.PurchaseOrderWhereInput[]).push({
+      OR: [{ approvedById: user.id }, { preparedById: user.id }],
+    });
+  } else if (user.role.name === "REVIEWER") {
+    (where.AND as Prisma.PurchaseOrderWhereInput[]).push({
+      OR: [{ reviewedById: user.id }, { preparedById: user.id }],
+    });
+  } else {
+    // Regular user sees only their own POs
+    (where.AND as Prisma.PurchaseOrderWhereInput[]).push({
+      preparedById: user.id,
+    });
+  }
 
   if (status) {
     const statuses = status.split(',') as POStatus[];

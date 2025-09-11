@@ -26,22 +26,34 @@ export async function generateIOMNumber(): Promise<string> {
   return `IOM-${year}-${(count + 1).toString().padStart(4, '0')}`;
 }
 
-export async function getIOMsByUser(
-  userId: string,
-  { page = 1, pageSize = 10, search = "", status = "" }: { page?: number; pageSize?: number, search?: string, status?: string }
+export async function getIOMs(
+  session: Session,
+  {
+    page = 1,
+    pageSize = 10,
+    search = "",
+    status = "",
+  }: { page?: number; pageSize?: number; search?: string; status?: string }
 ) {
+  const user = session.user;
   const where: Prisma.IOMWhereInput = {
-    AND: [
-      {
-        OR: [
-          { preparedById: userId },
-          { requestedById: userId },
-          { reviewedById: userId },
-          { approvedById: userId },
-        ],
-      },
-    ],
+    AND: [],
   };
+
+  if (user.role.name === "ADMIN") {
+    // Admin sees all IOMs
+  } else if (user.role.name === "MANAGER") {
+    (where.AND as Prisma.IOMWhereInput[]).push({
+      OR: [{ approvedById: user.id }, { preparedById: user.id }],
+    });
+  } else if (user.role.name === "REVIEWER") {
+    (where.AND as Prisma.IOMWhereInput[]).push({
+      OR: [{ reviewedById: user.id }, { preparedById: user.id }],
+    });
+  } else {
+    // Regular user sees only their own IOMs
+    (where.AND as Prisma.IOMWhereInput[]).push({ preparedById: user.id });
+  }
 
   if (status) {
     const statuses = status.split(',') as IOMStatus[];

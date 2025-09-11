@@ -1,7 +1,7 @@
 // src/app/api/iom/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
-import { createIOM, getIOMsByUser } from "@/lib/iom";
+import { createIOM, getIOMs } from "@/lib/iom";
 // FIX: Correct the schema import name
 import { createIomSchema } from "@/lib/schemas";
 import { fromZodError } from "zod-validation-error";
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
 
-    const { ioms, total } = await getIOMsByUser(session.user.id, {
+    const { ioms, total } = await getIOMs(session, {
       page,
       pageSize,
       search,
