@@ -1,6 +1,11 @@
 import NextAuth from "next-auth";
 import { JWT } from "next-auth/jwt";
 
+interface UserRole {
+  id: string;
+  name: string;
+}
+
 declare module 'next-auth' {
   /**
    * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
@@ -10,8 +15,9 @@ declare module 'next-auth' {
       id: string;
       email: string;
       name: string;
-      roleId?: string | null; // Corrected type
+      roleId?: string | null;
       permissions?: string[];
+      role?: UserRole | null;
     };
   }
 
@@ -22,8 +28,9 @@ declare module 'next-auth' {
     id: string;
     email: string;
     name?: string | null;
-    roleId?: string | null; // Corrected type
+    roleId?: string | null;
     permissions?: string[];
+    role?: UserRole | null;
   }
 }
 
@@ -32,7 +39,8 @@ declare module 'next-auth/jwt' {
    * The shape of the JWT object.
    */
   interface JWT {
-    roleId?: string | null; // Corrected type
+    roleId?: string | null;
     permissions?: string[];
+    role?: UserRole | null;
   }
 }
