@@ -1,12 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(
-  _request: Request,
-  { params }: { params: { roleName: string } }
+  _request: NextRequest,
+  { params: paramsPromise }: { params: Promise<{ roleName: string }> }
 ) {
   try {
+    const params = await paramsPromise;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -31,7 +32,7 @@ export async function GET(
 
     return NextResponse.json(users);
   } catch (error) {
-    console.error(`Error fetching users with role ${params.roleName}:`, error);
+    console.error(`Error fetching users by role:`, error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

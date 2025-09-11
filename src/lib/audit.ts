@@ -21,7 +21,7 @@ export async function logAudit(
         recordId: data.recordId,
         userId: data.userId,
         userName: data.userName,
-        changes: data.changes,
+        changes: JSON.stringify(data.changes),
       },
     });
   } catch (error) {

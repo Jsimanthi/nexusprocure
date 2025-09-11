@@ -35,7 +35,10 @@ export async function getPOs(
     status = "",
   }: { page?: number; pageSize?: number; search?: string; status?: string }
 ) {
-  const user = session.user;
+  const user = session.user as unknown as {
+    id: string;
+    role: { name: string };
+  };
   const where: Prisma.PurchaseOrderWhereInput = {
     AND: [],
   };

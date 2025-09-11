@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
 import { useSession } from "next-auth/react";
+import { z } from "zod";
+import { createIomSchema } from "@/lib/schemas";
 
 interface IOMItem {
   itemName: string;
@@ -91,7 +93,7 @@ export default function CreateIOMPage() {
     setLoading(true);
 
     try {
-      const payload: any = {
+      const payload: z.infer<typeof createIomSchema> = {
         ...formData,
         items: items.map((item) => ({
           itemName: item.itemName,
@@ -99,13 +101,9 @@ export default function CreateIOMPage() {
           quantity: item.quantity,
           unitPrice: item.unitPrice,
         })),
-        preparedById: session.user.id,
         requestedById: session.user.id,
+        reviewedById: formData.reviewedById || undefined,
       };
-
-      if (formData.reviewedById) {
-        payload.reviewedById = formData.reviewedById;
-      }
 
       const response = await fetch("/api/iom", {
         method: "POST",
