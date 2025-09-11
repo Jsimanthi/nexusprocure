@@ -8,11 +8,15 @@ const updateRoleSchema = z.object({
   roleId: z.string().cuid(),
 });
 
+// HACK: The type for params is a Promise when using Next.js 15.5.2 with Turbopack.
+// This is likely a bug and this workaround should be removed when the issue is fixed.
+// The standard signature is { params }: { params: { id: string } }
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await paramsPromise;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -54,9 +58,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await paramsPromise;
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -88,7 +93,7 @@ export async function PUT(
     return NextResponse.json(updatedUser);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
+      return NextResponse.json({ error: error.issues }, { status: 400 });
     }
     if (error instanceof Error && error.message.includes('Not authorized')) {
       return NextResponse.json({ error: error.message }, { status: 403 });
