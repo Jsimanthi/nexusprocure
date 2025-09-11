@@ -96,6 +96,10 @@ export const authOptions: NextAuthConfig = {
           }
         }
 
+        const role = user.roleId
+          ? await prisma.role.findUnique({ where: { id: user.roleId } })
+          : null;
+
         // Return user with roleId and permissions
         return {
           id: user.id,
@@ -103,6 +107,7 @@ export const authOptions: NextAuthConfig = {
           name: user.name || "User",
           roleId: user.roleId || undefined,
           permissions,
+          role,
         };
       },
     }),
@@ -112,6 +117,7 @@ export const authOptions: NextAuthConfig = {
       if (user) {
         token.roleId = user.roleId;
         token.permissions = user.permissions;
+        token.role = user.role;
       }
       return token;
     },
@@ -120,6 +126,7 @@ export const authOptions: NextAuthConfig = {
         session.user.roleId = token.roleId;
         session.user.permissions = token.permissions;
         session.user.id = token.sub as string;
+        session.user.role = token.role;
       }
       return session;
     },
