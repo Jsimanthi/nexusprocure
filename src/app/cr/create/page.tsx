@@ -25,6 +25,7 @@ interface FormData {
   totalAmount: number;
   taxAmount: number;
   grandTotal: number;
+  reviewedById: string;
 }
 
 export default function CreateCRPage() {
