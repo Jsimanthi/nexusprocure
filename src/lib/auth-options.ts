@@ -29,7 +29,7 @@ export const authOptions: NextAuthConfig = {
         });
 
         // Create demo user if not exists
-        if (!user) {
+        if (!user && credentials.email === 'demo@nexusprocure.com') {
           const hashedPassword = await bcrypt.hash(DEMO_PASSWORD, 12);
           const adminRole = await prisma.role.findUnique({
             where: { name: 'ADMIN' },
@@ -45,6 +45,21 @@ export const authOptions: NextAuthConfig = {
               roleId: adminRole.id,
             },
           });
+        } else if (user && user.email === 'demo@nexusprocure.com') {
+          // Ensure demo user is always an admin
+          const adminRole = await prisma.role.findUnique({
+            where: { name: 'ADMIN' },
+          });
+          if (adminRole && user.roleId !== adminRole.id) {
+            user = await prisma.user.update({
+              where: { id: user.id },
+              data: { roleId: adminRole.id },
+            });
+          }
+        }
+
+        if (!user) {
+          return null;
         }
 
         // Verify password - handle null password
