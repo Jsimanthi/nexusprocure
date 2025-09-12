@@ -196,39 +196,62 @@ export async function updateIOMStatus(
   session: Session,
   approverId?: string
 ) {
+  if (!status && !approverId) {
+    throw new Error("Either status or approverId must be provided.");
+  }
+
+  // Authorize based on action
   if (status) {
     switch (status) {
       case IOMStatus.APPROVED:
-        authorize(session, 'APPROVE_IOM');
+        authorize(session, "APPROVE_IOM");
         break;
       case IOMStatus.REJECTED:
-        authorize(session, 'REJECT_IOM');
+        authorize(session, "REJECT_IOM");
         break;
       default:
-        authorize(session, 'UPDATE_IOM');
+        authorize(session, "UPDATE_IOM");
+        break;
+    }
+  } else {
+    // If only approverId is provided, it's an update action
+    authorize(session, "UPDATE_IOM");
+  }
+
+  interface UpdateData {
+    status?: IOMStatus;
+    reviewedById?: string | null;
+    approvedById?: string | null;
+  }
+
+  const updateData: UpdateData = {};
+  const userId = session.user.id;
+
+  if (status) {
+    updateData.status = status;
+    switch (status) {
+      case IOMStatus.DRAFT: // Withdrawing
+        updateData.reviewedById = null;
+        updateData.approvedById = null;
+        break;
+      case IOMStatus.UNDER_REVIEW: // Starting review
+        updateData.reviewedById = userId;
+        break;
+      case IOMStatus.PENDING_APPROVAL: // Submitting for approval
+        if (!approverId) {
+          throw new Error("Approver ID is required when moving to PENDING_APPROVAL");
+        }
+        updateData.approvedById = approverId;
+        break;
+      case IOMStatus.APPROVED: // Approving
+        updateData.approvedById = userId;
         break;
     }
   } else if (approverId) {
-    authorize(session, 'UPDATE_IOM');
-  } else {
-    throw new Error("Either status or approverId must be provided.");
-  }
-  
-  interface UpdateData {
-    status?: IOMStatus;
-    reviewedById?: string;
-    approvedById?: string;
-  }
-  
-  const updateData: UpdateData = {};
-  if (status) {
-    updateData.status = status;
-  }
-  if (approverId) {
+    // This case should not be used anymore, but we keep it for safety.
+    // The new flow always sets a status when assigning an approver.
     updateData.approvedById = approverId;
   }
-
-  const userId = session.user.id;
 
   const iom = await prisma.iOM.findUnique({
     where: { id },
@@ -244,12 +267,6 @@ export async function updateIOMStatus(
 
   if (!iom || !iom.preparedBy) {
     throw new Error("IOM or originator not found.");
-  }
-
-  if (status === IOMStatus.UNDER_REVIEW) {
-    updateData.reviewedById = userId;
-  } else if (status === IOMStatus.APPROVED) {
-    updateData.approvedById = userId;
   }
 
   const updatedIom = await prisma.iOM.update({

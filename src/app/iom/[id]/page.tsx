@@ -11,9 +11,11 @@ import ErrorDisplay from "@/components/ErrorDisplay";
 import { getIOMStatusColor } from "@/lib/utils";
 import { useHasPermission } from "@/hooks/useHasPermission";
 import { User } from "next-auth";
+import { useSession } from "next-auth/react";
 
 export default function IOMDetailPage() {
   const params = useParams();
+  const { data: session } = useSession();
   const [iom, setIom] = useState<IOM | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -23,6 +25,7 @@ export default function IOMDetailPage() {
 
   const canApprove = useHasPermission('APPROVE_IOM');
   const canReview = useHasPermission('REVIEW_IOM');
+  const isCreator = session?.user?.id === iom?.preparedById;
 
   useEffect(() => {
     if (params.id) {
@@ -64,7 +67,7 @@ export default function IOMDetailPage() {
     }
   };
 
-  const updateStatus = async (newStatus: IOMStatus, approverId?: string) => {
+  const updateStatus = async (newStatus?: IOMStatus, approverId?: string) => {
     setUpdating(true);
     try {
       const body: { status?: IOMStatus; approverId?: string } = {};
@@ -95,7 +98,7 @@ export default function IOMDetailPage() {
 
   const handleApproverSubmit = () => {
     if (selectedApprover) {
-      updateStatus(IOMStatus.SUBMITTED, selectedApprover);
+      updateStatus(IOMStatus.PENDING_APPROVAL, selectedApprover);
     }
   };
 
@@ -104,26 +107,39 @@ export default function IOMDetailPage() {
     
     switch (currentStatus) {
       case IOMStatus.DRAFT:
-        actions.push({
-          status: IOMStatus.SUBMITTED,
-          label: "Submit for Review",
-          color: "bg-blue-600 hover:bg-blue-700",
-          onClick: () => updateStatus(IOMStatus.SUBMITTED)
-        });
+        if (isCreator) {
+          actions.push({
+            status: IOMStatus.SUBMITTED,
+            label: "Submit for Review",
+            color: "bg-blue-600 hover:bg-blue-700",
+            onClick: () => updateStatus(IOMStatus.SUBMITTED)
+          });
+        }
         break;
       case IOMStatus.SUBMITTED:
-        actions.push(
-          { status: IOMStatus.UNDER_REVIEW, label: "Start Review", color: "bg-yellow-600 hover:bg-yellow-700", onClick: () => updateStatus(IOMStatus.UNDER_REVIEW) },
-          { status: IOMStatus.REJECTED, label: "Reject", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(IOMStatus.REJECTED) }
-        );
+        if (isCreator) {
+          actions.push({
+            status: IOMStatus.DRAFT,
+            label: "Withdraw Request",
+            color: "bg-gray-600 hover:bg-gray-700",
+            onClick: () => updateStatus(IOMStatus.DRAFT),
+          });
+        } else if (canReview) {
+          actions.push(
+            { status: IOMStatus.UNDER_REVIEW, label: "Start Review", color: "bg-yellow-600 hover:bg-yellow-700", onClick: () => updateStatus(IOMStatus.UNDER_REVIEW) }
+          );
+        }
         break;
       case IOMStatus.UNDER_REVIEW:
+        if (canReview) {
+          actions.push({ status: IOMStatus.PENDING_APPROVAL, label: "Submit for Approval", color: "bg-blue-600 hover:bg-blue-700", onClick: () => setShowApproverModal(true) });
+        }
+        break;
+      case IOMStatus.PENDING_APPROVAL:
         if (canApprove) {
           actions.push({ status: IOMStatus.APPROVED, label: "Approve", color: "bg-green-600 hover:bg-green-700", onClick: () => updateStatus(IOMStatus.APPROVED) });
-        } else if (canReview) {
-          actions.push({ status: IOMStatus.SUBMITTED, label: "Submit for Approval", color: "bg-blue-600 hover:bg-blue-700", onClick: () => setShowApproverModal(true) });
+          actions.push({ status: IOMStatus.REJECTED, label: "Reject", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(IOMStatus.REJECTED) });
         }
-        actions.push({ status: IOMStatus.REJECTED, label: "Reject", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(IOMStatus.REJECTED) });
         break;
       case IOMStatus.APPROVED:
         actions.push({ status: IOMStatus.COMPLETED, label: "Mark as Completed", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(IOMStatus.COMPLETED) });

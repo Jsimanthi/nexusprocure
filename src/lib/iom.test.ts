@@ -117,6 +117,16 @@ describe('IOM Functions', () => {
 
     it('should allow a user with APPROVE_IOM permission to approve', async () => {
       vi.mocked(authorize).mockResolvedValue(true);
+      // Set initial state to PENDING_APPROVAL for this test
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue({
+        id: iomId,
+        preparedById: 'user-prepared-id',
+        iomNumber: 'IOM-2024-0001',
+        status: IOMStatus.PENDING_APPROVAL,
+        preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+
       await updateIOMStatus(iomId, IOMStatus.APPROVED, session);
 
       expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_IOM');
@@ -124,8 +134,29 @@ describe('IOM Functions', () => {
       expect(logAudit).toHaveBeenCalledWith("UPDATE", expect.objectContaining({
         recordId: iomId,
         changes: {
-          from: { status: IOMStatus.DRAFT },
+          from: { status: IOMStatus.PENDING_APPROVAL },
           to: { status: IOMStatus.APPROVED, approverId: undefined }
+        }
+      }));
+    });
+
+    it('should move to PENDING_APPROVAL when reviewer submits for approval', async () => {
+      vi.mocked(authorize).mockResolvedValue(true);
+      const approverId = 'manager-id';
+      await updateIOMStatus(iomId, IOMStatus.PENDING_APPROVAL, session, approverId);
+
+      expect(authorize).toHaveBeenCalledWith(session, 'UPDATE_IOM');
+      expect(prisma.iOM.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: {
+          status: IOMStatus.PENDING_APPROVAL,
+          approvedById: approverId
+        }
+      }));
+      expect(logAudit).toHaveBeenCalledWith("UPDATE", expect.objectContaining({
+        recordId: iomId,
+        changes: {
+          from: { status: IOMStatus.DRAFT },
+          to: { status: IOMStatus.PENDING_APPROVAL, approverId }
         }
       }));
     });
