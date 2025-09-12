@@ -2,7 +2,7 @@ import * as React from 'react';
 
 interface StatusUpdateEmailProps {
   userName: string;
-  documentType: 'Purchase Order' | 'IOM' | 'Check Request';
+  documentType: 'Purchase Order' | 'IOM' | 'Payment Request';
   documentNumber: string;
   newStatus: string;
 }

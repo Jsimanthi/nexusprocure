@@ -19,7 +19,7 @@ vi.mock('@/lib/email');
 vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
 vi.mock('@/lib/auth-utils');
-import { getAuditUser } from './audit';
+import { getAuditUser, logAudit } from './audit';
 
 const mockUserSession = (roleName = 'USER'): Session => ({
   user: {
@@ -188,11 +188,40 @@ describe('Purchase Order Functions', () => {
 
     it('should allow a user with APPROVE_PO permission to approve', async () => {
       vi.mocked(authorize).mockResolvedValue(true);
-      await expect(
-        updatePOStatus(poId, POStatus.APPROVED, session)
-      ).resolves.not.toThrow();
+      vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
+        id: poId,
+        preparedById: 'user-prepared-id',
+        poNumber: 'PO-2024-0001',
+        status: POStatus.PENDING_APPROVAL,
+        preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+
+      await updatePOStatus(poId, POStatus.APPROVED, session);
+
       expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_PO');
       expect(prisma.purchaseOrder.update).toHaveBeenCalled();
+      expect(logAudit).toHaveBeenCalledWith("UPDATE", expect.objectContaining({
+        recordId: poId,
+        changes: {
+          from: { status: POStatus.PENDING_APPROVAL },
+          to: { status: POStatus.APPROVED, approverId: undefined }
+        }
+      }));
+    });
+
+    it('should move to PENDING_APPROVAL when reviewer submits for approval', async () => {
+      vi.mocked(authorize).mockResolvedValue(true);
+      const approverId = 'manager-id';
+      await updatePOStatus(poId, POStatus.PENDING_APPROVAL, session, approverId);
+
+      expect(authorize).toHaveBeenCalledWith(session, 'UPDATE_PO');
+      expect(prisma.purchaseOrder.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: {
+          status: POStatus.PENDING_APPROVAL,
+          approvedById: approverId
+        }
+      }));
     });
   });
 

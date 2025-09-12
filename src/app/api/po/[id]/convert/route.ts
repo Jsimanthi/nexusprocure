@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
 import { getPOById } from "@/lib/po";
-import { createCheckRequest } from "@/lib/cr";
-import { CRStatus, PaymentMethod } from "@/types/cr";
+import { createPaymentRequest } from "@/lib/pr";
+import { PRStatus, PaymentMethod } from "@/types/pr";
 
 export async function POST(
   request: NextRequest,
@@ -25,7 +25,7 @@ export async function POST(
       return NextResponse.json({ error: "Purchase Order not found" }, { status: 404 });
     }
 
-    // Validate that PO status allows for CR conversion
+    // Validate that PO status allows for PR conversion
     const allowedStatuses = ['APPROVED', 'ORDERED', 'DELIVERED'];
     if (!allowedStatuses.includes(po.status)) {
       return NextResponse.json(
@@ -44,8 +44,8 @@ export async function POST(
       );
     }
 
-    const cr = await createCheckRequest({
-      title: `CR for ${po.title}`,
+    const pr = await createPaymentRequest({
+      title: `PR for ${po.title}`,
       poId: po.id,
       paymentTo: po.vendor?.name || 'N/A',
       grandTotal: po.grandTotal,
@@ -58,9 +58,9 @@ export async function POST(
       purpose: `Payment for PO #${po.poNumber}`,
     }, session);
 
-    return NextResponse.json(cr, { status: 201 });
+    return NextResponse.json(pr, { status: 201 });
   } catch (error) {
-    console.error("Error converting PO to CR:", error);
+    console.error("Error converting PO to PR:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

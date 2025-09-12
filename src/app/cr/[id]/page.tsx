@@ -1,21 +1,21 @@
-// src/app/cr/[id]/page.tsx
+// src/app/pr/[id]/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import { CheckRequest, CRStatus, PaymentMethod } from "@/types/cr";
+import { PaymentRequest, PRStatus, PaymentMethod } from "@/types/pr";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
-import { getCRStatusColor, formatCurrency } from "@/lib/utils";
+import { getPRStatusColor, formatCurrency } from "@/lib/utils";
 import { UserRef } from "@/types/iom";
 import { PurchaseOrder } from "@prisma/client";
+import { useSession } from "next-auth/react";
+import { useHasPermission } from "@/hooks/useHasPermission";
+import { User } from "next-auth";
 
-// Define a new type that includes the related data.
-// This assumes your API endpoint for fetching the CR includes these relations.
-// The `Partial<PurchaseOrder>` is used here because the PO object might not have all fields if you only select some of them.
-type FullCheckRequest = CheckRequest & {
+type FullPaymentRequest = PaymentRequest & {
   po?: Partial<PurchaseOrder> | null;
   preparedBy?: UserRef | null;
   requestedBy?: UserRef | null;
@@ -23,50 +23,75 @@ type FullCheckRequest = CheckRequest & {
   approvedBy?: UserRef | null;
 };
 
-export default function CRDetailPage() {
+export default function PRDetailPage() {
   const params = useParams();
-  //const router = useRouter();
-  // Use the new, more complete type for your state
-  const [cr, setCr] = useState<FullCheckRequest | null>(null);
+  const { data: session } = useSession();
+  const [pr, setPr] = useState<FullPaymentRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [showApproverModal, setShowApproverModal] = useState(false);
+  const [approvers, setApprovers] = useState<User[]>([]);
+  const [selectedApprover, setSelectedApprover] = useState<string>('');
+
+  const canApprove = useHasPermission('APPROVE_PR');
+  const canReview = useHasPermission('REVIEW_PR');
+  const isCreator = session?.user?.id === pr?.preparedById;
 
   useEffect(() => {
     if (params.id) {
-      fetchCR();
+      fetchPR();
     }
-  }, [params.id]);
+    if (canReview) {
+      fetchApprovers();
+    }
+  }, [params.id, canReview]);
 
-  const fetchCR = async () => {
+  const fetchPR = async () => {
     try {
       const response = await fetch(`/api/cr/${params.id}`);
       if (response.ok) {
         const data = await response.json();
-        setCr(data);
+        setPr(data);
       } else {
-        console.error("Failed to fetch CR");
+        console.error("Failed to fetch PR");
       }
     } catch (error) {
-      console.error("Error fetching CR:", error);
+      console.error("Error fetching PR:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const updateStatus = async (newStatus: CRStatus) => {
+  const fetchApprovers = async () => {
+    try {
+      const response = await fetch('/api/users?role=MANAGER');
+      if (response.ok) {
+        const data = await response.json();
+        setApprovers(data);
+      } else {
+        console.error("Failed to fetch approvers");
+      }
+    } catch (error) {
+      console.error("Error fetching approvers:", error);
+    }
+  };
+
+  const updateStatus = async (newStatus?: PRStatus, approverId?: string) => {
     setUpdating(true);
     try {
+      const body: { status?: PRStatus; approverId?: string } = {};
+      if (newStatus) body.status = newStatus;
+      if (approverId) body.approverId = approverId;
+
       const response = await fetch(`/api/cr/${params.id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: newStatus }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
 
       if (response.ok) {
-        const updatedCR = await response.json();
-        setCr(updatedCR);
+        const updatedPR = await response.json();
+        setPr(updatedPR);
       } else {
         console.error("Failed to update status");
       }
@@ -74,62 +99,56 @@ export default function CRDetailPage() {
       console.error("Error updating status:", error);
     } finally {
       setUpdating(false);
+      setShowApproverModal(false);
+    }
+  };
+
+  const handleApproverSubmit = () => {
+    if (selectedApprover) {
+      updateStatus(PRStatus.PENDING_APPROVAL, selectedApprover);
     }
   };
 
   const getPaymentMethodLabel = (method: PaymentMethod) => {
     switch (method) {
-      case PaymentMethod.CHEQUE:
-        return "Cheque";
-      case PaymentMethod.BANK_TRANSFER:
-        return "Bank Transfer";
-      case PaymentMethod.CASH:
-        return "Cash";
-      case PaymentMethod.ONLINE_PAYMENT:
-        return "Online Payment";
-      default:
-        return method;
+      case PaymentMethod.CHEQUE: return "Cheque";
+      case PaymentMethod.BANK_TRANSFER: return "Bank Transfer";
+      case PaymentMethod.CASH: return "Cash";
+      case PaymentMethod.ONLINE_PAYMENT: return "Online Payment";
+      default: return method;
     }
   };
 
-  const getAvailableStatusActions = (currentStatus: CRStatus) => {
-    const actions: { status: CRStatus; label: string; color: string }[] = [];
+  const getAvailableStatusActions = (currentStatus: PRStatus) => {
+    const actions: { status: PRStatus; label: string; color: string; onClick: () => void }[] = [];
 
     switch (currentStatus) {
-      case CRStatus.DRAFT:
-        actions.push({
-          status: CRStatus.PENDING_APPROVAL,
-          label: "Submit for Approval",
-          color: "bg-blue-600 hover:bg-blue-700",
-        });
+      case PRStatus.DRAFT:
+        if (isCreator) {
+          actions.push({ status: PRStatus.SUBMITTED, label: "Submit for Review", color: "bg-blue-600 hover:bg-blue-700", onClick: () => updateStatus(PRStatus.SUBMITTED) });
+        }
         break;
-      case CRStatus.PENDING_APPROVAL:
-        actions.push(
-          {
-            status: CRStatus.APPROVED,
-            label: "Approve CR",
-            color: "bg-green-600 hover:bg-green-700",
-          },
-          {
-            status: CRStatus.REJECTED,
-            label: "Reject CR",
-            color: "bg-red-600 hover:bg-red-700",
-          }
-        );
+      case PRStatus.SUBMITTED:
+        if (isCreator) {
+          actions.push({ status: PRStatus.DRAFT, label: "Withdraw Request", color: "bg-gray-600 hover:bg-gray-700", onClick: () => updateStatus(PRStatus.DRAFT) });
+        } else if (canReview) {
+          actions.push({ status: PRStatus.UNDER_REVIEW, label: "Start Review", color: "bg-yellow-600 hover:bg-yellow-700", onClick: () => updateStatus(PRStatus.UNDER_REVIEW) });
+        }
         break;
-      case CRStatus.APPROVED:
-        actions.push(
-          {
-            status: CRStatus.PROCESSED,
-            label: "Mark as Processed",
-            color: "bg-purple-600 hover:bg-purple-700",
-          },
-          {
-            status: CRStatus.CANCELLED,
-            label: "Cancel CR",
-            color: "bg-red-600 hover:bg-red-700",
-          }
-        );
+      case PRStatus.UNDER_REVIEW:
+        if (canReview) {
+          actions.push({ status: PRStatus.PENDING_APPROVAL, label: "Submit for Approval", color: "bg-blue-600 hover:bg-blue-700", onClick: () => setShowApproverModal(true) });
+        }
+        break;
+      case PRStatus.PENDING_APPROVAL:
+        if (canApprove) {
+          actions.push({ status: PRStatus.APPROVED, label: "Approve PR", color: "bg-green-600 hover:bg-green-700", onClick: () => updateStatus(PRStatus.APPROVED) });
+          actions.push({ status: PRStatus.REJECTED, label: "Reject PR", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(PRStatus.REJECTED) });
+        }
+        break;
+      case PRStatus.APPROVED:
+        actions.push({ status: PRStatus.PROCESSED, label: "Mark as Processed", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(PRStatus.PROCESSED) });
+        actions.push({ status: PRStatus.CANCELLED, label: "Cancel PR", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(PRStatus.CANCELLED) });
         break;
     }
 
@@ -137,262 +156,120 @@ export default function CRDetailPage() {
   };
 
   if (loading) {
+    return <PageLayout title="Loading Payment Request..."><LoadingSpinner /></PageLayout>;
+  }
+
+  if (!pr) {
     return (
-      <PageLayout title="Loading Check Request...">
-        <LoadingSpinner />
+      <PageLayout title="Payment Request Not Found">
+        <ErrorDisplay title="PR Not Found" message={`Could not find a Payment Request with the ID: ${params.id}`} />
+        <div className="mt-6 text-center"><Link href="/cr" className="text-blue-600 hover:text-blue-800">&larr; Back to PR List</Link></div>
       </PageLayout>
     );
   }
 
-  if (!cr) {
-    return (
-      <PageLayout title="Check Request Not Found">
-        <ErrorDisplay
-          title="CR Not Found"
-          message={`Could not find a Check Request with the ID: ${params.id}`}
-        />
-        <div className="mt-6 text-center">
-          <Link href="/cr" className="text-blue-600 hover:text-blue-800">
-            &larr; Back to CR List
-          </Link>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  const statusActions = getAvailableStatusActions(cr.status as CRStatus);
+  const statusActions = getAvailableStatusActions(pr.status as PRStatus);
 
   return (
-    <PageLayout title={cr.title}>
-      <div className="mb-6">
-        <Link href="/cr" className="text-blue-600 hover:text-blue-800">
-          &larr; Back to CR List
-        </Link>
-      </div>
+    <PageLayout title={pr.title}>
+      {showApproverModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl">
+            <h2 className="text-lg font-bold mb-4">Select Approver</h2>
+            <select value={selectedApprover} onChange={(e) => setSelectedApprover(e.target.value)} className="w-full p-2 border rounded">
+              <option value="" disabled>Select an approver</option>
+              {approvers.map((approver) => (<option key={approver.id} value={approver.id}>{approver.name}</option>))}
+            </select>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setShowApproverModal(false)} className="px-4 py-2 bg-gray-300 rounded" disabled={updating}>Cancel</button>
+              <button onClick={handleApproverSubmit} className="px-4 py-2 bg-blue-600 text-white rounded" disabled={!selectedApprover || updating}>{updating ? "Submitting..." : "Submit"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="mb-6"><Link href="/cr" className="text-blue-600 hover:text-blue-800">&larr; Back to PR List</Link></div>
       <div className="flex justify-between items-start mt-2 mb-6">
         <div>
-          <p className="text-lg text-gray-600">{cr.crNumber}</p>
-          {/* Now safe to access cr.po because it's part of the type */}
-          {cr.po && (
-            <p className="text-sm text-gray-500">Linked to PO: {cr.po.poNumber}</p>
-          )}
+          <p className="text-lg text-gray-600">{pr.prNumber}</p>
+          {pr.po && <p className="text-sm text-gray-500">Linked to PO: {pr.po.poNumber}</p>}
         </div>
         <div className="text-right">
-          <span
-            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getCRStatusColor(cr.status)}`}
-          >
-            {cr.status.replace("_", " ")}
-          </span>
-          <p className="text-sm text-gray-500 mt-1">
-            Created: {new Date(cr.createdAt!).toLocaleDateString()}
-          </p>
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPRStatusColor(pr.status)}`}>{pr.status.replace("_", " ")}</span>
+          <p className="text-sm text-gray-500 mt-1">Created: {new Date(pr.createdAt!).toLocaleDateString()}</p>
         </div>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* CR Details */}
           <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Check Request Details</h2>
+            <h2 className="text-xl font-semibold mb-4">Payment Request Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">
-                  Payment Information
-                </h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Payment Information</h3>
                 <dl className="space-y-2">
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Payment To</dt>
-                    <dd className="text-sm text-gray-900">{cr.paymentTo}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Payment Date</dt>
-                    <dd className="text-sm text-gray-900">
-                      {new Date(cr.paymentDate).toLocaleDateString()}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">
-                      Payment Method
-                    </dt>
-                    <dd className="text-sm text-gray-900">
-                      {getPaymentMethodLabel(cr.paymentMethod)}
-                    </dd>
-                  </div>
-                  {cr.bankAccount && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">
-                        Bank Account
-                      </dt>
-                      <dd className="text-sm text-gray-900">{cr.bankAccount}</dd>
-                    </div>
-                  )}
-                  {cr.referenceNumber && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">
-                        Reference Number
-                      </dt>
-                      <dd className="text-sm text-gray-900">
-                        {cr.referenceNumber}
-                      </dd>
-                    </div>
-                  )}
+                  <div><dt className="text-sm font-medium text-gray-500">Payment To</dt><dd className="text-sm text-gray-900">{pr.paymentTo}</dd></div>
+                  <div><dt className="text-sm font-medium text-gray-500">Payment Date</dt><dd className="text-sm text-gray-900">{new Date(pr.paymentDate).toLocaleDateString()}</dd></div>
+                  <div><dt className="text-sm font-medium text-gray-500">Payment Method</dt><dd className="text-sm text-gray-900">{getPaymentMethodLabel(pr.paymentMethod)}</dd></div>
+                  {pr.bankAccount && <div><dt className="text-sm font-medium text-gray-500">Bank Account</dt><dd className="text-sm text-gray-900">{pr.bankAccount}</dd></div>}
+                  {pr.referenceNumber && <div><dt className="text-sm font-medium text-gray-500">Reference Number</dt><dd className="text-sm text-gray-900">{pr.referenceNumber}</dd></div>}
                 </dl>
               </div>
-
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-3">Purpose</h3>
-                <p className="text-sm text-gray-900 whitespace-pre-wrap">
-                  {cr.purpose}
-                </p>
+                <p className="text-sm text-gray-900 whitespace-pre-wrap">{pr.purpose}</p>
               </div>
             </div>
           </div>
-
-          {/* PO Information (if linked) */}
-          {cr.po && (
+          {pr.po && (
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Linked Purchase Order</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">
-                    PO Details
-                  </h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">PO Details</h3>
                   <dl className="space-y-2">
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">
-                        PO Number
-                      </dt>
-                      <dd className="text-sm text-gray-900">{cr.po.poNumber}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Title</dt>
-                      <dd className="text-sm text-gray-900">{cr.po.title}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Vendor</dt>
-                      <dd className="text-sm text-gray-900">{cr.po.vendorName}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Status</dt>
-                      <dd className="text-sm text-gray-900">{cr.po.status}</dd>
-                    </div>
+                    <div><dt className="text-sm font-medium text-gray-500">PO Number</dt><dd className="text-sm text-gray-900">{pr.po.poNumber}</dd></div>
+                    <div><dt className="text-sm font-medium text-gray-500">Title</dt><dd className="text-sm text-gray-900">{pr.po.title}</dd></div>
+                    <div><dt className="text-sm font-medium text-gray-500">Vendor</dt><dd className="text-sm text-gray-900">{pr.po.vendorName}</dd></div>
+                    <div><dt className="text-sm font-medium text-gray-500">Status</dt><dd className="text-sm text-gray-900">{pr.po.status}</dd></div>
                   </dl>
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">
-                    Financial Summary
-                  </h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Financial Summary</h3>
                   <dl className="space-y-2">
-                    <div className="flex justify-between">
-                      <dt className="text-sm font-medium text-gray-500">
-                        Total Amount
-                      </dt>
-                      <dd className="text-sm text-gray-900">
-                        {formatCurrency(cr.po.grandTotal!)}
-                      </dd>
-                    </div>
+                    <div className="flex justify-between"><dt className="text-sm font-medium text-gray-500">Total Amount</dt><dd className="text-sm text-gray-900">{formatCurrency(pr.po.grandTotal!)}</dd></div>
                   </dl>
                 </div>
               </div>
             </div>
           )}
         </div>
-
-        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Status Actions */}
           {statusActions.length > 0 && (
             <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">CR Actions</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">PR Actions</h3>
               <div className="space-y-2">
-                {statusActions.map((action) => (
-                  <button
-                    key={action.status}
-                    onClick={() => updateStatus(action.status)}
-                    disabled={updating}
-                    className={`w-full ${action.color} text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50`}
-                  >
-                    {updating ? "Updating..." : action.label}
-                  </button>
-                ))}
+                {statusActions.map((action) => (<button key={action.status} onClick={action.onClick} disabled={updating} className={`w-full ${action.color} text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50`}>{updating ? "Updating..." : action.label}</button>))}
               </div>
             </div>
           )}
-
-          {/* Financial Summary */}
           <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Financial Summary
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Financial Summary</h3>
             <dl className="space-y-2">
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Total Amount</dt>
-                <dd className="text-sm text-gray-900">
-                  {formatCurrency(cr.totalAmount)}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Tax Amount</dt>
-                <dd className="text-sm text-gray-900">
-                  {formatCurrency(cr.taxAmount)}
-                </dd>
-              </div>
-              <div className="flex justify-between border-t pt-2">
-                <dt className="text-sm font-semibold text-gray-900">Grand Total</dt>
-                <dd className="text-sm font-bold text-gray-900">
-                  {formatCurrency(cr.grandTotal)}
-                </dd>
-              </div>
+              <div className="flex justify-between"><dt className="text-sm font-medium text-gray-500">Total Amount</dt><dd className="text-sm text-gray-900">{formatCurrency(pr.totalAmount)}</dd></div>
+              <div className="flex justify-between"><dt className="text-sm font-medium text-gray-500">Tax Amount</dt><dd className="text-sm text-gray-900">{formatCurrency(pr.taxAmount)}</dd></div>
+              <div className="flex justify-between border-t pt-2"><dt className="text-sm font-semibold text-gray-900">Grand Total</dt><dd className="text-sm font-bold text-gray-900">{formatCurrency(pr.grandTotal)}</dd></div>
             </dl>
           </div>
-
-          {/* People Involved */}
           <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              People Involved
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">People Involved</h3>
             <dl className="space-y-3">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Prepared By</dt>
-                {/* Now safe to access cr.preparedBy because it's part of the type */}
-                <dd className="text-sm text-gray-900">
-                  {cr.preparedBy?.name} ({cr.preparedBy?.email})
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Requested By</dt>
-                <dd className="text-sm text-gray-900">
-                  {cr.requestedBy?.name} ({cr.requestedBy?.email})
-                </dd>
-              </div>
-              {cr.reviewedBy && (
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Reviewed By</dt>
-                  <dd className="text-sm text-gray-900">
-                    {cr.reviewedBy.name} ({cr.reviewedBy.email})
-                  </dd>
-                </div>
-              )}
-              {cr.approvedBy && (
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Approved By</dt>
-                  <dd className="text-sm text-gray-900">
-                    {cr.approvedBy.name} ({cr.approvedBy.email})
-                  </dd>
-                </div>
-              )}
+              <div><dt className="text-sm font-medium text-gray-500">Prepared By</dt><dd className="text-sm text-gray-900">{pr.preparedBy?.name} ({pr.preparedBy?.email})</dd></div>
+              <div><dt className="text-sm font-medium text-gray-500">Requested By</dt><dd className="text-sm text-gray-900">{pr.requestedBy?.name} ({pr.requestedBy?.email})</dd></div>
+              {pr.reviewedBy && (<div><dt className="text-sm font-medium text-gray-500">Reviewed By</dt><dd className="text-sm text-gray-900">{pr.reviewedBy.name} ({pr.reviewedBy.email})</dd></div>)}
+              {pr.approvedBy && (<div><dt className="text-sm font-medium text-gray-500">Approved By</dt><dd className="text-sm text-gray-900">{pr.approvedBy.name} ({pr.approvedBy.email})</dd></div>)}
             </dl>
           </div>
-
-          {/* Print Button */}
           <div className="bg-white shadow rounded-lg p-6">
-            <button
-              onClick={() => window.print()}
-              className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              Print CR
-            </button>
+            <button onClick={() => window.print()} className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">Print PR</button>
           </div>
         </div>
       </div>

@@ -13,7 +13,7 @@ export async function GET(_request: NextRequest) {
     // 1. Document Counts
     const poCount = await prisma.purchaseOrder.count();
     const iomCount = await prisma.iOM.count();
-    const crCount = await prisma.checkRequest.count();
+    const prCount = await prisma.paymentRequest.count();
 
     // 2. POs by Status
     const poStatusCounts = await prisma.purchaseOrder.groupBy({
@@ -58,7 +58,7 @@ export async function GET(_request: NextRequest) {
       documentCounts: {
         purchaseOrders: poCount,
         ioms: iomCount,
-        checkRequests: crCount,
+        paymentRequests: prCount,
       },
       poStatusCounts: poStatusCounts.map(item => ({
         status: item.status,

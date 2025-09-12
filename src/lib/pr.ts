@@ -1,20 +1,20 @@
-// src/lib/cr.ts
+// src/lib/pr.ts
 import { prisma } from "./prisma";
-import { CRStatus } from "@/types/cr";
+import { PRStatus } from "@/types/pr";
 import { z } from "zod";
 import { createNotification } from "./notification";
 import { sendEmail } from "./email";
 import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
-import { createCrSchema } from "./schemas";
+import { createPrSchema } from "./schemas";
 import * as React from "react";
 import { Session } from "next-auth";
 import { authorize } from "./auth-utils";
 import { logAudit, getAuditUser } from "./audit";
 import { Prisma } from "@prisma/client";
 
-export async function generateCRNumber(): Promise<string> {
+export async function generatePRNumber(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.checkRequest.count({
+  const count = await prisma.paymentRequest.count({
     where: {
       createdAt: {
         gte: new Date(`${year}-01-01`),
@@ -23,10 +23,10 @@ export async function generateCRNumber(): Promise<string> {
     },
   });
 
-  return `CR-${year}-${(count + 1).toString().padStart(4, '0')}`;
+  return `PR-${year}-${(count + 1).toString().padStart(4, '0')}`;
 }
 
-export async function getCRs(
+export async function getPRs(
   session: Session,
   {
     page = 1,
@@ -39,38 +39,38 @@ export async function getCRs(
     id: string;
     role: { name: string };
   };
-  const where: Prisma.CheckRequestWhereInput = {
+  const where: Prisma.PaymentRequestWhereInput = {
     AND: [],
   };
 
   if (user.role.name === "ADMIN") {
-    // Admin sees all CRs
+    // Admin sees all PRs
   } else if (user.role.name === "MANAGER") {
-    (where.AND as Prisma.CheckRequestWhereInput[]).push({
+    (where.AND as Prisma.PaymentRequestWhereInput[]).push({
       OR: [{ approvedById: user.id }, { preparedById: user.id }],
     });
   } else if (user.role.name === "REVIEWER") {
-    (where.AND as Prisma.CheckRequestWhereInput[]).push({
+    (where.AND as Prisma.PaymentRequestWhereInput[]).push({
       OR: [{ reviewedById: user.id }, { preparedById: user.id }],
     });
   } else {
-    // Regular user sees only their own CRs
-    (where.AND as Prisma.CheckRequestWhereInput[]).push({
+    // Regular user sees only their own PRs
+    (where.AND as Prisma.PaymentRequestWhereInput[]).push({
       preparedById: user.id,
     });
   }
 
   if (status) {
-    const statuses = status.split(',') as CRStatus[];
+    const statuses = status.split(',') as PRStatus[];
     if (statuses.length > 0) {
-      (where.AND as Prisma.CheckRequestWhereInput[]).push({ status: { in: statuses } });
+      (where.AND as Prisma.PaymentRequestWhereInput[]).push({ status: { in: statuses } });
     }
   }
 
   if (search) {
-    (where.AND as Prisma.CheckRequestWhereInput[]).push({
+    (where.AND as Prisma.PaymentRequestWhereInput[]).push({
       OR: [
-        { crNumber: { contains: search } },
+        { prNumber: { contains: search } },
         { title: { contains: search } },
         { paymentTo: { contains: search } },
         { purpose: { contains: search } },
@@ -79,12 +79,11 @@ export async function getCRs(
     });
   }
 
-  const [checkRequests, total] = await prisma.$transaction([
-    prisma.checkRequest.findMany({
+  const [paymentRequests, total] = await prisma.$transaction([
+    prisma.paymentRequest.findMany({
       where,
       skip: (page - 1) * pageSize,
       take: pageSize,
-      // FIX: Add this 'include' to fetch the related PO data
       include: {
         po: {
           select: {
@@ -98,14 +97,14 @@ export async function getCRs(
       },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.checkRequest.count({ where }),
+    prisma.paymentRequest.count({ where }),
   ]);
 
-  return { checkRequests, total };
+  return { paymentRequests, total };
 }
 
-export async function getCRById(id: string) {
-  return await prisma.checkRequest.findUnique({
+export async function getPRById(id: string) {
+  return await prisma.paymentRequest.findUnique({
     where: { id },
     include: {
       po: {
@@ -122,7 +121,7 @@ export async function getCRById(id: string) {
   });
 }
 
-export async function getPOsForCR() {
+export async function getPOsForPR() {
   return await prisma.purchaseOrder.findMany({
     where: {
       status: {
@@ -137,12 +136,12 @@ export async function getPOsForCR() {
   });
 }
 
-type CreateCrData = z.infer<typeof createCrSchema> & {
+type CreatePrData = z.infer<typeof createPrSchema> & {
   preparedById: string;
 };
 
-export async function createCheckRequest(data: CreateCrData, session: Session) {
-  authorize(session, 'CREATE_CR');
+export async function createPaymentRequest(data: CreatePrData, session: Session) {
+  authorize(session, 'CREATE_PR');
   if (data.poId) {
     const po = await prisma.purchaseOrder.findUnique({
       where: { id: data.poId },
@@ -152,7 +151,7 @@ export async function createCheckRequest(data: CreateCrData, session: Session) {
       throw new Error("Associated Purchase Order not found.");
     }
     if (data.grandTotal > po.grandTotal) {
-      throw new Error(`Check Request total (${data.grandTotal}) cannot exceed Purchase Order total (${po.grandTotal}).`);
+      throw new Error(`Payment Request total (${data.grandTotal}) cannot exceed Purchase Order total (${po.grandTotal}).`);
     }
   }
 
@@ -160,16 +159,16 @@ export async function createCheckRequest(data: CreateCrData, session: Session) {
   let lastError: unknown;
 
   for (let i = 0; i < maxRetries; i++) {
-    const crNumber = await generateCRNumber();
-    const crData = {
+    const prNumber = await generatePRNumber();
+    const prData = {
       ...data,
-      crNumber,
-      status: CRStatus.DRAFT,
+      prNumber,
+      status: PRStatus.DRAFT,
     };
 
     try {
-      const createdCr = await prisma.checkRequest.create({
-        data: crData,
+      const createdPr = await prisma.paymentRequest.create({
+        data: prData,
         include: {
           po: {
             include: {
@@ -184,54 +183,92 @@ export async function createCheckRequest(data: CreateCrData, session: Session) {
 
       const auditUser = getAuditUser(session);
       await logAudit("CREATE", {
-        model: "CheckRequest",
-        recordId: createdCr.id,
+        model: "PaymentRequest",
+        recordId: createdPr.id,
         userId: auditUser.userId,
         userName: auditUser.userName,
-        changes: createdCr,
+        changes: createdPr,
       });
 
-      return createdCr;
+      return createdPr;
     } catch (error) {
       lastError = error;
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        console.warn(`Unique constraint violation for CR number. Retrying... (${i + 1}/${maxRetries})`);
+        console.warn(`Unique constraint violation for PR number. Retrying... (${i + 1}/${maxRetries})`);
         continue;
       }
       throw error;
     }
   }
 
-  throw new Error(`Failed to create Check Request after ${maxRetries} attempts. Last error: ${lastError}`);
+  throw new Error(`Failed to create Payment Request after ${maxRetries} attempts. Last error: ${lastError}`);
 }
 
-export async function updateCRStatus(id: string, status: CRStatus, session: Session) {
-  switch (status) {
-    case CRStatus.APPROVED:
-      authorize(session, 'APPROVE_CR');
-      break;
-    case CRStatus.REJECTED:
-      authorize(session, 'REJECT_CR');
-      break;
-    default:
-      authorize(session, 'UPDATE_CR');
-      break;
+export async function updatePRStatus(
+  id: string,
+  status: PRStatus | undefined,
+  session: Session,
+  approverId?: string
+) {
+  if (!status && !approverId) {
+    throw new Error("Either status or approverId must be provided.");
   }
-  
+
+  // Authorize based on action
+  if (status) {
+    switch (status) {
+      case PRStatus.APPROVED:
+        authorize(session, "APPROVE_PR");
+        break;
+      case PRStatus.REJECTED:
+        authorize(session, "REJECT_PR");
+        break;
+      default:
+        authorize(session, "UPDATE_PR");
+        break;
+    }
+  } else {
+    authorize(session, "UPDATE_PR");
+  }
+
   interface UpdateData {
-    status: CRStatus;
-    reviewedById?: string;
-    approvedById?: string;
+    status?: PRStatus;
+    reviewedById?: string | null;
+    approvedById?: string | null;
   }
-  
-  const updateData: UpdateData = { status };
+
+  const updateData: UpdateData = {};
   const userId = session.user.id;
 
-  const cr = await prisma.checkRequest.findUnique({
+  if (status) {
+    updateData.status = status;
+    switch (status) {
+      case PRStatus.DRAFT: // Withdrawing
+        updateData.reviewedById = null;
+        updateData.approvedById = null;
+        break;
+      case PRStatus.UNDER_REVIEW: // Starting review
+        updateData.reviewedById = userId;
+        break;
+      case PRStatus.PENDING_APPROVAL: // Submitting for approval
+        if (!approverId) {
+          throw new Error("Approver ID is required when moving to PENDING_APPROVAL");
+        }
+        updateData.approvedById = approverId;
+        break;
+      case PRStatus.APPROVED: // Approving
+        updateData.approvedById = userId;
+        break;
+    }
+  } else if (approverId) {
+    updateData.approvedById = approverId;
+  }
+
+  const pr = await prisma.paymentRequest.findUnique({
     where: { id },
     select: {
       preparedById: true,
-      crNumber: true,
+      prNumber: true,
       status: true,
       preparedBy: {
         select: { name: true, email: true }
@@ -239,17 +276,11 @@ export async function updateCRStatus(id: string, status: CRStatus, session: Sess
     },
   });
 
-  if (!cr || !cr.preparedBy) {
-    throw new Error("Check Request or originator not found.");
+  if (!pr || !pr.preparedBy) {
+    throw new Error("Payment Request or originator not found.");
   }
 
-  if (status === CRStatus.PENDING_APPROVAL) {
-    updateData.reviewedById = userId;
-  } else if (status === CRStatus.APPROVED) {
-    updateData.approvedById = userId;
-  }
-
-  const updatedCr = await prisma.checkRequest.update({
+  const updatedPr = await prisma.paymentRequest.update({
     where: { id },
     data: updateData,
     include: {
@@ -265,33 +296,35 @@ export async function updateCRStatus(id: string, status: CRStatus, session: Sess
     }
   });
 
-  const message = `The status of your Check Request ${cr.crNumber} has been updated to ${status}.`;
-  await createNotification(cr.preparedById, message);
+  if (status) {
+    const message = `The status of your Payment Request ${pr.prNumber} has been updated to ${status}.`;
+    await createNotification(pr.preparedById, message);
 
-  const emailComponent = React.createElement(StatusUpdateEmail, {
-    userName: cr.preparedBy.name || 'User',
-    documentType: 'Check Request',
-    documentNumber: cr.crNumber,
-    newStatus: status,
-  });
+    const emailComponent = React.createElement(StatusUpdateEmail, {
+      userName: pr.preparedBy.name || 'User',
+      documentType: 'Payment Request',
+      documentNumber: pr.prNumber,
+      newStatus: status,
+    });
 
-  await sendEmail({
-    to: cr.preparedBy.email,
-    subject: `Status Update for CR: ${cr.crNumber}`,
-    react: emailComponent,
-  });
+    await sendEmail({
+      to: pr.preparedBy.email,
+      subject: `Status Update for PR: ${pr.prNumber}`,
+      react: emailComponent,
+    });
+  }
 
   const auditUser = getAuditUser(session);
-  await logAudit("STATUS_CHANGE", {
-    model: "CheckRequest",
+  await logAudit("UPDATE", {
+    model: "PaymentRequest",
     recordId: id,
     userId: auditUser.userId,
     userName: auditUser.userName,
     changes: {
-      from: cr.status,
-      to: status,
+      from: { status: pr.status },
+      to: { status, approverId },
     },
   });
 
-  return updatedCr;
+  return updatedPr;
 }

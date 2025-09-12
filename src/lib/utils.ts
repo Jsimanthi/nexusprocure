@@ -3,7 +3,7 @@ import { twMerge } from "tailwind-merge"
 
 import { POStatus } from "@/types/po";
 import { IOMStatus } from "@/types/iom";
-import { CRStatus } from "@/types/cr";
+import { PRStatus } from "@/types/pr";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -42,14 +42,14 @@ export const getIOMStatusColor = (status: IOMStatus) => {
   }
 };
 
-export const getCRStatusColor = (status: CRStatus) => {
+export const getPRStatusColor = (status: PRStatus) => {
   switch (status) {
-    case CRStatus.DRAFT: return "bg-gray-100 text-gray-800";
-    case CRStatus.PENDING_APPROVAL: return "bg-blue-100 text-blue-800";
-    case CRStatus.APPROVED: return "bg-green-100 text-green-800";
-    case CRStatus.REJECTED: return "bg-red-100 text-red-800";
-    case CRStatus.PROCESSED: return "bg-purple-100 text-purple-800";
-    case CRStatus.CANCELLED: return "bg-red-100 text-red-800";
+    case PRStatus.DRAFT: return "bg-gray-100 text-gray-800";
+    case PRStatus.PENDING_APPROVAL: return "bg-blue-100 text-blue-800";
+    case PRStatus.APPROVED: return "bg-green-100 text-green-800";
+    case PRStatus.REJECTED: return "bg-red-100 text-red-800";
+    case PRStatus.PROCESSED: return "bg-purple-100 text-purple-800";
+    case PRStatus.CANCELLED: return "bg-red-100 text-red-800";
     default: return "bg-gray-100 text-gray-800";
   }
 };

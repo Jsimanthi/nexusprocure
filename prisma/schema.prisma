@@ -84,11 +84,11 @@ model User {
   reviewedPOs  PurchaseOrder[] @relation("POReviewedBy")
   approvedPOs  PurchaseOrder[] @relation("POApprovedBy")
   
-  // Reverse relations for CheckRequest
-  preparedCRs  CheckRequest[] @relation("CRPreparedBy")
-  requestedCRs CheckRequest[] @relation("CRRequestedBy")
-  reviewedCRs  CheckRequest[] @relation("CRReviewedBy")
-  approvedCRs  CheckRequest[] @relation("CRApprovedBy")
+  // Reverse relations for PaymentRequest
+  preparedPRs  PaymentRequest[] @relation("PRPreparedBy")
+  requestedPRs PaymentRequest[] @relation("PRRequestedBy")
+  reviewedPRs  PaymentRequest[] @relation("PRReviewedBy")
+  approvedPRs  PaymentRequest[] @relation("PRApprovedBy")
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -203,8 +203,8 @@ model PurchaseOrder {
   reviewedBy User?    @relation(fields: [reviewedById], references: [id], name: "POReviewedBy")
   approvedBy User?    @relation(fields: [approvedById], references: [id], name: "POApprovedBy")
   
-  // Reverse relation for CheckRequest
-  checkRequests CheckRequest[]
+  // Reverse relation for PaymentRequest
+  paymentRequests PaymentRequest[]
   attachments   Attachment[]
   
   // Foreign keys
@@ -255,6 +255,8 @@ model Vendor {
 
 enum POStatus {
   DRAFT
+  SUBMITTED
+  UNDER_REVIEW
   PENDING_APPROVAL
   APPROVED
   REJECTED
@@ -263,17 +265,17 @@ enum POStatus {
   CANCELLED
 }
 
-model CheckRequest {
-  id          String   @id @default(cuid())
-  crNumber    String   @unique
-  poId        String?
-  title       String
-  status      CRStatus @default(DRAFT)
-  totalAmount Float    @default(0)
-  taxAmount   Float    @default(0)
-  grandTotal  Float    @default(0)
-  currency      String   @default("INR")
-  exchangeRate  Float    @default(1.0)
+model PaymentRequest {
+  id              String   @id @default(cuid())
+  prNumber        String   @unique
+  poId            String?
+  title           String
+  status          PRStatus @default(DRAFT)
+  totalAmount     Float    @default(0)
+  taxAmount       Float    @default(0)
+  grandTotal      Float    @default(0)
+  currency        String   @default("INR")
+  exchangeRate    Float    @default(1.0)
   
   // Payment Details
   paymentTo       String
@@ -286,10 +288,10 @@ model CheckRequest {
   // Relationships
   po         PurchaseOrder? @relation(fields: [poId], references: [id])
   attachments Attachment[]
-  preparedBy User           @relation(fields: [preparedById], references: [id], name: "CRPreparedBy")
-  requestedBy User          @relation(fields: [requestedById], references: [id], name: "CRRequestedBy")
-  reviewedBy User?          @relation(fields: [reviewedById], references: [id], name: "CRReviewedBy")
-  approvedBy User?          @relation(fields: [approvedById], references: [id], name: "CRApprovedBy")
+  preparedBy User           @relation(fields: [preparedById], references: [id], name: "PRPreparedBy")
+  requestedBy User          @relation(fields: [requestedById], references: [id], name: "PRRequestedBy")
+  reviewedBy User?          @relation(fields: [reviewedById], references: [id], name: "PRReviewedBy")
+  approvedBy User?          @relation(fields: [approvedById], references: [id], name: "PRApprovedBy")
   
   // Foreign keys
   preparedById  String
@@ -315,15 +317,17 @@ model Attachment {
   poId      String?
   po        PurchaseOrder? @relation(fields: [poId], references: [id], onDelete: Cascade)
 
-  crId      String?
-  cr        CheckRequest? @relation(fields: [crId], references: [id], onDelete: Cascade)
+  prId      String?
+  pr        PaymentRequest? @relation(fields: [prId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-enum CRStatus {
+enum PRStatus {
   DRAFT
+  SUBMITTED
+  UNDER_REVIEW
   PENDING_APPROVAL
   APPROVED
   REJECTED

@@ -1,11 +1,10 @@
-// src/app/api/cr/route.ts
+// src/app/api/pr/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
-import { createCheckRequest, getCRs } from "@/lib/cr";
-import { createCrSchema } from "@/lib/schemas";
+import { createPaymentRequest, getPRs } from "@/lib/pr";
+import { createPrSchema } from "@/lib/schemas";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { fromZodError } from "zod-validation-error";
-
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +20,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
 
-    const { checkRequests, total } = await getCRs(session, {
+    const { paymentRequests, total } = await getPRs(session, {
       page,
       pageSize,
       search,
@@ -29,14 +28,14 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      data: checkRequests,
+      data: paymentRequests,
       total,
       page,
       pageSize,
       pageCount: Math.ceil(total / pageSize),
     });
   } catch (error) {
-    console.error("Error fetching CRs:", error);
+    console.error("Error fetching PRs:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -53,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const validation = createCrSchema.safeParse(body);
+    const validation = createPrSchema.safeParse(body);
 
     if (!validation.success) {
       return NextResponse.json(
@@ -62,20 +61,18 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const crData = {
+    const prData = {
       ...validation.data,
       preparedById: session.user.id,
     };
     
-    // FIX: Pass the full data object and the session object as separate arguments.
-    // The previous code had the `preparedById` addition inside the function call, which may have confused TypeScript.
-    const cr = await createCheckRequest(crData, session);
+    const pr = await createPaymentRequest(prData, session);
 
-    return NextResponse.json(cr, { status: 201 });
+    return NextResponse.json(pr, { status: 201 });
   } catch (error) {
-    console.error("Error creating CR:", error);
+    console.error("Error creating PR:", error);
     if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
-        return NextResponse.json({ error: "A check request with this number already exists." }, { status: 409 });
+        return NextResponse.json({ error: "A payment request with this number already exists." }, { status: 409 });
     }
     return NextResponse.json(
       { error: "Internal server error" },
