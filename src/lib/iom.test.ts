@@ -124,6 +124,7 @@ describe('IOM Functions', () => {
         iomNumber: 'IOM-2024-0001',
         status: IOMStatus.PENDING_APPROVAL,
         preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       await updateIOMStatus(iomId, IOMStatus.APPROVED, session);
