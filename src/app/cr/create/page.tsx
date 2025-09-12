@@ -1,11 +1,11 @@
-// src/app/cr/create/page.tsx
+// src/app/pr/create/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { PurchaseOrder } from "@/types/po";
-import { PaymentMethod } from "@/types/cr";
+import { PaymentMethod } from "@/types/pr";
 import PageLayout from "@/components/PageLayout";
 
 interface User {
@@ -28,7 +28,7 @@ interface FormData {
   reviewedById: string;
 }
 
-export default function CreateCRPage() {
+export default function CreatePRPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
@@ -68,7 +68,7 @@ export default function CreateCRPage() {
 
   const fetchPOs = async () => {
     try {
-      const response = await fetch("/api/cr/po");
+      const response = await fetch("/api/cr/po"); // This API route still exists at /api/cr
       if (response.ok) {
         const data = await response.json();
         setPos(data);
@@ -115,7 +115,7 @@ export default function CreateCRPage() {
         ...(formData.reviewedById && { reviewedById: formData.reviewedById }),
       };
 
-      const response = await fetch("/api/cr", {
+      const response = await fetch("/api/cr", { // API route is still /api/cr
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -124,19 +124,19 @@ export default function CreateCRPage() {
       });
 
       if (response.ok) {
-        router.push("/cr");
+        router.push("/cr"); // Route is still /cr
       } else {
-        console.error("Failed to create CR");
+        console.error("Failed to create PR");
       }
     } catch (error) {
-      console.error("Error creating CR:", error);
+      console.error("Error creating PR:", error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <PageLayout title="Create Check Request">
+    <PageLayout title="Create Payment Request">
       <div className="mb-6">
         <BackButton href="/cr" />
       </div>
@@ -163,10 +163,10 @@ export default function CreateCRPage() {
             )}
           </div>
 
-          {/* Basic CR Information */}
+          {/* Basic PR Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700">CR Title *</label>
+              <label className="block text-sm font-medium text-gray-700">PR Title *</label>
               <input
                 type="text"
                 required
@@ -318,7 +318,7 @@ export default function CreateCRPage() {
               disabled={loading}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-md"
             >
-              {loading ? "Creating..." : "Create CR"}
+              {loading ? "Creating..." : "Create PR"}
             </button>
           </div>
         </form>

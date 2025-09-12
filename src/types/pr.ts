@@ -1,9 +1,9 @@
-// src/types/cr.ts
-import { CheckRequest, CRStatus, PaymentMethod } from "@prisma/client";
+// src/types/pr.ts
+import { PaymentRequest, PRStatus, PaymentMethod } from "@prisma/client";
 
-// This type is used to create a new Check Request
+// This type is used to create a new Payment Request
 // It includes all required fields but omits automatically generated ones like `id` and `createdAt`
-export interface CreateCrData {
+export interface CreatePrData {
   title: string;
   poId?: string;
   paymentTo: string;
@@ -36,5 +36,5 @@ export interface PORef {
 
 // Re-exporting the types and enums from Prisma for use in other files.
 // This allows them to be used as both types and values.
-export { CRStatus, PaymentMethod };
-export type { CheckRequest };
+export { PRStatus, PaymentMethod };
+export type { PaymentRequest };

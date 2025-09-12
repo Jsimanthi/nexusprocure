@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { formatCurrency, getPOStatusColor, getIOMStatusColor, getCRStatusColor } from './utils';
+import { formatCurrency, getPOStatusColor, getIOMStatusColor, getPRStatusColor } from './utils';
 import { POStatus } from '@/types/po';
 import { IOMStatus } from '@/types/iom';
-import { CRStatus } from '@/types/cr';
+import { PRStatus } from '@/types/pr';
 
 describe('Utility Functions', () => {
   describe('formatCurrency', () => {
@@ -36,11 +36,11 @@ describe('Utility Functions', () => {
     });
   });
 
-  describe('getCRStatusColor', () => {
-    it('should return the correct color class for each CR status', () => {
-      expect(getCRStatusColor(CRStatus.APPROVED)).toContain('green');
-      expect(getCRStatusColor(CRStatus.REJECTED)).toContain('red');
-      expect(getCRStatusColor(CRStatus.PROCESSED)).toContain('purple');
+  describe('getPRStatusColor', () => {
+    it('should return the correct color class for each PR status', () => {
+      expect(getPRStatusColor(PRStatus.APPROVED)).toContain('green');
+      expect(getPRStatusColor(PRStatus.REJECTED)).toContain('red');
+      expect(getPRStatusColor(PRStatus.PROCESSED)).toContain('purple');
     });
   });
 });

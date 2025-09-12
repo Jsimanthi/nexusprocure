@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PaymentMethod } from '@/types/cr';
+import { PaymentMethod } from '@/types/pr';
 
 export const createPoItemSchema = z.object({
   itemName: z.string().min(1, 'Item name is required.'),
@@ -68,7 +68,7 @@ export const createIomSchema = z.object({
 
 export const updateIomSchema = createIomSchema.partial();
 
-export const createCrSchema = z.object({
+export const createPrSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   poId: z.string().cuid().optional(),
   paymentTo: z.string().min(1, 'Payment to is required.'),
@@ -84,7 +84,7 @@ export const createCrSchema = z.object({
   reviewedById: z.string().cuid().optional(),
 });
 
-export const updateCrSchema = createCrSchema.partial();
+export const updatePrSchema = createPrSchema.partial();
 
 export const createUserSchema = z.object({
   name: z.string().min(1, 'Name is required.'),

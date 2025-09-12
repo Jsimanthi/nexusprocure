@@ -1,8 +1,8 @@
 // src/lib/cr.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getCRs, createCheckRequest, updateCRStatus } from './cr';
+import { getPRs, createPaymentRequest, updatePRStatus } from './pr';
 import { prisma } from './prisma';
-import { CRStatus, CreateCrData, CheckRequest, PaymentMethod } from '@/types/cr';
+import { PRStatus, CreatePrData, PaymentRequest, PaymentMethod } from '@/types/pr';
 import { Session } from 'next-auth';
 import { Prisma, Role, POStatus } from '@prisma/client';
 
@@ -27,13 +27,13 @@ const mockUserSession = (roleName = 'USER'): Session => ({
   expires: '2099-01-01T00:00:00.000Z',
 });
 
-// A complete mock object to satisfy the Prisma CheckRequest type
-const mockCheckRequest: CheckRequest = {
-  id: 'new-cr-id',
-  crNumber: 'CR-2024-001',
+// A complete mock object to satisfy the Prisma PaymentRequest type
+const mockPaymentRequest: PaymentRequest = {
+  id: 'new-pr-id',
+  prNumber: 'PR-2024-001',
   poId: null,
-  title: 'Test CR',
-  status: CRStatus.DRAFT,
+  title: 'Test PR',
+  status: PRStatus.DRAFT,
   totalAmount: 100,
   taxAmount: 10,
   grandTotal: 110,
@@ -83,16 +83,16 @@ const mockPurchaseOrder = {
   updatedAt: new Date(),
 };
 
-describe('Check Request (CR) Functions', () => {
+describe('Payment Request (PR) Functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getAuditUser).mockReturnValue({ userId: 'mock-user-id', userName: 'Mock User' });
   });
 
-  describe('createCheckRequest', () => {
-    it('should create a CR and log the audit trail', async () => {
-      const crData: CreateCrData = {
-        title: 'Test CR',
+  describe('createPaymentRequest', () => {
+    it('should create a PR and log the audit trail', async () => {
+      const prData: CreatePrData = {
+        title: 'Test PR',
         paymentTo: 'Vendor',
         paymentDate: new Date(),
         purpose: 'Testing',
@@ -105,19 +105,19 @@ describe('Check Request (CR) Functions', () => {
       };
       const session = mockUserSession();
       vi.mocked(authorize).mockResolvedValue(true);
-      vi.mocked(prisma.checkRequest.create).mockResolvedValue(mockCheckRequest);
+      vi.mocked(prisma.paymentRequest.create).mockResolvedValue(mockPaymentRequest);
 
-      await createCheckRequest(crData, session);
+      await createPaymentRequest(prData, session);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'CREATE_CR');
+      expect(authorize).toHaveBeenCalledWith(session, 'CREATE_PR');
 
-      expect(prisma.checkRequest.create).toHaveBeenCalled();
+      expect(prisma.paymentRequest.create).toHaveBeenCalled();
       expect(logAudit).toHaveBeenCalledWith("CREATE", expect.any(Object));
     });
 
-    it('should retry creating a CR if a unique constraint violation occurs', async () => {
-      const crData: CreateCrData = {
-        title: 'Test Retry CR',
+    it('should retry creating a PR if a unique constraint violation occurs', async () => {
+      const prData: CreatePrData = {
+        title: 'Test Retry PR',
         paymentTo: 'Vendor',
         paymentDate: new Date(),
         purpose: 'Testing',
@@ -135,20 +135,20 @@ describe('Check Request (CR) Functions', () => {
         { code: 'P2002', clientVersion: 'test', meta: {} }
       );
 
-      vi.mocked(prisma.checkRequest.count).mockResolvedValue(0);
-      vi.mocked(prisma.checkRequest.create)
+      vi.mocked(prisma.paymentRequest.count).mockResolvedValue(0);
+      vi.mocked(prisma.paymentRequest.create)
         .mockRejectedValueOnce(uniqueConstraintError)
-        .mockResolvedValue(mockCheckRequest);
+        .mockResolvedValue(mockPaymentRequest);
 
-      await createCheckRequest(crData, session);
+      await createPaymentRequest(prData, session);
 
-      expect(prisma.checkRequest.create).toHaveBeenCalledTimes(2);
+      expect(prisma.paymentRequest.create).toHaveBeenCalledTimes(2);
     });
 
-    it('should throw an error if the CR total exceeds the PO total', async () => {
+    it('should throw an error if the PR total exceeds the PO total', async () => {
       const poId = 'po-123';
-      const crData: CreateCrData = {
-        title: 'Test CR',
+      const prData: CreatePrData = {
+        title: 'Test PR',
         poId,
         grandTotal: 1500,
         paymentTo: 'Vendor',
@@ -168,15 +168,15 @@ describe('Check Request (CR) Functions', () => {
         grandTotal: 1000,
       });
 
-      await expect(createCheckRequest(crData, session)).rejects.toThrow(
-        'Check Request total (1500) cannot exceed Purchase Order total (1000).'
+      await expect(createPaymentRequest(prData, session)).rejects.toThrow(
+        'Payment Request total (1500) cannot exceed Purchase Order total (1000).'
       );
     });
 
-    it('should succeed if the CR total is less than or equal to the PO total', async () => {
+    it('should succeed if the PR total is less than or equal to the PO total', async () => {
       const poId = 'po-123';
-      const crData: CreateCrData = {
-        title: 'Test CR',
+      const prData: CreatePrData = {
+        title: 'Test PR',
         poId,
         grandTotal: 900,
         paymentTo: 'Vendor',
@@ -195,67 +195,90 @@ describe('Check Request (CR) Functions', () => {
         id: 'po-123',
         grandTotal: 1000
       });
-      vi.mocked(prisma.checkRequest.create).mockResolvedValue(mockCheckRequest);
+      vi.mocked(prisma.paymentRequest.create).mockResolvedValue(mockPaymentRequest);
 
-      await expect(createCheckRequest(crData, session)).resolves.not.toThrow();
-      expect(prisma.checkRequest.create).toHaveBeenCalled();
+      await expect(createPaymentRequest(prData, session)).resolves.not.toThrow();
+      expect(prisma.paymentRequest.create).toHaveBeenCalled();
     });
   });
 
-  describe('updateCRStatus', () => {
-    const crId = 'cr-123';
+  describe('updatePRStatus', () => {
+    const prId = 'pr-123';
     const session = mockUserSession();
 
     beforeEach(() => {
       const user = { id: 'user-id', name: 'Test User', email: 'test@example.com' };
-      vi.mocked(prisma.checkRequest.findUnique).mockResolvedValue({
-        ...mockCheckRequest,
-        id: crId,
-        status: CRStatus.DRAFT,
+      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue({
+        ...mockPaymentRequest,
+        id: prId,
+        status: PRStatus.DRAFT,
         preparedBy: user,
         preparedById: user.id,
       });
-      vi.mocked(prisma.checkRequest.update).mockResolvedValue({
-        ...mockCheckRequest,
-        id: crId,
-        status: CRStatus.APPROVED,
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValue({
+        ...mockPaymentRequest,
+        id: prId,
+        status: PRStatus.APPROVED,
         preparedBy: user,
         preparedById: user.id,
       });
     });
 
-    it('should throw an error if user does not have APPROVE_CR permission', async () => {
-      const authError = new Error('Not authorized. Missing required permission: APPROVE_CR');
+    it('should throw an error if user does not have APPROVE_PR permission', async () => {
+      const authError = new Error('Not authorized. Missing required permission: APPROVE_PR');
       vi.mocked(authorize).mockImplementation(() => {
         throw authError;
       });
 
       await expect(
-        updateCRStatus(crId, CRStatus.APPROVED, session)
+        updatePRStatus(prId, PRStatus.APPROVED, session)
       ).rejects.toThrow(authError);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_CR');
-      expect(prisma.checkRequest.update).not.toHaveBeenCalled();
+      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_PR');
+      expect(prisma.paymentRequest.update).not.toHaveBeenCalled();
     });
 
-    it('should allow a user with APPROVE_CR permission to approve a CR', async () => {
+    it('should allow a user with APPROVE_PR permission to approve a PR', async () => {
       vi.mocked(authorize).mockResolvedValue(true);
+      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue({
+        ...mockPaymentRequest,
+        id: prId,
+        status: PRStatus.PENDING_APPROVAL,
+        preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+      });
 
-      await updateCRStatus(crId, CRStatus.APPROVED, session);
+      await updatePRStatus(prId, PRStatus.APPROVED, session);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_CR');
-      expect(prisma.checkRequest.update).toHaveBeenCalled();
-      expect(logAudit).toHaveBeenCalledWith("STATUS_CHANGE", expect.objectContaining({
-        recordId: crId,
-        changes: { from: CRStatus.DRAFT, to: CRStatus.APPROVED }
+      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_PR');
+      expect(prisma.paymentRequest.update).toHaveBeenCalled();
+      expect(logAudit).toHaveBeenCalledWith("UPDATE", expect.objectContaining({
+        recordId: prId,
+        changes: {
+          from: { status: PRStatus.PENDING_APPROVAL },
+          to: { status: PRStatus.APPROVED, approverId: undefined }
+        }
+      }));
+    });
+
+    it('should move to PENDING_APPROVAL when reviewer submits for approval', async () => {
+      vi.mocked(authorize).mockResolvedValue(true);
+      const approverId = 'manager-id';
+      await updatePRStatus(prId, PRStatus.PENDING_APPROVAL, session, approverId);
+
+      expect(authorize).toHaveBeenCalledWith(session, 'UPDATE_PR');
+      expect(prisma.paymentRequest.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: {
+          status: PRStatus.PENDING_APPROVAL,
+          approvedById: approverId
+        }
       }));
     });
   });
 
-  describe('getCRs', () => {
+  describe('getPRs', () => {
     beforeEach(() => {
-      vi.mocked(prisma.checkRequest.findMany).mockResolvedValue([]);
-      vi.mocked(prisma.checkRequest.count).mockResolvedValue(0);
+      vi.mocked(prisma.paymentRequest.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.paymentRequest.count).mockResolvedValue(0);
       vi.mocked(prisma.$transaction).mockImplementation(async (promises) => {
         const [findManyResult, countResult] = await Promise.all(promises);
         return [findManyResult, countResult];
@@ -264,8 +287,8 @@ describe('Check Request (CR) Functions', () => {
 
     it('should filter by preparedById for USER role', async () => {
       const session = mockUserSession('USER');
-      await getCRs(session, {});
-      expect(prisma.checkRequest.findMany).toHaveBeenCalledWith(
+      await getPRs(session, {});
+      expect(prisma.paymentRequest.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             AND: expect.arrayContaining([
@@ -278,8 +301,8 @@ describe('Check Request (CR) Functions', () => {
 
     it('should filter by reviewedById for REVIEWER role', async () => {
       const session = mockUserSession('REVIEWER');
-      await getCRs(session, {});
-      expect(prisma.checkRequest.findMany).toHaveBeenCalledWith(
+      await getPRs(session, {});
+      expect(prisma.paymentRequest.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             AND: expect.arrayContaining([
@@ -292,8 +315,8 @@ describe('Check Request (CR) Functions', () => {
 
     it('should filter by approvedById for MANAGER role', async () => {
       const session = mockUserSession('MANAGER');
-      await getCRs(session, {});
-      expect(prisma.checkRequest.findMany).toHaveBeenCalledWith(
+      await getPRs(session, {});
+      expect(prisma.paymentRequest.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             AND: expect.arrayContaining([
@@ -306,8 +329,8 @@ describe('Check Request (CR) Functions', () => {
 
     it('should not apply any user-based filters for ADMIN role', async () => {
       const session = mockUserSession('ADMIN');
-      await getCRs(session, {});
-      expect(prisma.checkRequest.findMany).toHaveBeenCalledWith(
+      await getPRs(session, {});
+      expect(prisma.paymentRequest.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             AND: [],

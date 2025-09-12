@@ -81,6 +81,8 @@ export interface PurchaseOrder {
 
 export enum POStatus {
   DRAFT = "DRAFT",
+  SUBMITTED = "SUBMITTED",
+  UNDER_REVIEW = "UNDER_REVIEW",
   PENDING_APPROVAL = "PENDING_APPROVAL",
   APPROVED = "APPROVED",
   REJECTED = "REJECTED",

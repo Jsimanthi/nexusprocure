@@ -277,27 +277,65 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
   throw new Error(`Failed to create purchase order after ${maxRetries} attempts. Last error: ${lastError}`);
 }
 
-export async function updatePOStatus(id: string, status: POStatus, session: Session) {
-  switch (status) {
-    case POStatus.APPROVED:
-      authorize(session, 'APPROVE_PO');
-      break;
-    case POStatus.REJECTED:
-      authorize(session, 'REJECT_PO');
-      break;
-    default:
-      authorize(session, 'UPDATE_PO');
-      break;
+export async function updatePOStatus(
+  id: string,
+  status: POStatus | undefined,
+  session: Session,
+  approverId?: string
+) {
+  if (!status && !approverId) {
+    throw new Error("Either status or approverId must be provided.");
   }
-  
+
+  // Authorize based on action
+  if (status) {
+    switch (status) {
+      case POStatus.APPROVED:
+        authorize(session, "APPROVE_PO");
+        break;
+      case POStatus.REJECTED:
+        authorize(session, "REJECT_PO");
+        break;
+      default:
+        authorize(session, "UPDATE_PO");
+        break;
+    }
+  } else {
+    authorize(session, "UPDATE_PO");
+  }
+
   interface UpdateData {
-    status: POStatus;
-    reviewedById?: string;
-    approvedById?: string;
+    status?: POStatus;
+    reviewedById?: string | null;
+    approvedById?: string | null;
   }
-  
-  const updateData: UpdateData = { status };
+
+  const updateData: UpdateData = {};
   const userId = session.user.id;
+
+  if (status) {
+    updateData.status = status;
+    switch (status) {
+      case POStatus.DRAFT: // Withdrawing
+        updateData.reviewedById = null;
+        updateData.approvedById = null;
+        break;
+      case POStatus.UNDER_REVIEW: // Starting review
+        updateData.reviewedById = userId;
+        break;
+      case POStatus.PENDING_APPROVAL: // Submitting for approval
+        if (!approverId) {
+          throw new Error("Approver ID is required when moving to PENDING_APPROVAL");
+        }
+        updateData.approvedById = approverId;
+        break;
+      case POStatus.APPROVED: // Approving
+        updateData.approvedById = userId;
+        break;
+    }
+  } else if (approverId) {
+    updateData.approvedById = approverId;
+  }
   
   const po = await prisma.purchaseOrder.findUnique({
     where: { id },
@@ -313,12 +351,6 @@ export async function updatePOStatus(id: string, status: POStatus, session: Sess
 
   if (!po || !po.preparedBy) {
     throw new Error("Purchase Order or originator not found.");
-  }
-
-  if (status === POStatus.PENDING_APPROVAL && userId) {
-    updateData.reviewedById = userId;
-  } else if (status === POStatus.APPROVED && userId) {
-    updateData.approvedById = userId;
   }
   
   const updatedPo = await prisma.purchaseOrder.update({
@@ -340,31 +372,33 @@ export async function updatePOStatus(id: string, status: POStatus, session: Sess
     }
   });
 
-  const message = `The status of your Purchase Order ${po.poNumber} has been updated to ${status}.`;
-  await createNotification(po.preparedById, message);
+  if (status) {
+    const message = `The status of your Purchase Order ${po.poNumber} has been updated to ${status}.`;
+    await createNotification(po.preparedById, message);
 
-  const emailComponent = React.createElement(StatusUpdateEmail, {
-    userName: po.preparedBy.name || 'User',
-    documentType: 'Purchase Order',
-    documentNumber: po.poNumber,
-    newStatus: status,
-  });
+    const emailComponent = React.createElement(StatusUpdateEmail, {
+      userName: po.preparedBy.name || 'User',
+      documentType: 'Purchase Order',
+      documentNumber: po.poNumber,
+      newStatus: status,
+    });
 
-  await sendEmail({
-    to: po.preparedBy.email,
-    subject: `Status Update for PO: ${po.poNumber}`,
-    react: emailComponent,
-  });
+    await sendEmail({
+      to: po.preparedBy.email,
+      subject: `Status Update for PO: ${po.poNumber}`,
+      react: emailComponent,
+    });
+  }
 
   const auditUser = getAuditUser(session);
-  await logAudit("STATUS_CHANGE", {
+  await logAudit("UPDATE", {
     model: "PurchaseOrder",
     recordId: id,
     userId: auditUser.userId,
     userName: auditUser.userName,
     changes: {
-      from: po.status,
-      to: status,
+      from: { status: po.status },
+      to: { status, approverId },
     },
   });
 
