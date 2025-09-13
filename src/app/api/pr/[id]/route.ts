@@ -59,24 +59,26 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    const { status, approverId } = body;
 
-    if (!body.status) {
+    if (!status && !approverId) {
       return NextResponse.json(
-        { error: "Status is required" },
+        { error: "At least one of status or approverId is required" },
         { status: 400 }
       );
     }
 
-    // Validate status
-    const validStatuses = Object.values(PRStatus);
-    if (!validStatuses.includes(body.status)) {
-      return NextResponse.json(
-        { error: "Invalid status" },
-        { status: 400 }
-      );
+    if (status) {
+      const validStatuses = Object.values(PRStatus);
+      if (!validStatuses.includes(status)) {
+        return NextResponse.json(
+          { error: "Invalid status" },
+          { status: 400 }
+        );
+      }
     }
 
-    const pr = await updatePRStatus(id, body.status, session);
+    const pr = await updatePRStatus(id, status, session, approverId);
 
     if (!pr) {
       return NextResponse.json({ error: "PR not found" }, { status: 404 });
