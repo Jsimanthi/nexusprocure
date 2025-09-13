@@ -216,6 +216,7 @@ export default function CreatePOPage() {
                 },
                 body: JSON.stringify({
                     ...formData,
+                    iomId: formData.iomId || undefined,
                     items: items.map(item => ({
                         itemName: item.itemName,
                         description: item.description,
