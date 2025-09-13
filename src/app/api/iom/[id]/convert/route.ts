@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
 import { getIOMById } from "@/lib/iom";
 import { createPurchaseOrder } from "@/lib/po";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(
   request: NextRequest,
@@ -31,6 +32,18 @@ export async function POST(
       return NextResponse.json(
         { error: "IOM must be approved before converting to PO" },
         { status: 400 }
+      );
+    }
+
+    // Check if a PO already exists for this IOM
+    const existingPo = await prisma.purchaseOrder.findFirst({
+      where: { iomId: id },
+    });
+
+    if (existingPo) {
+      return NextResponse.json(
+        { error: "A Purchase Order has already been created for this IOM." },
+        { status: 409 }
       );
     }
 
