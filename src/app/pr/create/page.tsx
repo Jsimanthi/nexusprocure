@@ -7,6 +7,7 @@ import BackButton from "@/components/BackButton";
 import { PurchaseOrder } from "@/types/po";
 import { PaymentMethod } from "@/types/pr";
 import PageLayout from "@/components/PageLayout";
+import { useSession } from "next-auth/react";
 
 interface User {
   id: string;
@@ -26,10 +27,12 @@ interface FormData {
   taxAmount: number;
   grandTotal: number;
   reviewedById: string;
+  requestedById: string;
 }
 
 export default function CreatePRPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null);
@@ -47,6 +50,7 @@ export default function CreatePRPage() {
     taxAmount: 0,
     grandTotal: 0,
     reviewedById: "",
+    requestedById: "",
   });
 
   useEffect(() => {
@@ -90,6 +94,7 @@ export default function CreatePRPage() {
         totalAmount: po.totalAmount,
         taxAmount: po.taxAmount,
         grandTotal: po.grandTotal,
+        requestedById: po.requestedById,
       }));
     } else {
       setSelectedPo(null);
@@ -98,7 +103,8 @@ export default function CreatePRPage() {
         poId: "", 
         totalAmount: 0, 
         taxAmount: 0, 
-        grandTotal: 0 
+        grandTotal: 0,
+        requestedById: session?.user?.id || "",
       }));
     }
   };
@@ -112,6 +118,7 @@ export default function CreatePRPage() {
       const submitData = {
         ...formData,
         poId: formData.poId || undefined,
+        requestedById: formData.requestedById || session?.user?.id,
         ...(formData.reviewedById && { reviewedById: formData.reviewedById }),
       };
 
