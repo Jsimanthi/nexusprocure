@@ -29,7 +29,7 @@ export default function PRDetailPage() {
   const [pr, setPr] = useState<FullPaymentRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [showApproverModal, setShowApproverModal] = useState(false);
+  const [showApproverSelection, setShowApproverSelection] = useState(false);
   const [approvers, setApprovers] = useState<User[]>([]);
   const [selectedApprover, setSelectedApprover] = useState<string>('');
 
@@ -99,7 +99,7 @@ export default function PRDetailPage() {
       console.error("Error updating status:", error);
     } finally {
       setUpdating(false);
-      setShowApproverModal(false);
+      setShowApproverSelection(false);
     }
   };
 
@@ -137,7 +137,7 @@ export default function PRDetailPage() {
         break;
       case PRStatus.UNDER_REVIEW:
         if (canReview) {
-          actions.push({ status: PRStatus.PENDING_APPROVAL, label: "Submit for Approval", color: "bg-blue-600 hover:bg-blue-700", onClick: () => setShowApproverModal(true) });
+          actions.push({ status: PRStatus.PENDING_APPROVAL, label: "Submit for Approval", color: "bg-blue-600 hover:bg-blue-700", onClick: () => setShowApproverSelection(true) });
         }
         break;
       case PRStatus.PENDING_APPROVAL:
@@ -172,21 +172,6 @@ export default function PRDetailPage() {
 
   return (
     <PageLayout title={pr.title}>
-      {showApproverModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl">
-            <h2 className="text-lg font-bold mb-4">Select Approver</h2>
-            <select value={selectedApprover} onChange={(e) => setSelectedApprover(e.target.value)} className="w-full p-2 border rounded">
-              <option value="" disabled>Select an approver</option>
-              {approvers.map((approver) => (<option key={approver.id} value={approver.id}>{approver.name}</option>))}
-            </select>
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setShowApproverModal(false)} className="px-4 py-2 bg-gray-300 rounded" disabled={updating}>Cancel</button>
-              <button onClick={handleApproverSubmit} className="px-4 py-2 bg-blue-600 text-white rounded" disabled={!selectedApprover || updating}>{updating ? "Submitting..." : "Submit"}</button>
-            </div>
-          </div>
-        </div>
-      )}
       <div className="mb-6"><Link href="/pr" className="text-blue-600 hover:text-blue-800">&larr; Back to PR List</Link></div>
       <div className="flex justify-between items-start mt-2 mb-6">
         <div>
@@ -247,7 +232,50 @@ export default function PRDetailPage() {
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">PR Actions</h3>
               <div className="space-y-2">
-                {statusActions.map((action) => (<button key={action.status} onClick={action.onClick} disabled={updating} className={`w-full ${action.color} text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50`}>{updating ? "Updating..." : action.label}</button>))}
+                {showApproverSelection ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Select Approver</label>
+                      <select
+                        value={selectedApprover}
+                        onChange={(e) => setSelectedApprover(e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="">Select an approver</option>
+                        {approvers.map((approver) => (
+                          <option key={approver.id} value={approver.id}>
+                            {approver.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleApproverSubmit}
+                      disabled={!selectedApprover || updating}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
+                    >
+                      {updating ? "Submitting..." : "Confirm & Submit"}
+                    </button>
+                    <button
+                      onClick={() => setShowApproverSelection(false)}
+                      disabled={updating}
+                      className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  statusActions.map((action) => (
+                    <button
+                      key={action.status}
+                      onClick={action.onClick}
+                      disabled={updating}
+                      className={`w-full ${action.color} text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50`}
+                    >
+                      {updating ? "Updating..." : action.label}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
           )}
