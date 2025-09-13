@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth-server";
 import { getPOById } from "@/lib/po";
 import { createPaymentRequest } from "@/lib/pr";
 import { PRStatus, PaymentMethod } from "@/types/pr";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(
   request: NextRequest,
@@ -31,6 +32,18 @@ export async function POST(
       return NextResponse.json(
         { error: `Purchase Order status must be one of: ${allowedStatuses.join(', ')} to be converted.` },
         { status: 400 }
+      );
+    }
+
+    // Check if a PR already exists for this PO
+    const existingPr = await prisma.paymentRequest.findFirst({
+      where: { poId: id },
+    });
+
+    if (existingPr) {
+      return NextResponse.json(
+        { error: "A Payment Request has already been created for this Purchase Order." },
+        { status: 409 }
       );
     }
 
