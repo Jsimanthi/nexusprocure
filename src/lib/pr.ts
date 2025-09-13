@@ -11,6 +11,7 @@ import { Session } from "next-auth";
 import { authorize } from "./auth-utils";
 import { logAudit, getAuditUser } from "./audit";
 import { Prisma } from "@prisma/client";
+import { triggerPusherEvent } from "./pusher";
 
 export async function generatePRNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -297,8 +298,14 @@ export async function updatePRStatus(
   });
 
   if (status) {
-    const message = `The status of your Payment Request ${pr.prNumber} has been updated to ${status}.`;
+    const message = `The status of Payment Request ${pr.prNumber} has been updated to ${status}.`;
+    // Notify the creator
     await createNotification(pr.preparedById, message);
+
+    // Notify other relevant parties
+    if (status === PRStatus.PENDING_APPROVAL && updatedPr.approvedById) {
+      await createNotification(updatedPr.approvedById, `A PR ${pr.prNumber} is pending your approval.`);
+    }
 
     const emailComponent = React.createElement(StatusUpdateEmail, {
       userName: pr.preparedBy.name || 'User',
@@ -325,6 +332,9 @@ export async function updatePRStatus(
       to: { status, approverId },
     },
   });
+
+  // Trigger a dashboard update
+  await triggerPusherEvent("dashboard-channel", "dashboard-update", {});
 
   return updatedPr;
 }

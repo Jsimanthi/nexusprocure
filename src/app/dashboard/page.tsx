@@ -1,32 +1,13 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
+import Pusher from "pusher-js";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
-
-interface Iom {
-  id: string;
-  status: string;
-  title: string;
-  createdAt: string;
-}
-
-interface PurchaseOrder {
-  id: string;
-  status: string;
-  title: string;
-  createdAt: string;
-}
-
-interface PaymentRequest {
-  id: string;
-  status: string;
-  title: string;
-  createdAt: string;
-}
 
 interface RecentActivityItem {
   id: string;
@@ -44,81 +25,47 @@ interface DashboardStats {
   recentActivity: RecentActivityItem[];
 }
 
+const fetchDashboardData = async (): Promise<DashboardStats> => {
+  const response = await fetch("/api/dashboard");
+  if (!response.ok) {
+    throw new Error("Failed to fetch dashboard data");
+  }
+  return response.json();
+};
+
 export default function DashboardPage() {
   const { data: session, status } = useSession();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: stats,
+    isLoading,
+    isError,
+    error,
+    refetch
+  } = useQuery<DashboardStats>({
+    queryKey: ["dashboardData"],
+    queryFn: fetchDashboardData,
+    enabled: status === "authenticated",
+  });
 
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      setError(null);
-      const [iomsRes, posRes, prsRes] = await Promise.all([
-        fetch("/api/iom"),
-        fetch("/api/po"),
-        fetch("/api/pr")
-      ]);
-
-      if (!iomsRes.ok || !posRes.ok || !prsRes.ok) {
-        throw new Error("Failed to fetch dashboard data");
-      }
-
-      const iomsData = await iomsRes.json();
-      const posData = await posRes.json();
-      const prsData = await prsRes.json();
-
-      const ioms: Iom[] = iomsData.data || [];
-      const pos: PurchaseOrder[] = posData.data || [];
-      const prs: PaymentRequest[] = prsData.data || [];
-
-      const pendingApprovals = ioms.filter((iom: Iom) =>
-        iom.status === "SUBMITTED" || iom.status === "UNDER_REVIEW"
-      ).length;
-
-      const recentIoms = ioms.slice(0, 5).map((iom: Iom) => ({
-        ...iom,
-        type: 'IOM' as const, // Use 'as const' to infer literal type
-        date: iom.createdAt
-      }));
-
-      const recentPos = pos.slice(0, 5).map((po: PurchaseOrder) => ({
-        ...po,
-        type: 'PO' as const,
-        date: po.createdAt
-      }));
-
-      const recentPrs = prs.slice(0, 5).map((pr: PaymentRequest) => ({
-        ...pr,
-        type: 'PR' as const,
-        date: pr.createdAt
-      }));
-
-      const recentActivity = [...recentIoms, ...recentPos, ...recentPrs]
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 10);
-
-      setStats({
-        iomCount: ioms.length,
-        poCount: pos.length,
-        prCount: prs.length,
-        pendingApprovals,
-        recentActivity
-      });
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      setError("Failed to load dashboard data. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, []); // Empty dependency array because this function doesn't rely on outside variables
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (status === "authenticated") {
-      fetchDashboardData();
-    }
-  }, [status, fetchDashboardData]); // Add fetchDashboardData to the dependency array
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    });
 
-  if (status === "loading" || loading) {
+    const channel = pusher.subscribe("dashboard-channel");
+
+    channel.bind("dashboard-update", () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+    });
+
+    return () => {
+      pusher.unsubscribe("dashboard-channel");
+    };
+  }, [queryClient]);
+
+  if (status === "loading" || isLoading) {
     return (
       <PageLayout title="Dashboard Overview">
         <LoadingSpinner />
@@ -133,12 +80,12 @@ export default function DashboardPage() {
   return (
     <PageLayout title="Dashboard Overview">
       <>
-        {error && (
+        {isError && (
           <div className="mb-6">
             <ErrorDisplay
               title="Error Loading Dashboard"
-              message={error}
-              onRetry={fetchDashboardData}
+              message={error?.message || "An unknown error occurred."}
+              onRetry={() => refetch()}
             />
           </div>
         )}

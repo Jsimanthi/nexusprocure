@@ -11,6 +11,7 @@ import { Session } from "next-auth";
 import { authorize } from "./auth-utils";
 import { logAudit, getAuditUser } from "./audit";
 import { Prisma } from "@prisma/client";
+import { triggerPusherEvent } from "./pusher";
 
 export async function generateIOMNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -257,6 +258,8 @@ export async function updateIOMStatus(
     where: { id },
     select: {
       preparedById: true,
+      reviewedById: true,
+      approvedById: true,
       iomNumber: true,
       status: true,
       preparedBy: {
@@ -282,8 +285,29 @@ export async function updateIOMStatus(
   });
 
   if (status) {
-    const message = `The status of your IOM ${iom.iomNumber} has been updated to ${status}.`;
+    const message = `The status of IOM ${iom.iomNumber} has been updated to ${status}.`;
+    // Notify the creator
     await createNotification(iom.preparedById, message);
+
+    // Notify other relevant parties
+    switch (status) {
+      case IOMStatus.SUBMITTED:
+        if (updatedIom.reviewedById) {
+          await createNotification(updatedIom.reviewedById, `An IOM ${iom.iomNumber} has been submitted for your review.`);
+        }
+        break;
+      case IOMStatus.PENDING_APPROVAL:
+        if (updatedIom.approvedById) {
+          await createNotification(updatedIom.approvedById, `An IOM ${iom.iomNumber} is pending your approval.`);
+        }
+        break;
+      case IOMStatus.APPROVED:
+      case IOMStatus.REJECTED:
+        if (iom.reviewedById) {
+          await createNotification(iom.reviewedById, `The IOM ${iom.iomNumber} you reviewed has been ${status.toLowerCase()}.`);
+        }
+        break;
+    }
 
     const emailComponent = React.createElement(StatusUpdateEmail, {
       userName: iom.preparedBy.name || 'User',
@@ -310,6 +334,9 @@ export async function updateIOMStatus(
       to: { status, approverId },
     },
   });
+
+  // Trigger a dashboard update
+  await triggerPusherEvent("dashboard-channel", "dashboard-update", {});
 
   return updatedIom;
 }
