@@ -40,11 +40,9 @@ export default function PRDetailPage() {
   useEffect(() => {
     if (params.id) {
       fetchPR();
-    }
-    if (canReview) {
       fetchApprovers();
     }
-  }, [params.id, canReview]);
+  }, [params.id]);
 
   const fetchPR = async () => {
     try {
@@ -125,18 +123,6 @@ export default function PRDetailPage() {
     switch (currentStatus) {
       case PRStatus.DRAFT:
         if (isCreator) {
-          actions.push({ status: PRStatus.SUBMITTED, label: "Submit for Review", color: "bg-blue-600 hover:bg-blue-700", onClick: () => updateStatus(PRStatus.SUBMITTED) });
-        }
-        break;
-      case PRStatus.SUBMITTED:
-        if (isCreator) {
-          actions.push({ status: PRStatus.DRAFT, label: "Withdraw Request", color: "bg-gray-600 hover:bg-gray-700", onClick: () => updateStatus(PRStatus.DRAFT) });
-        } else if (canReview) {
-          actions.push({ status: PRStatus.UNDER_REVIEW, label: "Start Review", color: "bg-yellow-600 hover:bg-yellow-700", onClick: () => updateStatus(PRStatus.UNDER_REVIEW) });
-        }
-        break;
-      case PRStatus.UNDER_REVIEW:
-        if (canReview) {
           actions.push({ status: PRStatus.PENDING_APPROVAL, label: "Submit for Approval", color: "bg-blue-600 hover:bg-blue-700", onClick: () => setShowApproverSelection(true) });
         }
         break;
