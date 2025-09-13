@@ -11,6 +11,7 @@ import { Session } from "next-auth";
 import * as React from "react";
 import { authorize } from "./auth-utils";
 import { Prisma } from "@prisma/client";
+import { triggerPusherEvent } from "./pusher";
 
 export async function generatePONumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -341,6 +342,8 @@ export async function updatePOStatus(
     where: { id },
     select: {
       preparedById: true,
+      reviewedById: true,
+      approvedById: true,
       poNumber: true,
       status: true,
       preparedBy: {
@@ -373,8 +376,29 @@ export async function updatePOStatus(
   });
 
   if (status) {
-    const message = `The status of your Purchase Order ${po.poNumber} has been updated to ${status}.`;
+    const message = `The status of Purchase Order ${po.poNumber} has been updated to ${status}.`;
+    // Notify the creator
     await createNotification(po.preparedById, message);
+
+    // Notify other relevant parties
+    switch (status) {
+      case POStatus.SUBMITTED:
+        if (updatedPo.reviewedById) {
+          await createNotification(updatedPo.reviewedById, `A PO ${po.poNumber} has been submitted for your review.`);
+        }
+        break;
+      case POStatus.PENDING_APPROVAL:
+        if (updatedPo.approvedById) {
+          await createNotification(updatedPo.approvedById, `A PO ${po.poNumber} is pending your approval.`);
+        }
+        break;
+      case POStatus.APPROVED:
+      case POStatus.REJECTED:
+        if (po.reviewedById) {
+          await createNotification(po.reviewedById, `The PO ${po.poNumber} you reviewed has been ${status.toLowerCase()}.`);
+        }
+        break;
+    }
 
     const emailComponent = React.createElement(StatusUpdateEmail, {
       userName: po.preparedBy.name || 'User',
@@ -401,6 +425,9 @@ export async function updatePOStatus(
       to: { status, approverId },
     },
   });
+
+  // Trigger a dashboard update
+  await triggerPusherEvent("dashboard-channel", "dashboard-update", {});
 
   return updatedPo;
 }
