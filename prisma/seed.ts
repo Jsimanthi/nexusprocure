@@ -109,22 +109,22 @@ async function main() {
     });
 
     // Link permissions to the role
-    await prisma.role.update({
-      where: { id: createdRole.id },
-      data: {
-        permissions: {
-          deleteMany: {}, // Clear existing permissions before setting new ones
-          create: permissionsToConnect.map((p) => ({
-            assignedBy: 'system',
-            permission: {
-              connect: {
-                id: p.id,
-              },
-            },
-          })),
+await prisma.role.update({
+  where: { id: createdRole.id },
+  data: {
+    permissions: {
+      deleteMany: {}, // Clear existing permissions before setting new ones
+      create: permissionsToConnect.map((p: { id: string }) => ({ // Add the type annotation here
+        assignedBy: 'system',
+        permission: {
+          connect: {
+            id: p.id,
+          },
         },
-      },
-    });
+      })),
+    },
+  },
+});
     console.log(`Linked ${permissionsToConnect.length} permissions to ${createdRole.name}`);
   }
 
