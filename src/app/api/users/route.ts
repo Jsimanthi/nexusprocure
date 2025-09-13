@@ -70,8 +70,14 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const roleName = searchParams.get('role');
 
-    if (roleName === 'MANAGER' && session.user.permissions?.includes('REVIEW_IOM')) {
-      // Allow reviewers to fetch managers
+    const permissions = session.user.permissions || [];
+    const canFetchManagers =
+        permissions.includes('REVIEW_IOM') ||
+        permissions.includes('REVIEW_PO') ||
+        permissions.includes('CREATE_PR');
+
+    if (roleName === 'MANAGER' && canFetchManagers) {
+      // Allow users with specific permissions to fetch managers
     } else {
       authorize(session, 'MANAGE_USERS');
     }
