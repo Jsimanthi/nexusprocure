@@ -68,7 +68,7 @@ export default function CreatePRPage() {
 
   const fetchPOs = async () => {
     try {
-      const response = await fetch("/api/cr/po"); // This API route still exists at /api/cr
+      const response = await fetch("/api/pr/po");
       if (response.ok) {
         const data = await response.json();
         setPos(data);
@@ -115,7 +115,7 @@ export default function CreatePRPage() {
         ...(formData.reviewedById && { reviewedById: formData.reviewedById }),
       };
 
-      const response = await fetch("/api/cr", { // API route is still /api/cr
+      const response = await fetch("/api/pr", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -124,7 +124,7 @@ export default function CreatePRPage() {
       });
 
       if (response.ok) {
-        router.push("/cr"); // Route is still /cr
+        router.push("/pr");
       } else {
         console.error("Failed to create PR");
       }
@@ -138,7 +138,7 @@ export default function CreatePRPage() {
   return (
     <PageLayout title="Create Payment Request">
       <div className="mb-6">
-        <BackButton href="/cr" />
+        <BackButton href="/pr" />
       </div>
       <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
           {/* PO Selection */}
@@ -308,7 +308,7 @@ export default function CreatePRPage() {
           <div className="flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => router.push("/cr")}
+              onClick={() => router.push("/pr")}
               className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
             >
               Cancel

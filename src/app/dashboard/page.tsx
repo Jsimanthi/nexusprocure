@@ -21,7 +21,7 @@ interface PurchaseOrder {
   createdAt: string;
 }
 
-interface CheckRequest {
+interface PaymentRequest {
   id: string;
   status: string;
   title: string;
@@ -30,7 +30,7 @@ interface CheckRequest {
 
 interface RecentActivityItem {
   id: string;
-  type: 'IOM' | 'PO' | 'CR';
+  type: 'IOM' | 'PO' | 'PR';
   date: string;
   status: string;
   title: string;
@@ -39,7 +39,7 @@ interface RecentActivityItem {
 interface DashboardStats {
   iomCount: number;
   poCount: number;
-  crCount: number;
+  prCount: number;
   pendingApprovals: number;
   recentActivity: RecentActivityItem[];
 }
@@ -53,23 +53,23 @@ export default function DashboardPage() {
   const fetchDashboardData = useCallback(async () => {
     try {
       setError(null);
-      const [iomsRes, posRes, crsRes] = await Promise.all([
+      const [iomsRes, posRes, prsRes] = await Promise.all([
         fetch("/api/iom"),
         fetch("/api/po"),
-        fetch("/api/cr")
+        fetch("/api/pr")
       ]);
 
-      if (!iomsRes.ok || !posRes.ok || !crsRes.ok) {
+      if (!iomsRes.ok || !posRes.ok || !prsRes.ok) {
         throw new Error("Failed to fetch dashboard data");
       }
 
       const iomsData = await iomsRes.json();
       const posData = await posRes.json();
-      const crsData = await crsRes.json();
+      const prsData = await prsRes.json();
 
       const ioms: Iom[] = iomsData.data || [];
       const pos: PurchaseOrder[] = posData.data || [];
-      const crs: CheckRequest[] = crsData.data || [];
+      const prs: PaymentRequest[] = prsData.data || [];
 
       const pendingApprovals = ioms.filter((iom: Iom) =>
         iom.status === "SUBMITTED" || iom.status === "UNDER_REVIEW"
@@ -87,20 +87,20 @@ export default function DashboardPage() {
         date: po.createdAt
       }));
 
-      const recentCrs = crs.slice(0, 5).map((cr: CheckRequest) => ({
-        ...cr,
-        type: 'CR' as const,
-        date: cr.createdAt
+      const recentPrs = prs.slice(0, 5).map((pr: PaymentRequest) => ({
+        ...pr,
+        type: 'PR' as const,
+        date: pr.createdAt
       }));
 
-      const recentActivity = [...recentIoms, ...recentPos, ...recentCrs]
+      const recentActivity = [...recentIoms, ...recentPos, ...recentPrs]
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 10);
 
       setStats({
         iomCount: ioms.length,
         poCount: pos.length,
-        crCount: crs.length,
+        prCount: prs.length,
         pendingApprovals,
         recentActivity
       });
@@ -162,10 +162,10 @@ export default function DashboardPage() {
                   </Link>
                 </div>
                 <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
-                  <h2 className="text-xl font-semibold mb-2">Check Requests</h2>
-                  <p className="text-3xl font-bold text-purple-600">{stats.crCount}</p>
+                  <h2 className="text-xl font-semibold mb-2">Payment Requests</h2>
+                  <p className="text-3xl font-bold text-purple-600">{stats.prCount}</p>
                   <p className="text-gray-600">Payment Requests</p>
-                  <Link href="/cr" className="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block transition-colors">
+                  <Link href="/pr" className="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block transition-colors">
                     View all →
                   </Link>
                 </div>
