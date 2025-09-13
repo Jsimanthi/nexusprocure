@@ -48,7 +48,7 @@ export default function PRDetailPage() {
 
   const fetchPR = async () => {
     try {
-      const response = await fetch(`/api/cr/${params.id}`);
+      const response = await fetch(`/api/pr/${params.id}`);
       if (response.ok) {
         const data = await response.json();
         setPr(data);
@@ -83,7 +83,7 @@ export default function PRDetailPage() {
       if (newStatus) body.status = newStatus;
       if (approverId) body.approverId = approverId;
 
-      const response = await fetch(`/api/cr/${params.id}`, {
+      const response = await fetch(`/api/pr/${params.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -163,7 +163,7 @@ export default function PRDetailPage() {
     return (
       <PageLayout title="Payment Request Not Found">
         <ErrorDisplay title="PR Not Found" message={`Could not find a Payment Request with the ID: ${params.id}`} />
-        <div className="mt-6 text-center"><Link href="/cr" className="text-blue-600 hover:text-blue-800">&larr; Back to PR List</Link></div>
+        <div className="mt-6 text-center"><Link href="/pr" className="text-blue-600 hover:text-blue-800">&larr; Back to PR List</Link></div>
       </PageLayout>
     );
   }
@@ -187,7 +187,7 @@ export default function PRDetailPage() {
           </div>
         </div>
       )}
-      <div className="mb-6"><Link href="/cr" className="text-blue-600 hover:text-blue-800">&larr; Back to PR List</Link></div>
+      <div className="mb-6"><Link href="/pr" className="text-blue-600 hover:text-blue-800">&larr; Back to PR List</Link></div>
       <div className="flex justify-between items-start mt-2 mb-6">
         <div>
           <p className="text-lg text-gray-600">{pr.prNumber}</p>

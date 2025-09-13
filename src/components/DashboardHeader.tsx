@@ -21,7 +21,7 @@ export default function DashboardHeader() {
     { href: "/dashboard/analytics", text: "Analytics", show: useHasPermission('VIEW_ANALYTICS') },
     { href: "/iom", text: "IOMs", show: true },
     { href: "/po", text: "POs", show: true },
-    { href: "/cr", text: "CRs", show: true },
+    { href: "/pr", text: "PRs", show: true },
     { href: "/vendors", text: "Vendors", show: true },
     { href: "/dashboard/users", text: "Users", show: canManageUsers },
     { href: "/dashboard/roles", text: "Roles", show: canManageRoles },

@@ -104,22 +104,22 @@ UI & API:
 
 "Create API endpoints for PO CRUD operations."
 
-Phase 4: Check Request Module (Days 10-11)
-Objective: Develop the Check Request module for payment processing.
+Phase 4: Payment Request Module (Days 10-11)
+Objective: Develop the Payment Request module for payment processing.
 
 Data Models:
 
-"Define a CheckRequest model: id, poId (links to the fulfilled PO), paymentTo, paymentDate, purpose, totalAmount, ...signature fields."
+"Define a PaymentRequest model: id, poId (links to the fulfilled PO), paymentTo, paymentDate, purpose, totalAmount, ...signature fields."
 
 "Items can be directly referenced from the linked PO."
 
 UI & API:
 
-"Create a page 'Create Check Request' where a user can select a 'Received/Completed' PO."
+"Create a page 'Create PaymentRequest' where a user can select a 'Received/Completed' PO."
 
-"Pre-fill the CR form with data from the PO. The table should mirror the PO's items and totals."
+"Pre-fill the PR form with data from the PO. The table should mirror the PO's items and totals."
 
-"Create the CR print view with the format you described."
+"Create the PR print view with the format you described."
 
 "Create API endpoints for CRUD operations."
 
@@ -130,7 +130,7 @@ Dashboard:
 
 "Create the Dashboard page."
 
-"Add summary cards: Total IOMs (Pending My Approval, Total Submitted), Total POs, Total CRs."
+"Add summary cards: Total IOMs (Pending My Approval, Total Submitted), Total POs, Total PRs."
 
 "Add a recent activity list or a chart showing request statuses."
 
@@ -140,7 +140,7 @@ Polish:
 
 "Add basic error handling and user feedback (toast messages)."
 
-"Test the complete flow: IOM -> Approve -> PO -> Receive -> CR -> Approve -> Payment."
+"Test the complete flow: IOM -> Approve -> PO -> Receive -> PR -> Approve -> Payment."
 
 "Ensure all print views are perfect on A4 paper."
 
@@ -181,7 +181,7 @@ Database (Prod)	PostgreSQL	Kept.
 Database (Dev)	SQLite	Kept.
 State Management	Zustand	ADDITION. A simple, fast state management library. Perfect for managing global state like user data, notifications, and sidebars. Lighter and easier than Redux.
 Forms	React Hook Form + Zod	CRITICAL UPGRADE. React Hook Form provides best-in-class performance for complex forms. Zod provides schema validation, ensuring data integrity both on the client and server.
-Tables	TanStack Table (React Table)	CRITICAL UPGRADE. Headless, powerful, and flexible. Essential for building feature-rich, sortable, filterable, and paginated tables for IOM/PO/CR lists.
+Tables	TanStack Table (React Table)	CRITICAL UPGRADE. Headless, powerful, and flexible. Essential for building feature-rich, sortable, filterable, and paginated tables for IOM/PO/PR lists.
 HTTP Client	TanStack Query (React Query)	CRITICAL UPGRADE. Manages server state (data fetching, caching, synchronization). Provides automatic background refreshes, pagination, and eliminates countless bugs. A hallmark of modern apps.
 Testing	Jest (Unit), Playwright (E2E)	ADDITION. A world-class app is a tested app. Jest for unit tests. Playwright for reliable end-to-end testing of critical user flows (e.g., creating an IOM).
 
@@ -262,24 +262,24 @@ Data Table & Dashboard Integration:
 
 "Update the dashboard to use real data: useIoms({ status: 'SUBMITTED' }) to show 'Pending My Approval'."
 
-Phase 3: PO & CR Modules - The Connected Workflow (Days 9-13)
-Objective: Build the PO and CR modules, focusing on the seamless flow of data between them.
+Phase 3: PO & PR Modules - The Connected Workflow (Days 9-13)
+Objective: Build the PO and PR modules, focusing on the seamless flow of data between them.
 
 Data Modeling:
 
-"Define Vendor, PO, POItem, CheckRequest models in Prisma. Use explicit relations and foreign keys."
+"Define Vendor, PO, POItem, PaymentRequest models in Prisma. Use explicit relations and foreign keys."
 
 Feature: "Create from Previous"
 
 "The 'Create PO' page should not be a blank form. It must start by allowing the user to select an Approved IOM. The form is then pre-populated with its data."
 
-"Similarly, the 'Create CR' page must start by selecting a Received/Approved PO."
+"Similarly, the 'Create PR' page must start by selecting a Received/Approved PO."
 
 "This enforces the business logic and dramatically improves user experience and data integrity."
 
 Printing & Document Integrity:
 
-"Each document (IOM, PO, CR) should have a dedicated, optimized print view page (e.g., /iom/[id]/print)."
+"Each document (IOM, PO, PR) should have a dedicated, optimized print view page (e.g., /iom/[id]/print)."
 
 "This page should use a specific print-only CSS stylesheet to ensure perfect A4 formatting, hiding navigation and buttons."
 
@@ -294,7 +294,7 @@ Real-time Notifications:
 
 Audit Logging:
 
-"Create an AuditLog model. Write a Prisma $extends middleware to automatically log create, update, and delete events on critical models (IOM, PO, CR), capturing who did it and what changed."
+"Create an AuditLog model. Write a Prisma $extends middleware to automatically log create, update, and delete events on critical models (IOM, PO, PR), capturing who did it and what changed."
 
 Settings & User Management:
 

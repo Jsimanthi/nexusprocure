@@ -16,7 +16,7 @@ const fetchPRs = async (page = 1, pageSize = 10, searchTerm = "", status = "") =
     search: searchTerm,
     status: status,
   });
-  const response = await fetch(`/api/cr?${params.toString()}`); // URL remains /api/cr
+  const response = await fetch(`/api/pr?${params.toString()}`);
   if (!response.ok) {
     throw new Error("Network response was not ok");
   }
@@ -72,7 +72,7 @@ export default function PRListPage() {
       <>
         <div className="flex justify-end mb-6">
           <Link
-            href="/cr/create" // URL remains /cr/create
+            href="/pr/create"
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
             >
               Create New PR
@@ -104,7 +104,7 @@ export default function PRListPage() {
               ) : (
                 prs.map((pr: PaymentRequest) => (
                   <li key={pr.id} className="hover:bg-gray-50 transition-colors">
-                    <Link href={`/cr/${pr.id}`} className="block">
+                    <Link href={`/pr/${pr.id}`} className="block">
                       <div className="px-4 py-4 sm:px-6">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <div className="flex items-center min-w-0">

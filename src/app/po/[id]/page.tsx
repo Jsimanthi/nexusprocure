@@ -116,7 +116,7 @@ export default function PODetailPage() {
 
       if (response.ok) {
         const pr = await response.json();
-        router.push(`/cr/${pr.id}`); // Keep old route for now
+        router.push(`/pr/${pr.id}`);
       } else {
         const errorData = await response.json();
         console.error("Failed to convert PO to PR:", errorData.error);

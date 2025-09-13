@@ -32,7 +32,7 @@ The initial implementation of a permission-based RBAC system is underway.
 
 ### 3. Enhanced Testing Strategy
 - **Unit Test Depth:** While test files exist, their depth and coverage should be systematically reviewed to cover more edge cases and error conditions.
-- **End-to-End (E2E) Testing:** Introduce a framework like **Playwright** to automate tests for critical user workflows (e.g., the full IOM -> PO -> CR lifecycle).
+- **End-to-End (E2E) Testing:** Introduce a framework like **Playwright** to automate tests for critical user workflows (e.g., the full IOM -> PO -> PR lifecycle).
 
 ### 4. Advanced Dashboard Features
 - **Description:** Expand the dashboard to provide more at-a-glance insights and analytics.

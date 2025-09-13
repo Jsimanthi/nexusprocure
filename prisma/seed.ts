@@ -26,14 +26,14 @@ const permissions = [
   'APPROVE_PO',
   'REJECT_PO',
   'REVIEW_PO',
-  // CR Permissions
-  'CREATE_CR',
-  'READ_CR',
-  'UPDATE_CR',
-  'DELETE_CR',
-  'APPROVE_CR',
-  'REJECT_CR',
-  'REVIEW_CR',
+  // PR Permissions
+  'CREATE_PR',
+  'READ_PR',
+  'UPDATE_PR',
+  'DELETE_PR',
+  'APPROVE_PR',
+  'REJECT_PR',
+  'REVIEW_PR',
 ];
 
 const roles = {
@@ -46,9 +46,9 @@ const roles = {
     'READ_PO',
     'APPROVE_PO',
     'REJECT_PO',
-    'READ_CR',
-    'APPROVE_CR',
-    'REJECT_CR',
+    'READ_PR',
+    'APPROVE_PR',
+    'REJECT_PR',
     'MANAGE_VENDORS',
     'VIEW_ANALYTICS',
   ],
@@ -58,8 +58,8 @@ const roles = {
     'UPDATE_IOM',
     'READ_PO',
     'REVIEW_PO',
-    'READ_CR',
-    'REVIEW_CR',
+    'READ_PR',
+    'REVIEW_PR',
   ],
   USER: [
     'CREATE_IOM',
@@ -70,10 +70,10 @@ const roles = {
     'READ_PO',
     'UPDATE_PO',
     'DELETE_PO',
-    'CREATE_CR',
-    'READ_CR',
-    'UPDATE_CR',
-    'DELETE_CR',
+    'CREATE_PR',
+    'READ_PR',
+    'UPDATE_PR',
+    'DELETE_PR',
   ],
 };
 
