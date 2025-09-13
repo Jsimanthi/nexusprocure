@@ -81,7 +81,6 @@ export const createPrSchema = z.object({
   taxAmount: z.number().nonnegative(),
   grandTotal: z.number().nonnegative(),
   requestedById: z.string().cuid(),
-  reviewedById: z.string().cuid().optional(),
 });
 
 export const updatePrSchema = createPrSchema.partial();

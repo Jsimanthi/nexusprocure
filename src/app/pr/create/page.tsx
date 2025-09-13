@@ -26,7 +26,6 @@ interface FormData {
   totalAmount: number;
   taxAmount: number;
   grandTotal: number;
-  reviewedById: string;
   requestedById: string;
 }
 
@@ -36,8 +35,7 @@ export default function CreatePRPage() {
   const [loading, setLoading] = useState(false);
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null);
-  const [reviewers, setReviewers] = useState<User[]>([]);
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<Omit<FormData, 'reviewedById'>>({
     title: "",
     poId: "",
     paymentTo: "",
@@ -49,26 +47,12 @@ export default function CreatePRPage() {
     totalAmount: 0,
     taxAmount: 0,
     grandTotal: 0,
-    reviewedById: "",
     requestedById: "",
   });
 
   useEffect(() => {
     fetchPOs();
-    fetchReviewers();
   }, []);
-
-  const fetchReviewers = async () => {
-    try {
-      const response = await fetch("/api/users/role/REVIEWER");
-      if (response.ok) {
-        const data = await response.json();
-        setReviewers(data);
-      }
-    } catch (error) {
-      console.error("Error fetching reviewers:", error);
-    }
-  };
 
   const fetchPOs = async () => {
     try {
@@ -119,7 +103,6 @@ export default function CreatePRPage() {
         ...formData,
         poId: formData.poId || undefined,
         requestedById: formData.requestedById || session?.user?.id,
-        ...(formData.reviewedById && { reviewedById: formData.reviewedById }),
       };
 
       const response = await fetch("/api/pr", {
@@ -194,25 +177,6 @@ export default function CreatePRPage() {
                 <option value={PaymentMethod.BANK_TRANSFER}>Bank Transfer</option>
                 <option value={PaymentMethod.CASH}>Cash</option>
                 <option value={PaymentMethod.ONLINE_PAYMENT}>Online Payment</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Assign Reviewer
-              </label>
-              <select
-                value={formData.reviewedById}
-                onChange={(e) =>
-                  setFormData({ ...formData, reviewedById: e.target.value })
-                }
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">Select a reviewer</option>
-                {reviewers.map((reviewer) => (
-                  <option key={reviewer.id} value={reviewer.id}>
-                    {reviewer.name}
-                  </option>
-                ))}
               </select>
             </div>
             <div>
