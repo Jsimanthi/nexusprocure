@@ -158,11 +158,15 @@ export default function PODetailPage() {
         }
         break;
       case POStatus.APPROVED:
-        actions.push({ status: POStatus.ORDERED, label: "Mark as Ordered", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(POStatus.ORDERED) });
-        actions.push({ status: POStatus.CANCELLED, label: "Cancel PO", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(POStatus.CANCELLED) });
+        if (isCreator) {
+          actions.push({ status: POStatus.ORDERED, label: "Mark as Ordered", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(POStatus.ORDERED) });
+          actions.push({ status: POStatus.CANCELLED, label: "Cancel PO", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(POStatus.CANCELLED) });
+        }
         break;
       case POStatus.ORDERED:
-        actions.push({ status: POStatus.DELIVERED, label: "Mark as Delivered", color: "bg-teal-600 hover:bg-teal-700", onClick: () => updateStatus(POStatus.DELIVERED) });
+        if (isCreator) {
+          actions.push({ status: POStatus.DELIVERED, label: "Mark as Delivered", color: "bg-teal-600 hover:bg-teal-700", onClick: () => updateStatus(POStatus.DELIVERED) });
+        }
         break;
     }
     
@@ -412,7 +416,7 @@ export default function PODetailPage() {
             </div>
 
             {/* Convert to PR Button */}
-            {canConvertToPR(po.status) && (
+            {canConvertToPR(po.status) && isCreator && (
               <div className="bg-white shadow rounded-lg p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   Payment Processing

@@ -133,8 +133,10 @@ export default function PRDetailPage() {
         }
         break;
       case PRStatus.APPROVED:
-        actions.push({ status: PRStatus.PROCESSED, label: "Mark as Processed", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(PRStatus.PROCESSED) });
-        actions.push({ status: PRStatus.CANCELLED, label: "Cancel PR", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(PRStatus.CANCELLED) });
+        if (isCreator) {
+          actions.push({ status: PRStatus.PROCESSED, label: "Mark as Processed", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(PRStatus.PROCESSED) });
+          actions.push({ status: PRStatus.CANCELLED, label: "Cancel PR", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(PRStatus.CANCELLED) });
+        }
         break;
     }
 
