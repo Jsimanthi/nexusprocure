@@ -50,19 +50,21 @@ export default function DashboardPage() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-    });
+    if (process.env.NEXT_PUBLIC_PUSHER_KEY && process.env.NEXT_PUBLIC_PUSHER_KEY !== 'placeholder') {
+      const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+      });
 
-    const channel = pusher.subscribe("dashboard-channel");
+      const channel = pusher.subscribe("dashboard-channel");
 
-    channel.bind("dashboard-update", () => {
-      queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
-    });
+      channel.bind("dashboard-update", () => {
+        queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+      });
 
-    return () => {
-      pusher.unsubscribe("dashboard-channel");
-    };
+      return () => {
+        pusher.unsubscribe("dashboard-channel");
+      };
+    }
   }, [queryClient]);
 
   if (status === "loading" || isLoading) {
