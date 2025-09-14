@@ -80,6 +80,23 @@ export default function Notifications() {
     mutation.mutate(id);
   };
 
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/notifications/mark-all-read", {
+        method: "POST",
+      });
+      if (!response.ok) throw new Error("Failed to mark all as read");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
+  const handleMarkAllAsRead = () => {
+    markAllReadMutation.mutate();
+  };
+
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
@@ -100,6 +117,15 @@ export default function Notifications() {
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
           <div className="p-4 border-b border-gray-200 flex justify-between items-center">
             <h3 className="font-semibold">Notifications</h3>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllAsRead}
+                disabled={markAllReadMutation.isPending}
+                className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+              >
+                Mark all as read
+              </button>
+            )}
           </div>
 
           <div className="max-h-96 overflow-y-auto">
