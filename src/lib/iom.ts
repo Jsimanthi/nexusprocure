@@ -210,6 +210,12 @@ export async function updateIOMStatus(
       case IOMStatus.REJECTED:
         authorize(session, "REJECT_IOM");
         break;
+      case IOMStatus.UNDER_REVIEW:
+        authorize(session, "REVIEW_IOM");
+        break;
+      case IOMStatus.PENDING_APPROVAL:
+        authorize(session, "REVIEW_IOM");
+        break;
       default:
         authorize(session, "UPDATE_IOM");
         break;

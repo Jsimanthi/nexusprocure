@@ -215,7 +215,7 @@ describe('Purchase Order Functions', () => {
       const approverId = 'manager-id';
       await updatePOStatus(poId, POStatus.PENDING_APPROVAL, session, approverId);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'UPDATE_PO');
+      expect(authorize).toHaveBeenCalledWith(session, 'REVIEW_PO');
       expect(prisma.purchaseOrder.update).toHaveBeenCalledWith(expect.objectContaining({
         data: {
           status: POStatus.PENDING_APPROVAL,
