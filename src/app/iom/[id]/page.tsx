@@ -142,7 +142,9 @@ export default function IOMDetailPage() {
         }
         break;
       case IOMStatus.APPROVED:
-        actions.push({ status: IOMStatus.COMPLETED, label: "Mark as Completed", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(IOMStatus.COMPLETED) });
+        if (isCreator) {
+          actions.push({ status: IOMStatus.COMPLETED, label: "Mark as Completed", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(IOMStatus.COMPLETED) });
+        }
         break;
     }
     
@@ -343,7 +345,7 @@ export default function IOMDetailPage() {
                 )}
 
                 {/* Add Convert to PO button for approved IOMs */}
-                {iom.status === "APPROVED" && !showApproverSelection && (
+                {iom.status === "APPROVED" && isCreator && !showApproverSelection && (
                   <Link
                     href={`/po/create?iomId=${iom.id}`}
                     className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center block"
