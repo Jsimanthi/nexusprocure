@@ -145,7 +145,7 @@ describe('IOM Functions', () => {
       const approverId = 'manager-id';
       await updateIOMStatus(iomId, IOMStatus.PENDING_APPROVAL, session, approverId);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'UPDATE_IOM');
+      expect(authorize).toHaveBeenCalledWith(session, 'REVIEW_IOM');
       expect(prisma.iOM.update).toHaveBeenCalledWith(expect.objectContaining({
         data: {
           status: IOMStatus.PENDING_APPROVAL,

@@ -297,6 +297,12 @@ export async function updatePOStatus(
       case POStatus.REJECTED:
         authorize(session, "REJECT_PO");
         break;
+      case POStatus.UNDER_REVIEW:
+        authorize(session, "REVIEW_PO");
+        break;
+      case POStatus.PENDING_APPROVAL:
+        authorize(session, "REVIEW_PO");
+        break;
       default:
         authorize(session, "UPDATE_PO");
         break;
