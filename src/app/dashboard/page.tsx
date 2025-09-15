@@ -94,38 +94,26 @@ export default function DashboardPage() {
         {stats && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
+              <Link href="/iom" className="block bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
                   <h2 className="text-xl font-semibold mb-2">IOMs</h2>
                   <p className="text-3xl font-bold text-blue-600">{stats.iomCount}</p>
                   <p className="text-gray-600">Internal Office Memos</p>
-                  <Link href="/iom" className="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block transition-colors">
-                    View all →
-                  </Link>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
+              </Link>
+              <Link href="/po" className="block bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
                   <h2 className="text-xl font-semibold mb-2">Purchase Orders</h2>
                   <p className="text-3xl font-bold text-green-600">{stats.poCount}</p>
                   <p className="text-gray-600">Vendor Orders</p>
-                  <Link href="/po" className="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block transition-colors">
-                    View all →
-                  </Link>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
+              </Link>
+              <Link href="/pr" className="block bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
                   <h2 className="text-xl font-semibold mb-2">Payment Requests</h2>
                   <p className="text-3xl font-bold text-purple-600">{stats.prCount}</p>
                   <p className="text-gray-600">Payment Requests</p>
-                  <Link href="/pr" className="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block transition-colors">
-                    View all →
-                  </Link>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
+              </Link>
+              <Link href="/iom?status=PENDING_APPROVAL,SUBMITTED,UNDER_REVIEW" className="block bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md">
                   <h2 className="text-xl font-semibold mb-2">Pending Approval</h2>
                   <p className="text-3xl font-bold text-yellow-600">{stats.pendingApprovals}</p>
                   <p className="text-gray-600">Items needing review</p>
-                  <Link href="/iom" className="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block transition-colors">
-                    Review now →
-                  </Link>
-                </div>
+              </Link>
               </div>
               <div className="bg-white rounded-lg shadow overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">

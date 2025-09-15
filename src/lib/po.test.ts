@@ -4,7 +4,7 @@ import { getPOs, createPurchaseOrder, updatePOStatus, createVendor, updateVendor
 import { prisma } from './prisma';
 import { POStatus } from '@/types/po';
 import { Session } from 'next-auth';
-import { Prisma, Role } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { createVendorSchema } from './schemas';
 import { z } from 'zod';
 

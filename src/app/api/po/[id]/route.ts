@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth-server";
 import { getPOById, updatePOStatus } from "@/lib/po";
 import { POStatus } from "@/types/po";
 
+// Type definition for route context parameters for clarity.
 interface RouteParams {
   params: { id: string };
 }

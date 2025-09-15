@@ -1,19 +1,15 @@
-// src/app/pr/create/page.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import BackButton from "@/components/BackButton";
-import { PurchaseOrder } from "@/types/po";
-import { PaymentMethod } from "@/types/pr";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
 import PageLayout from "@/components/PageLayout";
-import { useSession } from "next-auth/react";
+import { PaymentRequest, PaymentMethod } from "@/types/pr";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { toast } from "react-hot-toast";
+import BackButton from "@/components/BackButton";
 
 interface FormData {
   title: string;
-  poId: string;
   paymentTo: string;
   paymentDate: string;
   purpose: string;
@@ -23,21 +19,18 @@ interface FormData {
   totalAmount: number;
   taxAmount: number;
   grandTotal: number;
-  requestedById: string;
 }
 
-export default function CreatePRPage() {
+export default function EditPRPage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const params = useParams();
+  const prId = params.id as string;
   const [loading, setLoading] = useState(false);
-  const [pos, setPos] = useState<PurchaseOrder[]>([]);
-  const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null);
+  const [pr, setPr] = useState<PaymentRequest | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string[]>>>({});
   const firstInputRef = useRef<HTMLInputElement>(null);
-
   const [formData, setFormData] = useState<FormData>({
     title: "",
-    poId: "",
     paymentTo: "",
     paymentDate: new Date().toISOString().split('T')[0],
     purpose: "",
@@ -47,55 +40,45 @@ export default function CreatePRPage() {
     totalAmount: 0,
     taxAmount: 0,
     grandTotal: 0,
-    requestedById: "",
   });
 
+  const fetchPR = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/pr/${prId}`);
+      if (!response.ok) {
+        toast.error("Failed to fetch payment request data.");
+        router.push('/pr');
+        return;
+      }
+      const data = await response.json();
+      setPr(data);
+      setFormData({
+        title: data.title,
+        paymentTo: data.paymentTo,
+        paymentDate: new Date(data.paymentDate).toISOString().split('T')[0],
+        purpose: data.purpose,
+        paymentMethod: data.paymentMethod,
+        bankAccount: data.bankAccount || "",
+        referenceNumber: data.referenceNumber || "",
+        totalAmount: data.totalAmount,
+        taxAmount: data.taxAmount,
+        grandTotal: data.grandTotal,
+      });
+    } catch (error) {
+      toast.error("An unexpected error occurred while fetching data.");
+      console.error("Error fetching PR:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [prId, router]);
+
   useEffect(() => {
-    fetchPOs();
-    if (session?.user?.id) {
-      setFormData(prev => ({ ...prev, requestedById: session.user.id }));
+    if (prId) {
+      fetchPR();
     }
     firstInputRef.current?.focus();
-  }, [session]);
-
-  const fetchPOs = async () => {
-    try {
-      const response = await fetch("/api/pr/po");
-      if (response.ok) {
-        const data = await response.json();
-        setPos(data);
-      }
-    } catch (error) {
-      console.error("Error fetching POs:", error);
-    }
-  };
-
-  const handlePoChange = (poId: string) => {
-    const po = pos.find(p => p.id === poId);
-    if (po) {
-      setSelectedPo(po);
-      setFormData(prev => ({
-        ...prev,
-        poId: po.id ?? "",
-        title: `Payment for ${po.title}`,
-        paymentTo: po.vendorName,
-        totalAmount: po.totalAmount,
-        taxAmount: po.taxAmount,
-        grandTotal: po.grandTotal,
-        requestedById: po.requestedById,
-      }));
-    } else {
-      setSelectedPo(null);
-      setFormData(prev => ({ 
-        ...prev, 
-        poId: "", 
-        totalAmount: 0, 
-        taxAmount: 0, 
-        grandTotal: 0,
-        requestedById: session?.user?.id || "",
-      }));
-    }
-  };
+  }, [prId, fetchPR]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,69 +86,48 @@ export default function CreatePRPage() {
     setErrors({});
 
     try {
-      // Prepare data for API - convert empty poId to undefined
-      const submitData = {
-        ...formData,
-        poId: formData.poId || undefined,
-        requestedById: formData.requestedById || session?.user?.id,
-      };
-
-      const response = await fetch("/api/pr", {
-        method: "POST",
+      const response = await fetch(`/api/pr/${prId}`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(submitData),
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
-        toast.success("Payment Request created successfully!");
-        router.push("/pr");
+        toast.success("Payment Request updated successfully!");
+        router.push(`/pr/${prId}`);
       } else {
         const errorData = await response.json();
         if (response.status === 400 && errorData.details?.fieldErrors) {
           setErrors(errorData.details.fieldErrors);
           toast.error("Please correct the errors in the form.");
         } else {
-          toast.error(`Error: ${errorData.error || "Failed to create PR"}`);
+          toast.error(`Error: ${errorData.error || "Failed to update PR"}`);
         }
       }
     } catch (error) {
-      console.error("Error creating PR:", error);
+      console.error("Error updating PR:", error);
       toast.error("An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
   };
 
+  if (!pr && loading) {
+    return <PageLayout title="Edit Payment Request"><LoadingSpinner /></PageLayout>;
+  }
+
+  if (!pr) {
+    return <PageLayout title="Error"><p>Payment Request not found.</p></PageLayout>;
+  }
+
   return (
-    <PageLayout title="Create Payment Request">
+    <PageLayout title="Edit Payment Request">
       <div className="mb-6">
-        <BackButton href="/pr" />
+        <BackButton href={`/pr/${prId}`} />
       </div>
       <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
-          {/* PO Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Select Purchase Order</label>
-            <select
-              value={formData.poId}
-              onChange={(e) => handlePoChange(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="">Select a PO (optional)</option>
-              {pos.map((po) => (
-                <option key={po.id} value={po.id}>
-                  {po.poNumber} - {po.title} (₹{po.grandTotal.toFixed(2)})
-                </option>
-              ))}
-            </select>
-            {selectedPo && (
-              <p className="mt-2 text-sm text-green-600">
-                Selected PO: {selectedPo.poNumber} - Vendor: {selectedPo.vendorName}
-              </p>
-            )}
-          </div>
-
           {/* Basic PR Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -297,7 +259,7 @@ export default function CreatePRPage() {
           <div className="flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => router.push("/pr")}
+              onClick={() => router.push(`/pr/${prId}`)}
               className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
             >
               Cancel
@@ -308,7 +270,7 @@ export default function CreatePRPage() {
             className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
             >
             {loading && <LoadingSpinner />}
-              {loading ? "Creating..." : "Create PR"}
+              {loading ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>

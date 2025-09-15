@@ -4,6 +4,7 @@
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("demo@nexusprocure.com");
@@ -39,7 +40,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-6 shadow-md">
         <div className="text-center">
-          <img src="https://i.postimg.cc/Kctw8crn/sblt-logo.png" alt="NexusProcure Logo" className="h-12 w-auto mx-auto" />
+          <Image src="https://i.postimg.cc/Kctw8crn/sblt-logo.png" alt="NexusProcure Logo" width={96} height={48} className="mx-auto" />
           <h1 className="text-2xl font-bold mt-4">NexusProcure</h1>
           <p className="mt-2 text-gray-600">Sign in to your account</p>
         </div>

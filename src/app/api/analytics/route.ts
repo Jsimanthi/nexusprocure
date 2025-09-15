@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
 import { prisma } from "@/lib/prisma";
 import { POStatus } from "@/types/po";
 import { authorize } from "@/lib/auth-utils";
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const session = await auth();
     // Use the new permission-based authorization

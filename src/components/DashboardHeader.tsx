@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useHasPermission } from "@/hooks/useHasPermission";
+import Image from "next/image";
 
 export default function DashboardHeader() {
   const { data: session } = useSession();
@@ -35,7 +36,7 @@ export default function DashboardHeader() {
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
             <div className="flex items-center">
-              <img src="https://i.postimg.cc/Kctw8crn/sblt-logo.png" alt="NexusProcure Logo" className="h-8 w-auto mr-3" />
+              <Image src="https://i.postimg.cc/Kctw8crn/sblt-logo.png" alt="NexusProcure Logo" width={64} height={32} className="mr-3" />
               <h1 className="text-2xl font-bold text-gray-900">NexusProcure</h1>
             </div>
             

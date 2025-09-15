@@ -1,7 +1,7 @@
 // src/app/pr/[id]/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { PaymentRequest, PRStatus, PaymentMethod } from "@/types/pr";
@@ -34,17 +34,9 @@ export default function PRDetailPage() {
   const [selectedApprover, setSelectedApprover] = useState<string>('');
 
   const canApprove = useHasPermission('APPROVE_PR');
-  const canReview = useHasPermission('REVIEW_PR');
   const isCreator = session?.user?.id === pr?.preparedById;
 
-  useEffect(() => {
-    if (params.id) {
-      fetchPR();
-      fetchApprovers();
-    }
-  }, [params.id]);
-
-  const fetchPR = async () => {
+  const fetchPR = useCallback(async () => {
     try {
       const response = await fetch(`/api/pr/${params.id}`);
       if (response.ok) {
@@ -58,9 +50,9 @@ export default function PRDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
 
-  const fetchApprovers = async () => {
+  const fetchApprovers = useCallback(async () => {
     try {
       const response = await fetch('/api/users?role=MANAGER');
       if (response.ok) {
@@ -72,7 +64,14 @@ export default function PRDetailPage() {
     } catch (error) {
       console.error("Error fetching approvers:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (params.id) {
+      fetchPR();
+      fetchApprovers();
+    }
+  }, [params.id, fetchPR, fetchApprovers]);
 
   const updateStatus = async (newStatus?: PRStatus, approverId?: string) => {
     setUpdating(true);

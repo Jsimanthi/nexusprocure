@@ -1,14 +1,11 @@
-// src/app/iom/create/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
-import { useSession } from "next-auth/react";
-import { z } from "zod";
-import { createIomSchema } from "@/lib/schemas";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { useCallback } from "react";
 
 interface IOMItem {
   itemName: string;
@@ -18,45 +15,49 @@ interface IOMItem {
   totalPrice: number;
 }
 
-interface User {
-  id: string;
-  name: string;
-}
-
-export default function CreateIOMPage() {
+export default function EditIOMPage() {
   const router = useRouter();
-  const { data: session } = useSession();
-  const [loading, setLoading] = useState(false);
+  const params = useParams();
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     title: "",
     from: "",
     to: "",
     subject: "",
     content: "",
-    reviewedById: "",
   });
   const [items, setItems] = useState<IOMItem[]>([
     { itemName: "", description: "", quantity: 1, unitPrice: 0, totalPrice: 0 },
   ]);
-  const [reviewers, setReviewers] = useState<User[]>([]);
-  const [errors, setErrors] = useState<Record<string, string[]>>({});
+
+  const fetchIOM = useCallback(async () => {
+    if (!params.id) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/iom/${params.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setFormData({
+          title: data.title,
+          from: data.from,
+          to: data.to,
+          subject: data.subject,
+          content: data.content || "",
+        });
+        setItems(data.items.map((item: IOMItem) => ({ ...item, totalPrice: item.quantity * item.unitPrice })));
+      } else {
+        console.error("Failed to fetch IOM");
+      }
+    } catch (error) {
+      console.error("Error fetching IOM:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
 
   useEffect(() => {
-    const fetchReviewers = async () => {
-      try {
-        const response = await fetch("/api/users/role/REVIEWER");
-        if (response.ok) {
-          const data = await response.json();
-          setReviewers(data);
-        } else {
-          console.error("Failed to fetch reviewers");
-        }
-      } catch (error) {
-        console.error("Error fetching reviewers:", error);
-      }
-    };
-    fetchReviewers();
-  }, []);
+    fetchIOM();
+  }, [fetchIOM]);
 
   const addItem = () => {
     setItems([
@@ -86,17 +87,10 @@ export default function CreateIOMPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!session?.user?.id) {
-      console.error("User session not found. Cannot create IOM.");
-      return;
-    }
-
     setLoading(true);
-    setErrors({});
 
     try {
-      const payload: z.infer<typeof createIomSchema> = {
+      const payload = {
         ...formData,
         items: items.map((item) => ({
           itemName: item.itemName,
@@ -104,12 +98,10 @@ export default function CreateIOMPage() {
           quantity: item.quantity,
           unitPrice: item.unitPrice,
         })),
-        requestedById: session.user.id,
-        reviewedById: formData.reviewedById || undefined,
       };
 
-      const response = await fetch("/api/iom", {
-        method: "POST",
+      const response = await fetch(`/api/iom/${params.id}`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
@@ -117,17 +109,13 @@ export default function CreateIOMPage() {
       });
 
       if (response.ok) {
-        router.push("/iom");
+        router.push(`/iom/${params.id}`);
       } else {
         const errorData = await response.json();
-        if (response.status === 400) {
-          setErrors(errorData.details.fieldErrors);
-        } else {
-          console.error("Failed to create IOM:", errorData.error);
-        }
+        console.error("Failed to update IOM:", errorData.error);
       }
     } catch (error) {
-      console.error("Error creating IOM:", error);
+      console.error("Error updating IOM:", error);
     } finally {
       setLoading(false);
     }
@@ -136,10 +124,10 @@ export default function CreateIOMPage() {
   const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
   return (
-    <PageLayout title="Create New IOM">
+    <PageLayout title="Edit IOM">
       <div className="mb-6">
-        <Link href="/iom" className="text-blue-600 hover:text-blue-800">
-          &larr; Back to IOM List
+        <Link href={`/iom/${params.id}`} className="text-blue-600 hover:text-blue-800">
+          &larr; Back to IOM
         </Link>
       </div>
       <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
@@ -153,9 +141,7 @@ export default function CreateIOMPage() {
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              autoFocus
             />
-            {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title[0]}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Subject *</label>
@@ -166,7 +152,6 @@ export default function CreateIOMPage() {
               onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
-            {errors.subject && <p className="text-red-500 text-xs mt-1">{errors.subject[0]}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">From *</label>
@@ -177,7 +162,6 @@ export default function CreateIOMPage() {
               onChange={(e) => setFormData({ ...formData, from: e.target.value })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
-            {errors.from && <p className="text-red-500 text-xs mt-1">{errors.from[0]}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">To *</label>
@@ -188,26 +172,6 @@ export default function CreateIOMPage() {
               onChange={(e) => setFormData({ ...formData, to: e.target.value })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
-            {errors.to && <p className="text-red-500 text-xs mt-1">{errors.to[0]}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Assign Reviewer
-            </label>
-            <select
-              value={formData.reviewedById}
-              onChange={(e) =>
-                setFormData({ ...formData, reviewedById: e.target.value })
-              }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="">Select a reviewer</option>
-              {reviewers.map((reviewer) => (
-                <option key={reviewer.id} value={reviewer.id}>
-                  {reviewer.name}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
 
@@ -306,7 +270,7 @@ export default function CreateIOMPage() {
 
         <div className="flex justify-end space-x-4">
           <Link
-            href="/iom"
+            href={`/iom/${params.id}`}
             className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
           >
             Cancel
@@ -317,7 +281,7 @@ export default function CreateIOMPage() {
             className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
           >
             {loading && <LoadingSpinner />}
-            {loading ? "Creating..." : "Create IOM"}
+            {loading ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </form>

@@ -4,7 +4,7 @@ import { getPRs, createPaymentRequest, updatePRStatus } from './pr';
 import { prisma } from './prisma';
 import { PRStatus, CreatePrData, PaymentRequest, PaymentMethod } from '@/types/pr';
 import { Session } from 'next-auth';
-import { Prisma, Role, POStatus } from '@prisma/client';
+import { Prisma, POStatus } from '@prisma/client';
 
 import { logAudit, getAuditUser } from './audit';
 
