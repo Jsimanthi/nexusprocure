@@ -1,4 +1,5 @@
 import { useSession } from 'next-auth/react';
+import type { Session } from 'next-auth';
 
 /**
  * A custom React hook to check if the current user has a specific permission.
@@ -8,7 +9,7 @@ import { useSession } from 'next-auth/react';
  */
 export function useHasPermission(permission: string): boolean {
   const { data: session } = useSession();
-  const userPermissions = session?.user?.permissions || [];
+  const userPermissions = (session as Session)?.user?.permissions || [];
 
   return userPermissions.includes(permission);
 }

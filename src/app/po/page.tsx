@@ -165,8 +165,8 @@ export default function POListPage() {
                               <Pencil size={18} />
                             </button>
                           )}
-                          {canDelete && po.status === "DRAFT" && (
-                            <button onClick={() => handleDelete(po.id)} disabled={deleteMutation.isPending} className="p-1 text-red-500 hover:text-red-700 disabled:opacity-50">
+                          {canDelete && po.status === "DRAFT" && po.id && (
+                            <button onClick={() => handleDelete(po.id as string)} disabled={deleteMutation.isPending} className="p-1 text-red-500 hover:text-red-700 disabled:opacity-50">
                               <Trash2 size={18} />
                             </button>
                           )}

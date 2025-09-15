@@ -23,7 +23,7 @@ interface FormData {
   totalAmount: number;
   taxAmount: number;
   grandTotal: number;
-  requestedById: string;
+  requestedById?: string;
 }
 
 export default function CreatePRPage() {
@@ -47,13 +47,13 @@ export default function CreatePRPage() {
     totalAmount: 0,
     taxAmount: 0,
     grandTotal: 0,
-    requestedById: "",
   });
 
   useEffect(() => {
     fetchPOs();
-    if (session?.user?.id) {
-      setFormData(prev => ({ ...prev, requestedById: session.user.id }));
+    const userId = session?.user?.id;
+    if (userId) {
+      setFormData(prev => ({ ...prev, requestedById: userId }));
     }
     firstInputRef.current?.focus();
   }, [session]);
@@ -92,7 +92,7 @@ export default function CreatePRPage() {
         totalAmount: 0, 
         taxAmount: 0, 
         grandTotal: 0,
-        requestedById: session?.user?.id || "",
+        requestedById: session?.user?.id,
       }));
     }
   };
@@ -102,12 +102,19 @@ export default function CreatePRPage() {
     setLoading(true);
     setErrors({});
 
+    const requestedById = formData.requestedById || session?.user?.id;
+    if (!requestedById) {
+      toast.error("You must be logged in to create a Payment Request.");
+      setLoading(false);
+      return;
+    }
+
     try {
       // Prepare data for API - convert empty poId to undefined
       const submitData = {
         ...formData,
         poId: formData.poId || undefined,
-        requestedById: formData.requestedById || session?.user?.id,
+        requestedById,
       };
 
       const response = await fetch("/api/pr", {

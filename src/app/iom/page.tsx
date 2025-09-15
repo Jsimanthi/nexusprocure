@@ -162,8 +162,8 @@ return (
                             <Pencil size={18} />
                           </button>
                         )}
-                        {canDelete && iom.status === "DRAFT" && (
-                          <button onClick={() => handleDelete(iom.id)} disabled={deleteMutation.isPending} className="p-1 text-red-500 hover:text-red-700 disabled:opacity-50">
+                        {canDelete && iom.status === "DRAFT" && iom.id && (
+                          <button onClick={() => handleDelete(iom.id as string)} disabled={deleteMutation.isPending} className="p-1 text-red-500 hover:text-red-700 disabled:opacity-50">
                             <Trash2 size={18} />
                           </button>
                         )}
