@@ -1,6 +1,6 @@
 // src/app/api/iom/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-server";
+import { auth } from "@/lib/auth-config";
 import { getIOMById, updateIOMStatus } from "@/lib/iom";
 import { IOMStatus } from "@/types/iom";
 

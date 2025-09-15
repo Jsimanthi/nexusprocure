@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth-server";
+import { auth } from "@/lib/auth-config";
 import { markAllNotificationsAsRead } from "@/lib/notification";
 
 export async function POST() {

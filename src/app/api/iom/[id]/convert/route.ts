@@ -1,6 +1,6 @@
 // src/app/api/iom/[id]/convert/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-server";
+import { auth } from "@/lib/auth-config";
 import { getIOMById } from "@/lib/iom";
 import { createPurchaseOrder } from "@/lib/po";
 import { prisma } from "@/lib/prisma";

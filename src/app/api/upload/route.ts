@@ -1,6 +1,6 @@
 import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
-import { auth } from "@/lib/auth-server";
+import { auth } from "@/lib/auth-config";
 
 export async function POST(request: Request): Promise<NextResponse> {
   const session = await auth();

@@ -1,6 +1,6 @@
 // src/app/api/iom/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-server";
+import { auth } from "@/lib/auth-config";
 import { createIOM, getIOMs } from "@/lib/iom";
 // FIX: Correct the schema import name
 import { createIomSchema } from "@/lib/schemas";

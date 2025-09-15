@@ -1,6 +1,6 @@
 // src/app/api/pr/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-server";
+import { auth } from "@/lib/auth-config";
 import { createPaymentRequest, getPRs } from "@/lib/pr";
 import { createPrSchema } from "@/lib/schemas";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";

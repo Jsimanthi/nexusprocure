@@ -1,6 +1,6 @@
 // src/app/api/pr/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-server";
+import { auth } from "@/lib/auth-config";
 import { getPRById, updatePRStatus } from "@/lib/pr";
 import { PRStatus } from "@/types/pr";
 

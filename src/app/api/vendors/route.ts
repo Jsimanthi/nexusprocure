@@ -1,6 +1,6 @@
 // src/app/api/vendors/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-server";
+import { auth } from "@/lib/auth-config";
 import { getVendors, createVendor } from "@/lib/po";
 import { createVendorSchema } from "@/lib/schemas";
 import { Prisma } from "@prisma/client";

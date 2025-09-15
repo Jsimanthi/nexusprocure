@@ -1,6 +1,6 @@
 // Removed NextRequest from the import statement
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth-server";
+import { auth } from "@/lib/auth-config";
 import { getNotifications } from "@/lib/notification";
 
 // Removed the request parameter from the function signature

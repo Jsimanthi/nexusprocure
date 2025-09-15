@@ -1,6 +1,6 @@
 // src/app/api/po/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-server";
+import { auth } from "@/lib/auth-config";
 import { createPurchaseOrder, getPOs } from "@/lib/po";
 import { createPoSchema } from "@/lib/schemas";
 

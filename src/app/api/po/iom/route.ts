@@ -1,6 +1,6 @@
 // src/app/api/po/iom/route.ts
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth-server";
+import { auth } from "@/lib/auth-config";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
