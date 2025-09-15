@@ -62,7 +62,6 @@ const authConfig: NextAuthConfig = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // user object contains the role and permissions
         token.id = user.id;
         token.role = (user as any).role;
         token.permissions = (user as any).permissions;
