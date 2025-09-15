@@ -1,12 +1,14 @@
 // src/lib/auth-options.ts
-import type { NextAuthConfig } from "next-auth";
+import NextAuth from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
+import type { JWT } from "next-auth/jwt";
 
 const DEMO_PASSWORD = "password123";
 
-export const authOptions: NextAuthConfig = {
+export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
       name: "credentials",
@@ -112,8 +114,9 @@ export const authOptions: NextAuthConfig = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
+        token.id = user.id;
         token.roleId = user.roleId;
         token.permissions = user.permissions;
         token.role = user.role;
@@ -122,9 +125,9 @@ export const authOptions: NextAuthConfig = {
     },
     async session({ session, token }) {
       if (session.user) {
+        session.user.id = token.id;
         session.user.roleId = token.roleId;
         session.user.permissions = token.permissions;
-        session.user.id = token.sub as string;
         session.user.role = token.role;
       }
       return session;
@@ -135,3 +138,6 @@ export const authOptions: NextAuthConfig = {
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
+
+// Add this to the end of src/lib/auth-options.ts
+export const handlers = NextAuth(authOptions);
