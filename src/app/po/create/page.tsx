@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FileUpload, { UploadedFileResult } from "@/components/FileUpload"; // 1. Import the new type
@@ -176,32 +176,6 @@ export default function CreatePOPage() {
             newItems[index].totalPrice = totalPrice;
         }
         setItems(newItems);
-    };
-
-    const handleIomChange = (iomId: string) => {
-        const iom = ioms.find(i => i.id === iomId);
-        if (iom) {
-            setSelectedIom(iom);
-            setFormData(prev => ({
-                ...prev,
-                iomId: iom.id,
-                title: `PO for ${iom.title}`
-            }));
-
-            const poItems = iom.items.map(item => ({
-                itemName: item.itemName,
-                description: item.description || '',
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                taxRate: formData.taxRate,
-                taxAmount: (item.quantity * item.unitPrice) * (formData.taxRate / 100),
-                totalPrice: (item.quantity * item.unitPrice) + ((item.quantity * item.unitPrice) * (formData.taxRate / 100))
-            }));
-            setItems(poItems);
-        } else {
-            setSelectedIom(null);
-            setFormData(prev => ({ ...prev, iomId: "", title: "" }));
-        }
     };
 
     const handleVendorChange = (vendorId: string) => {
