@@ -1,7 +1,7 @@
 // src/app/po/[id]/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PurchaseOrder, POStatus } from "@/types/po";
@@ -33,16 +33,7 @@ export default function PODetailPage() {
   const canReview = useHasPermission('REVIEW_PO');
   const isCreator = session?.user?.id === po?.preparedById;
 
-  useEffect(() => {
-    if (params.id) {
-      fetchPO();
-    }
-    if (canReview) {
-      fetchApprovers();
-    }
-  }, [params.id, canReview]);
-
-  const fetchPO = async () => {
+  const fetchPO = useCallback(async () => {
     try {
       const response = await fetch(`/api/po/${params.id}`);
       if (response.ok) {
@@ -56,9 +47,9 @@ export default function PODetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
 
-  const fetchApprovers = async () => {
+  const fetchApprovers = useCallback(async () => {
     try {
       const response = await fetch('/api/users?role=MANAGER');
       if (response.ok) {
@@ -70,7 +61,16 @@ export default function PODetailPage() {
     } catch (error) {
       console.error("Error fetching approvers:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (params.id) {
+      fetchPO();
+    }
+    if (canReview) {
+      fetchApprovers();
+    }
+  }, [params.id, canReview, fetchPO, fetchApprovers]);
 
   const updateStatus = async (newStatus?: POStatus, approverId?: string) => {
     setUpdating(true);

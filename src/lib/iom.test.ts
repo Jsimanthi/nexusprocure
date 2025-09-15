@@ -4,7 +4,7 @@ import { getIOMs, createIOM, updateIOMStatus, deleteIOM } from './iom';
 import { prisma } from './prisma';
 import { IOMStatus } from '@/types/iom';
 import { Session } from 'next-auth';
-import { Prisma, Role } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 import { logAudit, getAuditUser } from './audit';
 

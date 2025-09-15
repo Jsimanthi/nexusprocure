@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-server";
 import { markNotificationAsRead } from "@/lib/notification";
 
+// Type definition for route context parameters for clarity.
 interface RouteParams {
   params: { id: string };
 }

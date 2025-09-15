@@ -5,6 +5,7 @@ import { getVendorById, updateVendor, deleteVendor } from "@/lib/po";
 import { updateVendorSchema } from "@/lib/schemas";
 import { Prisma } from "@prisma/client";
 
+// Type definition for route context parameters for clarity.
 interface RouteParams {
   params: { id: string };
 }

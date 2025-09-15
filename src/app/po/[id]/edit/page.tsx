@@ -1,18 +1,11 @@
-// src/app/po/create/page.tsx
-
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import FileUpload, { UploadedFileResult } from "@/components/FileUpload"; // 1. Import the new type
+import FileUpload, { UploadedFileResult } from "@/components/FileUpload";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
-
-interface User {
-  id: string;
-  name: string;
-}
 
 interface POItem {
     itemName: string;
@@ -33,33 +26,14 @@ interface Vendor {
     contactInfo: string;
 }
 
-interface IOM {
-    id: string;
-    iomNumber: string;
-    title: string;
-    status: string;
-    totalAmount: number;
-    items: Array<{
-        itemName: string;
-        description: string;
-        quantity: number;
-        unitPrice: number;
-        totalPrice: number;
-    }>;
-}
-
-export default function CreatePOPage() {
+export default function EditPOPage() {
     const router = useRouter();
-    const [loading, setLoading] = useState(false);
-    // 2. Use the new type for the attachments state
+    const params = useParams();
+    const [loading, setLoading] = useState(true);
     const [attachments, setAttachments] = useState<UploadedFileResult[]>([]);
     const [vendors, setVendors] = useState<Vendor[]>([]);
-    const [ioms, setIoms] = useState<IOM[]>([]);
-    const [selectedIom, setSelectedIom] = useState<IOM | null>(null);
-    const [reviewers, setReviewers] = useState<User[]>([]);
     const [formData, setFormData] = useState({
         title: "",
-        iomId: "",
         vendorId: "",
         companyName: "Your Company Name",
         companyAddress: "Your Company Address",
@@ -68,56 +42,44 @@ export default function CreatePOPage() {
         vendorAddress: "",
         vendorContact: "",
         taxRate: 18,
-        reviewedById: "",
     });
     const [items, setItems] = useState<POItem[]>([
         { itemName: "", description: "", quantity: 1, unitPrice: 0, taxRate: 18, taxAmount: 0, totalPrice: 0 }
     ]);
-  const [errors, setErrors] = useState<Record<string, string[]>>({});
 
-  const handleIomChange = useCallback((iomId: string) => {
-    const iom = ioms.find(i => i.id === iomId);
-    if (iom) {
-        setSelectedIom(iom);
-        setFormData(prev => ({
-            ...prev,
-            iomId: iom.id,
-            title: `PO for ${iom.title}`
-        }));
-
-        const poItems = iom.items.map(item => ({
-            itemName: item.itemName,
-            description: item.description || '',
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            taxRate: formData.taxRate,
-            taxAmount: (item.quantity * item.unitPrice) * (formData.taxRate / 100),
-            totalPrice: (item.quantity * item.unitPrice) + ((item.quantity * item.unitPrice) * (formData.taxRate / 100))
-        }));
-        setItems(poItems);
-    } else {
-        setSelectedIom(null);
-        setFormData(prev => ({ ...prev, iomId: "", title: "" }));
-    }
-  }, [ioms, formData.taxRate]);
-
-    useEffect(() => {
-        fetchVendors();
-        fetchApprovedIOMs();
-        fetchReviewers();
-    }, []);
-
-    const fetchReviewers = async () => {
+    const fetchPO = useCallback(async () => {
+        if (!params.id) return;
+        setLoading(true);
         try {
-            const response = await fetch("/api/users/role/REVIEWER");
+            const response = await fetch(`/api/po/${params.id}`);
             if (response.ok) {
                 const data = await response.json();
-                setReviewers(data);
+                setFormData({
+                    title: data.title,
+                    vendorId: data.vendorId || "",
+                    companyName: data.companyName,
+                    companyAddress: data.companyAddress,
+                    companyContact: data.companyContact,
+                    vendorName: data.vendorName,
+                    vendorAddress: data.vendorAddress,
+                    vendorContact: data.vendorContact,
+                    taxRate: data.taxRate,
+                });
+                setItems(data.items.map((item: POItem) => ({ ...item, totalPrice: item.quantity * item.unitPrice * (1 + item.taxRate / 100) })));
+            } else {
+                console.error("Failed to fetch PO");
             }
         } catch (error) {
-            console.error("Error fetching reviewers:", error);
+            console.error("Error fetching PO:", error);
+        } finally {
+            setLoading(false);
         }
-    };
+    }, [params.id]);
+
+    useEffect(() => {
+        fetchPO();
+        fetchVendors();
+    }, [fetchPO]);
 
     const fetchVendors = async () => {
         try {
@@ -128,26 +90,6 @@ export default function CreatePOPage() {
             }
         } catch (error) {
             console.error("Error fetching vendors:", error);
-        }
-    };
-    
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const iomId = urlParams.get('iomId');
-        if (iomId) {
-            handleIomChange(iomId);
-        }
-  }, [ioms, handleIomChange]); // Add ioms dependency to ensure it runs after ioms are fetched
-
-    const fetchApprovedIOMs = async () => {
-        try {
-            const response = await fetch("/api/po/iom");
-            if (response.ok) {
-                const data = await response.json();
-                setIoms(data);
-            }
-        } catch (error) {
-            console.error("Error fetching IOMs:", error);
         }
     };
 
@@ -176,32 +118,6 @@ export default function CreatePOPage() {
             newItems[index].totalPrice = totalPrice;
         }
         setItems(newItems);
-    };
-
-    const handleIomChange = (iomId: string) => {
-        const iom = ioms.find(i => i.id === iomId);
-        if (iom) {
-            setSelectedIom(iom);
-            setFormData(prev => ({
-                ...prev,
-                iomId: iom.id,
-                title: `PO for ${iom.title}`
-            }));
-
-            const poItems = iom.items.map(item => ({
-                itemName: item.itemName,
-                description: item.description || '',
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                taxRate: formData.taxRate,
-                taxAmount: (item.quantity * item.unitPrice) * (formData.taxRate / 100),
-                totalPrice: (item.quantity * item.unitPrice) + ((item.quantity * item.unitPrice) * (formData.taxRate / 100))
-            }));
-            setItems(poItems);
-        } else {
-            setSelectedIom(null);
-            setFormData(prev => ({ ...prev, iomId: "", title: "" }));
-        }
     };
 
     const handleVendorChange = (vendorId: string) => {
@@ -236,16 +152,14 @@ export default function CreatePOPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setErrors({});
         try {
-            const response = await fetch("/api/po", {
-                method: "POST",
+            const response = await fetch(`/api/po/${params.id}`, {
+                method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
                     ...formData,
-                    iomId: formData.iomId || undefined,
                     items: items.map(item => ({
                         itemName: item.itemName,
                         description: item.description,
@@ -257,24 +171,19 @@ export default function CreatePOPage() {
                         url: att.url,
                         filename: att.pathname,
                         filetype: att.contentType,
-                        size: att.size, // This now works correctly
+                        size: att.size,
                     })),
-                    ...(formData.reviewedById && { reviewedById: formData.reviewedById }),
                 }),
             });
             if (response.ok) {
-                router.push("/po");
+                router.push(`/po/${params.id}`);
             } else {
                 const errorData = await response.json();
-                if (response.status === 400) {
-                    setErrors(errorData.details.fieldErrors);
-                } else {
-                    console.error("Failed to create PO", errorData);
-                    alert(`Error: ${errorData.error}`);
-                }
+                console.error("Failed to update PO", errorData);
+                alert(`Error: ${errorData.error}. Details: ${JSON.stringify(errorData.details)}`);
             }
         } catch (error) {
-            console.error("Error creating PO:", error);
+            console.error("Error updating PO:", error);
         } finally {
             setLoading(false);
         }
@@ -285,34 +194,13 @@ export default function CreatePOPage() {
     const grandTotal = subtotal + totalTax;
 
     return (
-        <PageLayout title="Create Purchase Order">
+        <PageLayout title="Edit Purchase Order">
           <div className="mb-6">
-            <Link href="/po" className="text-blue-600 hover:text-blue-800">
-              &larr; Back to PO List
+            <Link href={`/po/${params.id}`} className="text-blue-600 hover:text-blue-800">
+              &larr; Back to PO
             </Link>
           </div>
           <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Select Approved IOM (Optional)</label>
-              <select
-                value={formData.iomId}
-                onChange={(e) => handleIomChange(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">Select an approved IOM (optional)</option>
-                {ioms.map((iom) => (
-                  <option key={iom.id} value={iom.id}>
-                    {iom.iomNumber} - {iom.title} (₹{iom.totalAmount.toFixed(2)})
-                  </option>
-                ))}
-              </select>
-              {selectedIom && (
-                <p className="mt-2 text-sm text-green-600">
-                  Selected IOM: {selectedIom.iomNumber} - {selectedIom.items.length} items loaded
-                </p>
-              )}
-            </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700">PO Title *</label>
@@ -323,9 +211,7 @@ export default function CreatePOPage() {
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   placeholder="e.g., Laptops for Development Team"
-                  autoFocus
                 />
-                {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title[0]}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Tax Rate (%) *</label>
@@ -340,27 +226,8 @@ export default function CreatePOPage() {
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Assign Reviewer
-                </label>
-                <select
-                  value={formData.reviewedById}
-                  onChange={(e) =>
-                    setFormData({ ...formData, reviewedById: e.target.value })
-                  }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option value="">Select a reviewer</option>
-                  {reviewers.map((reviewer) => (
-                    <option key={reviewer.id} value={reviewer.id}>
-                      {reviewer.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700">Select Vendor</label>
               <select
@@ -376,7 +243,7 @@ export default function CreatePOPage() {
                 ))}
               </select>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Company Details</h3>
@@ -390,7 +257,6 @@ export default function CreatePOPage() {
                       onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     />
-                    {errors.companyName && <p className="text-red-500 text-xs mt-1">{errors.companyName[0]}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Company Address *</label>
@@ -401,7 +267,6 @@ export default function CreatePOPage() {
                       onChange={(e) => setFormData({ ...formData, companyAddress: e.target.value })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     />
-                    {errors.companyAddress && <p className="text-red-500 text-xs mt-1">{errors.companyAddress[0]}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Contact Info *</label>
@@ -412,7 +277,6 @@ export default function CreatePOPage() {
                       onChange={(e) => setFormData({ ...formData, companyContact: e.target.value })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     />
-                    {errors.companyContact && <p className="text-red-500 text-xs mt-1">{errors.companyContact[0]}</p>}
                   </div>
                 </div>
               </div>
@@ -428,7 +292,6 @@ export default function CreatePOPage() {
                       onChange={(e) => setFormData({ ...formData, vendorName: e.target.value })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     />
-                    {errors.vendorName && <p className="text-red-500 text-xs mt-1">{errors.vendorName[0]}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Vendor Address *</label>
@@ -439,7 +302,6 @@ export default function CreatePOPage() {
                       onChange={(e) => setFormData({ ...formData, vendorAddress: e.target.value })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     />
-                    {errors.vendorAddress && <p className="text-red-500 text-xs mt-1">{errors.vendorAddress[0]}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Contact Info *</label>
@@ -450,7 +312,6 @@ export default function CreatePOPage() {
                       onChange={(e) => setFormData({ ...formData, vendorContact: e.target.value })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     />
-                    {errors.vendorContact && <p className="text-red-500 text-xs mt-1">{errors.vendorContact[0]}</p>}
                   </div>
                 </div>
               </div>
@@ -459,7 +320,7 @@ export default function CreatePOPage() {
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium text-gray-900">
-                  Items {selectedIom && `(From IOM: ${selectedIom.iomNumber})`}
+                  Items
                 </h3>
                 <button
                   type="button"
@@ -561,10 +422,10 @@ export default function CreatePOPage() {
               <h3 className="text-lg font-medium text-gray-900 mb-4">Attachments</h3>
               <FileUpload onUploadComplete={setAttachments} />
             </div>
-            
+
             <div className="flex justify-end space-x-4">
               <Link
-                href="/po"
+                href={`/po/${params.id}`}
                 className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
               >
                 Cancel
@@ -575,7 +436,7 @@ export default function CreatePOPage() {
             className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
               >
             {loading && <LoadingSpinner />}
-                {loading ? "Creating..." : "Create PO"}
+                {loading ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </form>

@@ -1,6 +1,5 @@
 // src/lib/auth-options.ts
-import type { NextAuthConfig, User, Session } from "next-auth";
-import type { JWT } from "next-auth/jwt";
+import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";

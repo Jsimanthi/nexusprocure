@@ -8,6 +8,11 @@ import PageLayout from "@/components/PageLayout";
 import { formatCurrency, getPRStatusColor } from "@/lib/utils";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
+import { useHasPermission } from "@/hooks/useHasPermission";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Eye, Trash2, Pencil } from "lucide-react";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 const fetchPRs = async (page = 1, pageSize = 10, searchTerm = "", status = "") => {
   const params = new URLSearchParams({
@@ -28,10 +33,38 @@ export default function PRListPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const pageSize = 10;
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const canDelete = useHasPermission("DELETE_PR");
+  const canUpdate = useHasPermission("UPDATE_PR");
+
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["paymentRequests", page, pageSize, searchTerm, statusFilter],
     queryFn: () => fetchPRs(page, pageSize, searchTerm, statusFilter),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/pr/${id}`, { method: "DELETE" });
+      if (!response.ok) {
+        throw new Error("Failed to delete PR");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["paymentRequests"] });
+      toast.success("PR deleted successfully.");
+    },
+    onError: (error) => {
+      toast.error(`Error deleting PR: ${error.message}`);
+    },
+  });
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this PR?")) {
+      deleteMutation.mutate(id);
+    }
+  };
 
   const prs = data?.data || [];
   const total = data?.total || 0;
@@ -103,47 +136,40 @@ export default function PRListPage() {
                 </li>
               ) : (
                 prs.map((pr: PaymentRequest) => (
-                  <li key={pr.id} className="hover:bg-gray-50 transition-colors">
-                    <Link href={`/pr/${pr.id}`} className="block">
-                      <div className="px-4 py-4 sm:px-6">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div className="flex items-center min-w-0">
-                            <span className="text-sm font-medium text-blue-600 truncate">
-                              {pr.prNumber}
-                            </span>
-                            <span className="ml-3 text-sm text-gray-900 font-semibold truncate">
-                              {pr.title}
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-2 flex-shrink-0">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPRStatusColor(pr.status)}`}>
-                              {pr.status.replace("_", " ")}
-                            </span>
-                            <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
-                              {formatCurrency(pr.grandTotal)}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="mt-2 sm:flex sm:justify-between">
-                          <div className="sm:flex">
-                            <p className="flex items-center text-sm text-gray-500">
-                              Payment to: {pr.paymentTo}
-                              {pr.poId && (
-                                <span className="ml-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                  PO: {pr.poId}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                          <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                            <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                            </svg>
-                            Payment Date: {new Date(pr.paymentDate).toLocaleDateString()}
-                          </div>
+                  <li key={pr.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/pr/${pr.id}`} className="text-sm font-medium text-blue-600 truncate hover:underline">
+                          {pr.prNumber}
+                        </Link>
+                        <p className="ml-3 text-sm text-gray-900 font-semibold truncate">
+                          {pr.title}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-4 flex-shrink-0">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPRStatusColor(pr.status)}`}>
+                          {pr.status.replace("_", " ")}
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                          {formatCurrency(pr.grandTotal)}
+                        </span>
+                        <div className="flex items-center space-x-2">
+                          <button onClick={() => router.push(`/pr/${pr.id}`)} className="p-1 text-gray-500 hover:text-gray-700">
+                            <Eye size={18} />
+                          </button>
+                          {canUpdate && pr.status === "DRAFT" && (
+                            <button onClick={() => router.push(`/pr/${pr.id}/edit`)} className="p-1 text-gray-500 hover:text-gray-700">
+                              <Pencil size={18} />
+                            </button>
+                          )}
+                          {canDelete && pr.status === "DRAFT" && (
+                            <button onClick={() => handleDelete(pr.id)} disabled={deleteMutation.isPending} className="p-1 text-red-500 hover:text-red-700 disabled:opacity-50">
+                              <Trash2 size={18} />
+                            </button>
+                          )}
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   </li>
                 ))
               )}

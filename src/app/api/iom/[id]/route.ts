@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth-server";
 import { getIOMById, updateIOMStatus } from "@/lib/iom";
 import { IOMStatus } from "@/types/iom";
 
+// Type definition for route context parameters for clarity.
 interface RouteParams {
   params: { id: string };
 }

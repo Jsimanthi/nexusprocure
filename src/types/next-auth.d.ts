@@ -1,6 +1,3 @@
-import NextAuth from "next-auth";
-import { JWT } from "next-auth/jwt";
-
 interface UserRole {
   id: string;
   name: string;

@@ -1,7 +1,7 @@
 // src/app/iom/[id]/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { IOM, IOMStatus } from "@/types/iom";
@@ -27,16 +27,7 @@ export default function IOMDetailPage() {
   const canReview = useHasPermission('REVIEW_IOM');
   const isCreator = session?.user?.id === iom?.preparedById;
 
-  useEffect(() => {
-    if (params.id) {
-      fetchIOM();
-    }
-    if (canReview) {
-      fetchApprovers();
-    }
-  }, [params.id, canReview]);
-
-  const fetchIOM = async () => {
+  const fetchIOM = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/iom/${params.id}`);
@@ -51,9 +42,9 @@ export default function IOMDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
 
-  const fetchApprovers = async () => {
+  const fetchApprovers = useCallback(async () => {
     try {
       const response = await fetch('/api/users?role=MANAGER');
       if (response.ok) {
@@ -65,7 +56,16 @@ export default function IOMDetailPage() {
     } catch (error) {
       console.error("Error fetching approvers:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (params.id) {
+      fetchIOM();
+    }
+    if (canReview) {
+      fetchApprovers();
+    }
+  }, [params.id, canReview, fetchIOM, fetchApprovers]);
 
   const updateStatus = async (newStatus?: IOMStatus, approverId?: string) => {
     setUpdating(true);

@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 const prismaSchemaPath = path.join(__dirname, '..', 'prisma', 'schema.prisma');
 const prodSchemaPath = path.join(__dirname, '..', 'prisma', 'schema.prod.prisma');

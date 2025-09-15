@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import PageLayout from '@/components/PageLayout';
 import { useHasPermission } from '@/hooks/useHasPermission';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -51,7 +51,6 @@ const updateUserRole = async ({ userId, roleId }: { userId: string; roleId: stri
 
 
 export default function UserEditPage() {
-  const router = useRouter();
   const params = useParams();
   const userId = params.id as string;
   const queryClient = useQueryClient();
