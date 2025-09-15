@@ -1,6 +1,16 @@
 import { z } from 'zod';
 import { PaymentMethod } from '@/types/pr';
 
+export const getIOMsSchema = z.object({
+  page: z.coerce.number().min(1).default(1),
+  pageSize: z.coerce.number().min(1).default(10),
+  search: z.string().optional(),
+  status: z.preprocess(
+    (val) => (typeof val === 'string' ? (val === '' ? [] : [val]) : val),
+    z.array(z.string()).optional().default([])
+  ),
+});
+
 export const createPoItemSchema = z.object({
   itemName: z.string().min(1, 'Item name is required.'),
   description: z.string().optional(),
