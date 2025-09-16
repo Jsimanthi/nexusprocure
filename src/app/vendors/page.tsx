@@ -8,7 +8,6 @@ import SearchAndFilter from "@/components/SearchAndFilter";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
-import { useHasPermission } from '@/hooks/useHasPermission';
 
 // Now, this import will work correctly
 import { FilterState } from "@/components/SearchAndFilter";
@@ -52,12 +51,10 @@ export default function VendorsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [formData, setFormData] = useState<Partial<Vendor>>({});
-  const canManageVendors = useHasPermission('MANAGE_VENDORS');
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["vendors", page, pageSize],
     queryFn: () => fetchVendors(page, pageSize),
-    enabled: canManageVendors,
   });
   const vendors = data?.data || [];
   const total = data?.total || 0;
@@ -109,14 +106,6 @@ export default function VendorsPage() {
     console.log("Filters:", filters);
   };
 
-  if (!canManageVendors) {
-    return (
-      <PageLayout title="Vendor Management">
-        <ErrorDisplay title="Unauthorized" message="You do not have permission to manage vendors." />
-      </PageLayout>
-    );
-  }
-
   if (isLoading) {
     return (
       <PageLayout title="Vendor Management">
@@ -148,17 +137,15 @@ export default function VendorsPage() {
             >
               Back to POs
             </Link>
-            {canManageVendors && (
-              <button
-                onClick={() => {
-                  cancelForm();
-                  setShowForm(true);
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Add New Vendor
-              </button>
-            )}
+            <button
+              onClick={() => {
+                cancelForm();
+                setShowForm(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Add New Vendor
+            </button>
           </div>
         </div>
 
@@ -323,23 +310,19 @@ export default function VendorsPage() {
                         </p>
                       </div>
                       <div className="flex space-x-4 flex-shrink-0">
-                        {canManageVendors && (
-                          <>
-                            <button
-                              onClick={() => handleEdit(vendor)}
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDelete(vendor.id!)}
-                              disabled={deleteMutation.isPending && deleteMutation.variables === vendor.id}
-                              className="text-red-600 hover:text-red-800 text-sm font-medium transition-colors disabled:opacity-50"
-                            >
-                              {deleteMutation.isPending && deleteMutation.variables === vendor.id ? 'Deleting...' : 'Delete'}
-                            </button>
-                          </>
-                        )}
+                        <button
+                          onClick={() => handleEdit(vendor)}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(vendor.id!)}
+                          disabled={deleteMutation.isPending && deleteMutation.variables === vendor.id}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium transition-colors disabled:opacity-50"
+                        >
+                          {deleteMutation.isPending && deleteMutation.variables === vendor.id ? 'Deleting...' : 'Delete'}
+                        </button>
                       </div>
                     </div>
                     {vendor.taxId && (
