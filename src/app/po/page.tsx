@@ -36,6 +36,7 @@ export default function POListPage() {
   const queryClient = useQueryClient();
   const canDelete = useHasPermission("DELETE_PO");
   const canUpdate = useHasPermission("UPDATE_PO");
+  const canCreate = useHasPermission("CREATE_PO");
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["purchaseOrders", page, pageSize, searchTerm, statusFilter],
@@ -103,13 +104,15 @@ export default function POListPage() {
     <PageLayout title="Purchase Orders">
       <>
         <div className="flex justify-end mb-6">
-          <Link
-            href="/po/create"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
+          {canCreate && (
+            <Link
+              href="/po/create"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
             >
               Create New PO
             </Link>
-          </div>
+          )}
+        </div>
 
           {/* Search and Filter */}
           <SearchAndFilter

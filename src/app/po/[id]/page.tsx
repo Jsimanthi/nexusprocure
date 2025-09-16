@@ -30,7 +30,12 @@ export default function PODetailPage() {
   const [selectedApprover, setSelectedApprover] = useState<string>('');
 
   const canApprove = useHasPermission('APPROVE_PO');
+  const canReject = useHasPermission('REJECT_PO');
   const canReview = useHasPermission('REVIEW_PO');
+  const canCancel = useHasPermission('CANCEL_PO');
+  const canMarkAsOrdered = useHasPermission('ORDER_PO');
+  const canMarkAsDelivered = useHasPermission('DELIVER_PO');
+  const canConvertToPR = useHasPermission('CREATE_PR');
   const isCreator = session?.user?.id === po?.preparedById;
 
   const fetchPO = useCallback(async () => {
@@ -154,17 +159,21 @@ export default function PODetailPage() {
       case POStatus.PENDING_APPROVAL:
         if (canApprove) {
           actions.push({ status: POStatus.APPROVED, label: "Approve PO", color: "bg-green-600 hover:bg-green-700", onClick: () => updateStatus(POStatus.APPROVED) });
+        }
+        if (canReject) {
           actions.push({ status: POStatus.REJECTED, label: "Reject PO", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(POStatus.REJECTED) });
         }
         break;
       case POStatus.APPROVED:
-        if (isCreator) {
+        if (canMarkAsOrdered) {
           actions.push({ status: POStatus.ORDERED, label: "Mark as Ordered", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(POStatus.ORDERED) });
+        }
+        if (canCancel) {
           actions.push({ status: POStatus.CANCELLED, label: "Cancel PO", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(POStatus.CANCELLED) });
         }
         break;
       case POStatus.ORDERED:
-        if (isCreator) {
+        if (canMarkAsDelivered) {
           actions.push({ status: POStatus.DELIVERED, label: "Mark as Delivered", color: "bg-teal-600 hover:bg-teal-700", onClick: () => updateStatus(POStatus.DELIVERED) });
         }
         break;
@@ -173,8 +182,8 @@ export default function PODetailPage() {
     return actions;
   };
 
-  const canConvertToPR = (status: string) => {
-    return ['APPROVED', 'ORDERED', 'DELIVERED'].includes(status);
+  const isAllowedToConvertToPR = (status: string) => {
+    return ['APPROVED', 'ORDERED', 'DELIVERED'].includes(status) && canConvertToPR;
   };
 
   if (loading) {
@@ -416,7 +425,7 @@ export default function PODetailPage() {
             </div>
 
             {/* Convert to PR Button */}
-            {canConvertToPR(po.status) && isCreator && (
+            {isAllowedToConvertToPR(po.status) && (
               <div className="bg-white shadow rounded-lg p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   Payment Processing

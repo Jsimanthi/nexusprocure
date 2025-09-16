@@ -6,7 +6,7 @@ import { Role, Permission } from '@prisma/client';
 import { DeepMockProxy } from 'vitest-mock-extended';
 
 vi.mock('@/lib/prisma');
-vi.mock('@/lib/auth-server', () => ({
+vi.mock('@/lib/auth-config', () => ({
   auth: vi.fn(),
 }));
 vi.mock('@/lib/auth-utils', () => ({
@@ -32,7 +32,7 @@ describe('GET /api/roles/[id]', () => {
   });
 
   it('should return a role successfully', async () => {
-    const { auth } = await import('@/lib/auth-server');
+    const { auth } = await import('@/lib/auth-config');
     const { authorize } = await import('@/lib/auth-utils');
     vi.mocked(auth).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
@@ -46,7 +46,7 @@ describe('GET /api/roles/[id]', () => {
   });
 
   it('should return 404 if role not found', async () => {
-    const { auth } = await import('@/lib/auth-server');
+    const { auth } = await import('@/lib/auth-config');
     const { authorize } = await import('@/lib/auth-utils');
     vi.mocked(auth).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
@@ -74,7 +74,7 @@ describe('PUT /api/roles/[id]', () => {
     });
 
     it('should update a role successfully', async () => {
-      const { auth } = await import('@/lib/auth-server');
+      const { auth } = await import('@/lib/auth-config');
       const { authorize } = await import('@/lib/auth-utils');
       vi.mocked(auth).mockResolvedValue(mockSession);
       vi.mocked(authorize).mockReturnValue(true);

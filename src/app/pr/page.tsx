@@ -37,6 +37,7 @@ export default function PRListPage() {
   const queryClient = useQueryClient();
   const canDelete = useHasPermission("DELETE_PR");
   const canUpdate = useHasPermission("UPDATE_PR");
+  const canCreate = useHasPermission("CREATE_PR");
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["paymentRequests", page, pageSize, searchTerm, statusFilter],
@@ -104,13 +105,15 @@ export default function PRListPage() {
     <PageLayout title="Payment Requests">
       <>
         <div className="flex justify-end mb-6">
-          <Link
-            href="/pr/create"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
+          {canCreate && (
+            <Link
+              href="/pr/create"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
             >
               Create New PR
             </Link>
-          </div>
+          )}
+        </div>
           <SearchAndFilter
             onSearch={handleSearch}
             onFilter={handleFilter}

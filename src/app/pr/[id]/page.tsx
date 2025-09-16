@@ -34,6 +34,9 @@ export default function PRDetailPage() {
   const [selectedApprover, setSelectedApprover] = useState<string>('');
 
   const canApprove = useHasPermission('APPROVE_PR');
+  const canReject = useHasPermission('REJECT_PR');
+  const canCancel = useHasPermission('CANCEL_PR');
+  const canMarkAsProcessed = useHasPermission('PROCESS_PR');
   const isCreator = session?.user?.id === pr?.preparedById;
 
   const fetchPR = useCallback(async () => {
@@ -128,12 +131,16 @@ export default function PRDetailPage() {
       case PRStatus.PENDING_APPROVAL:
         if (canApprove) {
           actions.push({ status: PRStatus.APPROVED, label: "Approve PR", color: "bg-green-600 hover:bg-green-700", onClick: () => updateStatus(PRStatus.APPROVED) });
+        }
+        if (canReject) {
           actions.push({ status: PRStatus.REJECTED, label: "Reject PR", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(PRStatus.REJECTED) });
         }
         break;
       case PRStatus.APPROVED:
-        if (isCreator) {
+        if (canMarkAsProcessed) {
           actions.push({ status: PRStatus.PROCESSED, label: "Mark as Processed", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(PRStatus.PROCESSED) });
+        }
+        if (canCancel) {
           actions.push({ status: PRStatus.CANCELLED, label: "Cancel PR", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(PRStatus.CANCELLED) });
         }
         break;
