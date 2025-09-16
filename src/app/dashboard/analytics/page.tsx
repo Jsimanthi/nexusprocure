@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import PageLayout from '@/components/PageLayout';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorDisplay from '@/components/ErrorDisplay';
+import { useHasPermission } from '@/hooks/useHasPermission';
 
 const fetchAnalyticsData = async () => {
   const response = await fetch("/api/analytics");
@@ -32,11 +33,21 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
+  const canViewAnalytics = useHasPermission('VIEW_ANALYTICS');
   const { data, isLoading, isError, error } = useQuery<AnalyticsData>({
     queryKey: ["analytics"],
     queryFn: fetchAnalyticsData,
+    enabled: canViewAnalytics,
     retry: 2,
   });
+
+  if (!canViewAnalytics) {
+    return (
+      <PageLayout title="Analytics & Reports">
+        <ErrorDisplay title="Unauthorized" message="You do not have permission to view this page." />
+      </PageLayout>
+    );
+  }
 
   if (isLoading) {
     return (
