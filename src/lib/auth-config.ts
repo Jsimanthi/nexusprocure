@@ -63,6 +63,8 @@ const authConfig: NextAuthConfig = {
 
         if (dbUser) {
           token.id = dbUser.id;
+          token.name = dbUser.name;
+          token.email = dbUser.email;
           token.role = dbUser.role;
           token.permissions = dbUser.role?.permissions.map(
             (p) => p.permission.name
@@ -75,6 +77,8 @@ const authConfig: NextAuthConfig = {
       // Populate the session object with data from the JWT token.
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
         session.user.role = token.role as Role;
         session.user.permissions = token.permissions as string[];
       }
