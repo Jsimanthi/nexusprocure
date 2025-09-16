@@ -67,9 +67,9 @@ export default function PRListPage() {
     }
   };
 
-  const prs = data?.data || [];
+  const prs = data?.prs || [];
   const total = data?.total || 0;
-  const pageCount = data?.pageCount || 0;
+  const pageCount = Math.ceil(total / pageSize);
 
   const handleSearch = (query: string) => {
     setPage(1);
