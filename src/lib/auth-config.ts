@@ -63,9 +63,8 @@ const authConfig: NextAuthConfig = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        const userWithRole = user as { role: Role, permissions: string[] };
-        token.role = userWithRole.role;
-        token.permissions = userWithRole.permissions;
+        token.role = (user as any).role;
+        token.permissions = (user as any).permissions;
       }
       return token;
     },

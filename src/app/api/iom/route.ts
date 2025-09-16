@@ -1,8 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getIOMs } from "@/lib/iom";
+import { getIOMs, createIOM } from "@/lib/iom";
 import { auth } from "@/lib/auth-config";
-import { getIOMsSchema } from "@/lib/schemas";
+import { getIOMsSchema, createIomSchema } from "@/lib/schemas";
 import { ZodError } from "zod";
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const data = await req.json();
+    const iomData = createIomSchema.parse(data);
+
+    const newIom = await createIOM(
+      { ...iomData, preparedById: session.user.id },
+      session
+    );
+
+    return NextResponse.json(newIom, { status: 201 });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    console.error("Error creating IOM:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {

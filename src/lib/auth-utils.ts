@@ -14,11 +14,21 @@ export function authorize(
   session: Session | null,
   requiredPermission: string
 ): true {
-  const userPermissions = session?.user?.permissions;
+  if (!session || !session.user) {
+    throw new Error('Not authenticated or user session is missing.');
+  }
+
+  const { user } = session;
+
+  // Admins have all permissions
+  if (user.role?.name === 'ADMIN') {
+    return true;
+  }
+
+  const userPermissions = user.permissions;
 
   if (!userPermissions) {
-    // This can happen if the user is not logged in, or their session is invalid.
-    throw new Error('Not authenticated or user permissions are missing.');
+    throw new Error('User permissions are missing.');
   }
 
   if (!userPermissions.includes(requiredPermission)) {

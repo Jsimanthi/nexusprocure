@@ -48,13 +48,9 @@ export async function getIOMs(
   if (!session || !session.user) {
     throw new Error("Authentication failed: No user session found.");
   }
-  const user = session.user as unknown as {
-    id: string;
-    role: { name: string };
-  };
+  const user = session.user as { id: string; role?: { name: string } };
 
-  // Add an additional check for the user's role to prevent the TypeError
-  if (!user.role || !user.role.name) {
+  if (!user.role?.name) {
     throw new Error("User role not found in session.");
   }
 
