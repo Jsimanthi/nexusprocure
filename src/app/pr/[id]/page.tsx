@@ -33,6 +33,8 @@ export default function PRDetailPage() {
   const [approvers, setApprovers] = useState<User[]>([]);
   const [selectedApprover, setSelectedApprover] = useState<string>('');
 
+  // Added permission check to view PR
+  const canViewPR = useHasPermission('VIEW_PR');
   const canApprove = useHasPermission('APPROVE_PR');
   const canReject = useHasPermission('REJECT_PR');
   const canCancel = useHasPermission('CANCEL_PR');
@@ -57,7 +59,7 @@ export default function PRDetailPage() {
 
   const fetchApprovers = useCallback(async () => {
     try {
-      const response = await fetch('/api/users?role=MANAGER');
+      const response = await fetch('/api/users?permission=APPROVE_PR'); // FIX: Fetch users by permission instead of hardcoded role
       if (response.ok) {
         const data = await response.json();
         setApprovers(data);
@@ -70,11 +72,18 @@ export default function PRDetailPage() {
   }, []);
 
   useEffect(() => {
+    if (!canViewPR) {
+      setLoading(false);
+      return;
+    }
     if (params.id) {
       fetchPR();
+    }
+    // Only fetch approvers if the user has a relevant permission
+    if (canApprove) {
       fetchApprovers();
     }
-  }, [params.id, fetchPR, fetchApprovers]);
+  }, [params.id, canViewPR, canApprove, fetchPR, fetchApprovers]);
 
   const updateStatus = async (newStatus?: PRStatus, approverId?: string) => {
     setUpdating(true);
@@ -151,6 +160,23 @@ export default function PRDetailPage() {
 
   if (loading) {
     return <PageLayout title="Loading Payment Request..."><LoadingSpinner /></PageLayout>;
+  }
+
+  // Display forbidden message if user lacks permission
+  if (!canViewPR) {
+    return (
+      <PageLayout title="Access Denied">
+        <ErrorDisplay
+          title="Forbidden"
+          message="You do not have permission to view this payment request."
+        />
+        <div className="mt-6 text-center">
+          <Link href="/pr" className="text-blue-600 hover:text-blue-800">
+            &larr; Back to PR List
+          </Link>
+        </div>
+      </PageLayout>
+    );
   }
 
   if (!pr) {

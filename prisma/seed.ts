@@ -1,3 +1,4 @@
+// prisma/seed.ts
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -21,7 +22,7 @@ const permissions = [
   'REVIEW_IOM',
   // PO Permissions
   'CREATE_PO',
-  'READ_PO',
+  'READ_PO', // Added this permission
   'UPDATE_PO',
   'DELETE_PO',
   'APPROVE_PO',
@@ -29,7 +30,7 @@ const permissions = [
   'REVIEW_PO',
   // PR Permissions
   'CREATE_PR',
-  'READ_PR',
+  'READ_PR', // Added this permission
   'UPDATE_PR',
   'DELETE_PR',
   'APPROVE_PR',
@@ -38,7 +39,7 @@ const permissions = [
 ];
 
 const roles = {
-  ADMIN: permissions, // Admin gets all permissions
+  ADMIN: permissions, // Admin now gets all permissions including READ_PO and READ_PR
   MANAGER: [
     'READ_IOM',
     'UPDATE_IOM',
@@ -110,22 +111,22 @@ async function main() {
     });
 
     // Link permissions to the role
-await prisma.role.update({
-  where: { id: createdRole.id },
-  data: {
-    permissions: {
-      deleteMany: {}, // Clear existing permissions before setting new ones
-      create: permissionsToConnect.map((p: { id: string }) => ({ // Add the type annotation here
-        assignedBy: 'system',
-        permission: {
-          connect: {
-            id: p.id,
-          },
+    await prisma.role.update({
+      where: { id: createdRole.id },
+      data: {
+        permissions: {
+          deleteMany: {}, // Clear existing permissions before setting new ones
+          create: permissionsToConnect.map((p) => ({
+            assignedBy: 'system',
+            permission: {
+              connect: {
+                id: p.id,
+              },
+            },
+          })),
         },
-      })),
-    },
-  },
-});
+      },
+    });
     console.log(`Linked ${permissionsToConnect.length} permissions to ${createdRole.name}`);
   }
 

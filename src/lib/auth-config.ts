@@ -24,11 +24,6 @@ const authConfig: NextAuthConfig = {
 
         const user = await prisma.user.findUnique({
           where: { email },
-          include: {
-            role: {
-              include: { permissions: { include: { permission: true } } },
-            },
-          },
         });
 
         if (!user) {
@@ -44,33 +39,40 @@ const authConfig: NextAuthConfig = {
           return null;
         }
 
+        // Return a basic user object with only the ID.
+        // The jwt callback will fetch the rest of the data.
         return {
           id: user.id,
-          email: user.email,
-          name: user.name,
-          roleId: user.roleId,
-          role: user.role,
-          permissions: user.role?.permissions.map(
-            (p) => p.permission.name
-          ),
         };
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
+      // If a user object is present, it means a new sign-in has occurred.
+      // Fetch the full user data with permissions and update the token.
       if (user) {
-        const userWithRoleAndPermissions = user as User & {
-          role: Role;
-          permissions: string[];
-        };
-        token.id = userWithRoleAndPermissions.id;
-        token.role = userWithRoleAndPermissions.role;
-        token.permissions = userWithRoleAndPermissions.permissions;
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          include: {
+            role: {
+              include: { permissions: { include: { permission: true } } },
+            },
+          },
+        });
+
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role;
+          token.permissions = dbUser.role?.permissions.map(
+            (p) => p.permission.name
+          );
+        }
       }
       return token;
     },
     async session({ session, token }) {
+      // Populate the session object with data from the JWT token.
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as Role;

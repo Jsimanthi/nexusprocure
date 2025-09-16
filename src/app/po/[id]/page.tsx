@@ -29,6 +29,8 @@ export default function PODetailPage() {
   const [approvers, setApprovers] = useState<User[]>([]);
   const [selectedApprover, setSelectedApprover] = useState<string>('');
 
+  // Add permission check to view PO
+  const canViewPO = useHasPermission('VIEW_PO');
   const canApprove = useHasPermission('APPROVE_PO');
   const canReject = useHasPermission('REJECT_PO');
   const canReview = useHasPermission('REVIEW_PO');
@@ -56,7 +58,8 @@ export default function PODetailPage() {
 
   const fetchApprovers = useCallback(async () => {
     try {
-      const response = await fetch('/api/users?role=MANAGER');
+      // FIX: Fetch users by permission instead of hardcoded role
+      const response = await fetch('/api/users?permission=APPROVE_PO');
       if (response.ok) {
         const data = await response.json();
         setApprovers(data);
@@ -69,13 +72,19 @@ export default function PODetailPage() {
   }, []);
 
   useEffect(() => {
+    // Check permission before fetching data
+    if (!canViewPO) {
+      setLoading(false);
+      return;
+    }
     if (params.id) {
       fetchPO();
     }
+    // Only fetch approvers if the user has a relevant permission
     if (canReview) {
       fetchApprovers();
     }
-  }, [params.id, canReview, fetchPO, fetchApprovers]);
+  }, [params.id, canViewPO, canReview, fetchPO, fetchApprovers]);
 
   const updateStatus = async (newStatus?: POStatus, approverId?: string) => {
     setUpdating(true);
@@ -129,7 +138,7 @@ export default function PODetailPage() {
       }
     } catch (error) {
       console.error("Error converting PO to PR:", error);
-       alert("An unexpected error occurred while converting the PO to a PR.");
+        alert("An unexpected error occurred while converting the PO to a PR.");
     } finally {
       setConverting(false);
     }
@@ -190,6 +199,23 @@ export default function PODetailPage() {
     return (
       <PageLayout title="Loading Purchase Order...">
         <LoadingSpinner />
+      </PageLayout>
+    );
+  }
+
+  // Display a forbidden message if the user does not have permission
+  if (!canViewPO) {
+    return (
+      <PageLayout title="Access Denied">
+        <ErrorDisplay
+          title="Forbidden"
+          message="You do not have permission to view this purchase order."
+        />
+        <div className="mt-6 text-center">
+          <Link href="/po" className="text-blue-600 hover:text-blue-800">
+            &larr; Back to PO List
+          </Link>
+        </div>
       </PageLayout>
     );
   }
