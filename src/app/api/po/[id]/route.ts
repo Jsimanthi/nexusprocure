@@ -4,11 +4,6 @@ import { auth } from "@/lib/auth-config";
 import { getPOById, updatePOStatus } from "@/lib/po";
 import { POStatus } from "@/types/po";
 
-// Type definition for route context parameters for clarity.
-interface RouteParams {
-  params: { id: string };
-}
-
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }

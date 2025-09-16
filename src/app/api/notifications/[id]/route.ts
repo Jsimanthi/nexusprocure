@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
 import { markNotificationAsRead } from "@/lib/notification";
 
-// Type definition for route context parameters for clarity.
-interface RouteParams {
-  params: { id: string };
-}
-
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
