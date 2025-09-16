@@ -67,9 +67,9 @@ export default function IOMListPage() {
     }
   };
 
-  const ioms = data?.data || [];
+  const ioms = data?.ioms || [];
   const total = data?.total || 0;
-  const pageCount = data?.pageCount || 0;
+  const pageCount = Math.ceil(total / pageSize);
 
   const handleSearch = (query: string) => {
     setPage(1);

@@ -43,14 +43,14 @@ export async function GET(req: NextRequest) {
       Object.fromEntries(req.nextUrl.searchParams)
     );
 
-    const ioms = await getIOMs({
+    const { ioms, total } = await getIOMs({
       page,
       pageSize,
       search,
       status: status || [],
       session,
     });
-    return NextResponse.json(ioms);
+    return NextResponse.json({ ioms, total });
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json({ error: error.message }, { status: 400 });

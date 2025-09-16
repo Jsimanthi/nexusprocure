@@ -25,13 +25,7 @@ export async function GET(request: NextRequest) {
       status,
     });
 
-    return NextResponse.json({
-      data: purchaseOrders,
-      total,
-      page,
-      pageSize,
-      pageCount: Math.ceil(total / pageSize),
-    });
+    return NextResponse.json({ pos: purchaseOrders, total });
   } catch (error) {
     console.error("Error fetching POs:", error);
     return NextResponse.json(

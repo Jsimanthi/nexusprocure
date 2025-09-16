@@ -27,13 +27,7 @@ export async function GET(request: NextRequest) {
       status,
     });
 
-    return NextResponse.json({
-      data: paymentRequests,
-      total,
-      page,
-      pageSize,
-      pageCount: Math.ceil(total / pageSize),
-    });
+    return NextResponse.json({ prs: paymentRequests, total });
   } catch (error) {
     console.error("Error fetching PRs:", error);
     return NextResponse.json(
