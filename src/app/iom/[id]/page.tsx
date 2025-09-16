@@ -24,7 +24,10 @@ export default function IOMDetailPage() {
   const [showApproverSelection, setShowApproverSelection] = useState(false);
 
   const canApprove = useHasPermission('APPROVE_IOM');
+  const canReject = useHasPermission('REJECT_IOM');
   const canReview = useHasPermission('REVIEW_IOM');
+  const canComplete = useHasPermission('COMPLETE_IOM');
+  const canCreatePO = useHasPermission('CREATE_PO');
   const isCreator = session?.user?.id === iom?.preparedById;
 
   const fetchIOM = useCallback(async () => {
@@ -138,11 +141,13 @@ export default function IOMDetailPage() {
       case IOMStatus.PENDING_APPROVAL:
         if (canApprove) {
           actions.push({ status: IOMStatus.APPROVED, label: "Approve", color: "bg-green-600 hover:bg-green-700", onClick: () => updateStatus(IOMStatus.APPROVED) });
+        }
+        if (canReject) {
           actions.push({ status: IOMStatus.REJECTED, label: "Reject", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(IOMStatus.REJECTED) });
         }
         break;
       case IOMStatus.APPROVED:
-        if (isCreator) {
+        if (canComplete) {
           actions.push({ status: IOMStatus.COMPLETED, label: "Mark as Completed", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(IOMStatus.COMPLETED) });
         }
         break;
@@ -345,7 +350,7 @@ export default function IOMDetailPage() {
                 )}
 
                 {/* Add Convert to PO button for approved IOMs */}
-                {iom.status === "APPROVED" && isCreator && !showApproverSelection && (
+                {iom.status === "APPROVED" && canCreatePO && !showApproverSelection && (
                   <Link
                     href={`/po/create?iomId=${iom.id}`}
                     className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center block"

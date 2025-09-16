@@ -5,7 +5,7 @@ import { Session } from 'next-auth';
 import { Permission } from '@prisma/client';
 
 vi.mock('@/lib/prisma');
-vi.mock('@/lib/auth-server', () => ({
+vi.mock('@/lib/auth-config', () => ({
   auth: vi.fn(),
 }));
 vi.mock('@/lib/auth-utils', () => ({
@@ -23,7 +23,7 @@ describe('GET /api/permissions', () => {
   });
 
   it('should return a list of permissions successfully', async () => {
-    const { auth } = await import('@/lib/auth-server');
+    const { auth } = await import('@/lib/auth-config');
     const { authorize } = await import('@/lib/auth-utils');
     vi.mocked(auth).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
@@ -39,7 +39,7 @@ describe('GET /api/permissions', () => {
   });
 
   it('should return 401 for unauthenticated users', async () => {
-    const { auth } = await import('@/lib/auth-server');
+    const { auth } = await import('@/lib/auth-config');
     vi.mocked(auth).mockResolvedValue(null);
 
     const response = await GET();
@@ -47,7 +47,7 @@ describe('GET /api/permissions', () => {
   });
 
   it('should return 403 for unauthorized users', async () => {
-    const { auth } = await import('@/lib/auth-server');
+    const { auth } = await import('@/lib/auth-config');
     const { authorize } = await import('@/lib/auth-utils');
     vi.mocked(auth).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockImplementation(() => {

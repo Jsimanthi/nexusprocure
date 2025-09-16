@@ -37,6 +37,7 @@ export default function IOMListPage() {
   const queryClient = useQueryClient();
   const canDelete = useHasPermission("DELETE_IOM");
   const canUpdate = useHasPermission("UPDATE_IOM");
+  const canCreate = useHasPermission("CREATE_IOM");
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["ioms", page, pageSize, searchTerm, statusFilter],
@@ -104,12 +105,14 @@ return (
   <PageLayout title="IOM Management">
     <>
       <div className="flex justify-end mb-6">
-        <Link
-          href="/iom/create"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
+        {canCreate && (
+          <Link
+            href="/iom/create"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
           >
             Create New IOM
           </Link>
+        )}
         </div>
         <SearchAndFilter
           onSearch={handleSearch}

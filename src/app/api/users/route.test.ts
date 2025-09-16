@@ -5,7 +5,7 @@ import { Session } from 'next-auth';
 import { User } from '@prisma/client';
 
 vi.mock('@/lib/prisma');
-vi.mock('@/lib/auth-server', () => ({
+vi.mock('@/lib/auth-config', () => ({
   auth: vi.fn(),
 }));
 vi.mock('@/lib/auth-utils', () => ({
@@ -42,7 +42,7 @@ describe('POST /api/users', () => {
   }
 
   it('should create a new user successfully', async () => {
-    const { auth } = await import('@/lib/auth-server');
+    const { auth } = await import('@/lib/auth-config');
     const { authorize } = await import('@/lib/auth-utils');
 
     vi.mocked(auth).mockResolvedValue(mockSession);
@@ -69,7 +69,7 @@ describe('POST /api/users', () => {
   });
 
   it('should return 409 if user already exists', async () => {
-    const { auth } = await import('@/lib/auth-server');
+    const { auth } = await import('@/lib/auth-config');
     const { authorize } = await import('@/lib/auth-utils');
     vi.mocked(auth).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
@@ -85,7 +85,7 @@ describe('POST /api/users', () => {
   });
 
   it('should return 400 for invalid data', async () => {
-    const { auth } = await import('@/lib/auth-server');
+    const { auth } = await import('@/lib/auth-config');
     const { authorize } = await import('@/lib/auth-utils');
     vi.mocked(auth).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
@@ -100,7 +100,7 @@ describe('POST /api/users', () => {
   });
 
   it('should return 403 for unauthorized users', async () => {
-    const { auth } = await import('@/lib/auth-server');
+    const { auth } = await import('@/lib/auth-config');
     const { authorize } = await import('@/lib/auth-utils');
     vi.mocked(auth).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockImplementation(() => {

@@ -190,7 +190,7 @@ describe('IOM Functions', () => {
 
     it('should filter by preparedById for USER role', async () => {
       const session = mockUserSession('USER');
-      await getIOMs(session, {});
+      await getIOMs({ session });
       expect(prisma.iOM.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
@@ -204,7 +204,7 @@ describe('IOM Functions', () => {
 
     it('should filter by reviewedById for REVIEWER role', async () => {
       const session = mockUserSession('REVIEWER');
-      await getIOMs(session, {});
+      await getIOMs({ session });
       expect(prisma.iOM.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
@@ -218,7 +218,7 @@ describe('IOM Functions', () => {
 
     it('should filter by approvedById for MANAGER role', async () => {
       const session = mockUserSession('MANAGER');
-      await getIOMs(session, {});
+      await getIOMs({ session });
       expect(prisma.iOM.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
@@ -232,7 +232,7 @@ describe('IOM Functions', () => {
 
     it('should not apply any user-based filters for ADMIN role', async () => {
       const session = mockUserSession('ADMIN');
-      await getIOMs(session, {});
+      await getIOMs({ session });
       expect(prisma.iOM.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
