@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
 import { getPOById, updatePOStatus } from "@/lib/po";
 import { POStatus } from "@/types/po";
+import { authorize } from "@/lib/auth-utils";
 
 export async function GET(
   request: NextRequest,
@@ -17,27 +18,21 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Use the authorize utility to check for READ_PO permission
+    authorize(session, 'READ_PO');
+
     const po = await getPOById(id);
     
     if (!po) {
       return NextResponse.json({ error: "PO not found" }, { status: 404 });
     }
 
-    // Check if user has access to this PO
-    const hasAccess = [
-      po.preparedById,
-      po.requestedById,
-      po.reviewedById,
-      po.approvedById
-    ].includes(session.user.id);
-
-    if (!hasAccess) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
-    }
-
     return NextResponse.json(po);
   } catch (error) {
     console.error("Error fetching PO:", error);
+    if (error instanceof Error && error.message.includes('Not authorized')) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -7,9 +7,9 @@ import { getPRById } from "@/lib/pr";
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id:string }> }
 ) {
-  const { id } = context.params;
+  const { id } = await context.params;
 
   try {
     const session = await auth();
