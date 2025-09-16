@@ -78,7 +78,7 @@ export async function getIOMs(
   }
 
   if (status && status.length > 0) {
-    (where.AND as Prisma.IOMWhereInput[]).push({ status: { in: status as any } });
+    (where.AND as Prisma.IOMWhereInput[]).push({ status: { in: status as IOMStatus[] } });
   }
 
   if (search) {
