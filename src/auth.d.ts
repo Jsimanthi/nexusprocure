@@ -8,6 +8,8 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
+      name?: string | null;
+      email?: string | null;
       roleId?: string | null;
       permissions?: string[];
       role?: Role | null;
@@ -19,6 +21,8 @@ declare module "next-auth" {
    */
   interface User extends DefaultUser {
     id: string;
+    name?: string | null;
+    email?: string | null;
     roleId?: string | null;
     permissions?: string[];
     role?: Role | null;
@@ -31,6 +35,8 @@ declare module "next-auth/jwt" {
    */
   interface JWT {
     id: string;
+    name?: string | null;
+    email?: string | null;
     roleId?: string | null;
     permissions?: string[];
     role?: Role | null;
