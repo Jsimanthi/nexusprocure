@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -126,6 +127,23 @@ await prisma.role.update({
   },
 });
     console.log(`Linked ${permissionsToConnect.length} permissions to ${createdRole.name}`);
+  }
+
+  // Create a default admin user
+  const adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } });
+  if (adminRole) {
+    const hashedPassword = await bcrypt.hash('password', 10);
+    await prisma.user.upsert({
+      where: { email: 'admin@example.com' },
+      update: {},
+      create: {
+        name: 'Admin User',
+        email: 'admin@example.com',
+        password: hashedPassword,
+        roleId: adminRole.id,
+      },
+    });
+    console.log('Default admin user created.');
   }
 
   console.log('Seeding finished.');
