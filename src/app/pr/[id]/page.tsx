@@ -34,7 +34,7 @@ export default function PRDetailPage() {
   const [selectedApprover, setSelectedApprover] = useState<string>('');
 
   // Added permission check to view PR
-  const canViewPR = useHasPermission('VIEW_PR');
+  const canViewPR = useHasPermission('READ_PR');
   const canApprove = useHasPermission('APPROVE_PR');
   const canReject = useHasPermission('REJECT_PR');
   const canCancel = useHasPermission('CANCEL_PR');

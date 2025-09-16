@@ -30,7 +30,7 @@ export default function PODetailPage() {
   const [selectedApprover, setSelectedApprover] = useState<string>('');
 
   // Add permission check to view PO
-  const canViewPO = useHasPermission('VIEW_PO');
+  const canViewPO = useHasPermission('READ_PO');
   const canApprove = useHasPermission('APPROVE_PO');
   const canReject = useHasPermission('REJECT_PO');
   const canReview = useHasPermission('REVIEW_PO');
