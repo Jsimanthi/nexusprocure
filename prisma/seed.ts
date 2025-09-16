@@ -36,6 +36,10 @@ const permissions = [
   'APPROVE_PR',
   'REJECT_PR',
   'REVIEW_PR',
+  // Permissions for viewing all documents of a type
+  'READ_ALL_IOMS',
+  'READ_ALL_POS',
+  'READ_ALL_PRS',
 ];
 
 const roles = {
@@ -53,6 +57,9 @@ const roles = {
     'REJECT_PR',
     'MANAGE_VENDORS',
     'VIEW_ANALYTICS',
+    'READ_ALL_IOMS',
+    'READ_ALL_POS',
+    'READ_ALL_PRS',
   ],
   REVIEWER: [
     'READ_IOM',

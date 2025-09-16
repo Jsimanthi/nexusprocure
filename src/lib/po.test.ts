@@ -21,12 +21,12 @@ vi.mock('@/lib/audit');
 vi.mock('@/lib/auth-utils');
 import { getAuditUser, logAudit } from './audit';
 
-const mockUserSession = (roleName = 'USER'): Session => ({
+const mockUserSession = (permissions: string[] = []): Session => ({
   user: {
     id: 'user-id',
     name: 'Test User',
     email: 'test@example.com',
-    role: { id: 'role-id', name: roleName },
+    permissions,
   },
   expires: '2099-01-01T00:00:00.000Z',
 });
@@ -60,8 +60,8 @@ describe('Purchase Order Functions', () => {
         requestedById: 'user-requested-id',
         attachments: [], // Explicitly empty
       };
-      const session = mockUserSession();
-      vi.mocked(authorize).mockResolvedValue(true);
+      const session = mockUserSession(['CREATE_PO']);
+      vi.mocked(authorize).mockReturnValue(true);
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
       // @ts-expect-error - We are providing a partial mock object to resolve the promise
       vi.mocked(prisma.purchaseOrder.create).mockResolvedValue({ id: 'po-123', ...inputData });
@@ -96,8 +96,8 @@ describe('Purchase Order Functions', () => {
           { url: 'http://example.com/file1.pdf', filename: 'file1.pdf', filetype: 'application/pdf', size: 12345 },
         ],
       };
-      const session = mockUserSession();
-      vi.mocked(authorize).mockResolvedValue(true);
+      const session = mockUserSession(['CREATE_PO']);
+      vi.mocked(authorize).mockReturnValue(true);
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
       // @ts-expect-error - We are providing a partial mock object to resolve the promise
       vi.mocked(prisma.purchaseOrder.create).mockResolvedValue({ id: 'po-124', ...inputData });
@@ -136,8 +136,8 @@ describe('Purchase Order Functions', () => {
         requestedById: 'user-requested-id',
         attachments: [],
       };
-      const session = mockUserSession();
-      vi.mocked(authorize).mockResolvedValue(true);
+      const session = mockUserSession(['CREATE_PO']);
+      vi.mocked(authorize).mockReturnValue(true);
       const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed',
         { code: 'P2002', clientVersion: 'test' }
@@ -159,7 +159,7 @@ describe('Purchase Order Functions', () => {
 
   describe('updatePOStatus', () => {
     const poId = 'po-123';
-    const session = mockUserSession();
+    const session = mockUserSession(['APPROVE_PO', 'REVIEW_PO']);
 
     beforeEach(() => {
       const user = { id: 'user-id', name: 'Test User', email: 'test@example.com' };
@@ -187,7 +187,7 @@ describe('Purchase Order Functions', () => {
     });
 
     it('should allow a user with APPROVE_PO permission to approve', async () => {
-      vi.mocked(authorize).mockResolvedValue(true);
+      vi.mocked(authorize).mockReturnValue(true);
       vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
         id: poId,
         preparedById: 'user-prepared-id',
@@ -211,7 +211,7 @@ describe('Purchase Order Functions', () => {
     });
 
     it('should move to PENDING_APPROVAL when reviewer submits for approval', async () => {
-      vi.mocked(authorize).mockResolvedValue(true);
+      vi.mocked(authorize).mockReturnValue(true);
       const approverId = 'manager-id';
       await updatePOStatus(poId, POStatus.PENDING_APPROVAL, session, approverId);
 
@@ -226,53 +226,56 @@ describe('Purchase Order Functions', () => {
   });
 
   describe('Vendor Functions', () => {
-    const session = mockUserSession();
+    const session = mockUserSession(['MANAGE_VENDORS']);
     const vendorData: CreateVendorData = { name: 'New Vendor', address: '123 Vendor St', contactInfo: 'info', email: 'v@e.com', phone: '123', currency: 'USD' };
     const vendorId = 'vendor-123';
 
     it('should prevent creating a vendor if user lacks permission', async () => {
       const authError = new Error('Not authorized');
+      const sessionWithoutPerm = mockUserSession([]);
       vi.mocked(authorize).mockImplementation(() => {
         throw authError;
       });
-      await expect(createVendor(vendorData, session)).rejects.toThrow(authError);
-      expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
+      await expect(createVendor(vendorData, sessionWithoutPerm)).rejects.toThrow(authError);
+      expect(authorize).toHaveBeenCalledWith(sessionWithoutPerm, 'MANAGE_VENDORS');
     });
 
     it('should allow creating a vendor if user has permission', async () => {
-      vi.mocked(authorize).mockResolvedValue(true);
+      vi.mocked(authorize).mockReturnValue(true);
       await expect(createVendor(vendorData, session)).resolves.not.toThrow();
       expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });
 
     it('should prevent updating a vendor if user lacks permission', async () => {
       const authError = new Error('Not authorized');
+      const sessionWithoutPerm = mockUserSession([]);
       vi.mocked(authorize).mockImplementation(() => {
         throw authError;
       });
-      await expect(updateVendor(vendorId, vendorData, session)).rejects.toThrow(
+      await expect(updateVendor(vendorId, vendorData, sessionWithoutPerm)).rejects.toThrow(
         authError
       );
-      expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
+      expect(authorize).toHaveBeenCalledWith(sessionWithoutPerm, 'MANAGE_VENDORS');
     });
 
     it('should allow updating a vendor if user has permission', async () => {
-      vi.mocked(authorize).mockResolvedValue(true);
+      vi.mocked(authorize).mockReturnValue(true);
       await expect(updateVendor(vendorId, vendorData, session)).resolves.not.toThrow();
       expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });
 
     it('should prevent deleting a vendor if user lacks permission', async () => {
       const authError = new Error('Not authorized');
+      const sessionWithoutPerm = mockUserSession([]);
       vi.mocked(authorize).mockImplementation(() => {
         throw authError;
       });
-      await expect(deleteVendor(vendorId, session)).rejects.toThrow(authError);
-      expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
+      await expect(deleteVendor(vendorId, sessionWithoutPerm)).rejects.toThrow(authError);
+      expect(authorize).toHaveBeenCalledWith(sessionWithoutPerm, 'MANAGE_VENDORS');
     });
 
     it('should allow deleting a vendor if user has permission', async () => {
-      vi.mocked(authorize).mockResolvedValue(true);
+      vi.mocked(authorize).mockReturnValue(true);
       await expect(deleteVendor(vendorId, session)).resolves.not.toThrow();
       expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });
@@ -288,50 +291,29 @@ describe('Purchase Order Functions', () => {
       });
     });
 
-    it('should filter by preparedById for USER role', async () => {
-      const session = mockUserSession('USER');
+    it('should filter by user involvement if user lacks READ_ALL_POS permission', async () => {
+      const session = mockUserSession(['SOME_OTHER_PERMISSION']);
       await getPOs(session, {});
       expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             AND: expect.arrayContaining([
-              expect.objectContaining({ preparedById: session.user.id }),
+              {
+                OR: [
+                  { preparedById: session.user.id },
+                  { requestedById: session.user.id },
+                  { reviewedById: session.user.id },
+                  { approvedById: session.user.id },
+                ],
+              },
             ]),
           },
         })
       );
     });
 
-    it('should filter by reviewedById for REVIEWER role', async () => {
-      const session = mockUserSession('REVIEWER');
-      await getPOs(session, {});
-      expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            AND: expect.arrayContaining([
-              { OR: [{ reviewedById: session.user.id }, { preparedById: session.user.id }] },
-            ]),
-          },
-        })
-      );
-    });
-
-    it('should filter by approvedById for MANAGER role', async () => {
-      const session = mockUserSession('MANAGER');
-      await getPOs(session, {});
-      expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            AND: expect.arrayContaining([
-              { OR: [{ approvedById: session.user.id }, { preparedById: session.user.id }] },
-            ]),
-          },
-        })
-      );
-    });
-
-    it('should not apply any user-based filters for ADMIN role', async () => {
-      const session = mockUserSession('ADMIN');
+    it('should not apply user-based filters if user has READ_ALL_POS permission', async () => {
+      const session = mockUserSession(['READ_ALL_POS']);
       await getPOs(session, {});
       expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

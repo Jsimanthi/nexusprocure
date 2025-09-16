@@ -17,12 +17,12 @@ vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
 vi.mock('@/lib/auth-utils');
 
-const mockUserSession = (roleName = 'USER'): Session => ({
+const mockUserSession = (permissions: string[] = []): Session => ({
   user: {
     id: 'user-id',
     name: 'Test User',
     email: 'test@example.com',
-    role: { id: 'role-id', name: roleName },
+    permissions,
   },
   expires: '2099-01-01T00:00:00.000Z',
 });
@@ -44,8 +44,8 @@ describe('IOM Functions', () => {
         requestedById: 'user-1',
         items: []
       };
-      const session = mockUserSession();
-      vi.mocked(authorize).mockResolvedValue(true);
+      const session = mockUserSession(['CREATE_IOM']);
+      vi.mocked(authorize).mockReturnValue(true);
       // @ts-expect-error - We're providing a partial mock object
       vi.mocked(prisma.iOM.create).mockResolvedValue({ id: 'new-iom-id', ...iomData });
 
@@ -67,8 +67,8 @@ describe('IOM Functions', () => {
         requestedById: 'user-1',
         items: []
       };
-      const session = mockUserSession();
-      vi.mocked(authorize).mockResolvedValue(true);
+      const session = mockUserSession(['CREATE_IOM']);
+      vi.mocked(authorize).mockReturnValue(true);
       const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed',
         { code: 'P2002', clientVersion: 'test' }
@@ -88,7 +88,7 @@ describe('IOM Functions', () => {
 
   describe('updateIOMStatus', () => {
     const iomId = 'iom-123';
-    const session = mockUserSession();
+    const session = mockUserSession(['APPROVE_IOM', 'REVIEW_IOM']);
 
     beforeEach(() => {
       const user = { id: 'user-id', name: 'Test User', email: 'test@example.com' };
@@ -116,7 +116,7 @@ describe('IOM Functions', () => {
     });
 
     it('should allow a user with APPROVE_IOM permission to approve', async () => {
-      vi.mocked(authorize).mockResolvedValue(true);
+      vi.mocked(authorize).mockReturnValue(true);
       // Set initial state to PENDING_APPROVAL for this test
       vi.mocked(prisma.iOM.findUnique).mockResolvedValue({
         id: iomId,
@@ -141,7 +141,7 @@ describe('IOM Functions', () => {
     });
 
     it('should move to PENDING_APPROVAL when reviewer submits for approval', async () => {
-      vi.mocked(authorize).mockResolvedValue(true);
+      vi.mocked(authorize).mockReturnValue(true);
       const approverId = 'manager-id';
       await updateIOMStatus(iomId, IOMStatus.PENDING_APPROVAL, session, approverId);
 
@@ -165,8 +165,8 @@ describe('IOM Functions', () => {
   describe('deleteIOM', () => {
     it('should delete an IOM if user has DELETE_IOM permission', async () => {
       const iomId = 'iom-to-delete';
-      const session = mockUserSession();
-      vi.mocked(authorize).mockResolvedValue(true);
+      const session = mockUserSession(['DELETE_IOM']);
+      vi.mocked(authorize).mockReturnValue(true);
       // @ts-expect-error - We're providing a partial mock object
       vi.mocked(prisma.iOM.findUnique).mockResolvedValue({ id: iomId, title: 'IOM to Delete' });
 
@@ -188,50 +188,29 @@ describe('IOM Functions', () => {
       });
     });
 
-    it('should filter by preparedById for USER role', async () => {
-      const session = mockUserSession('USER');
+    it('should filter by user involvement if user lacks READ_ALL_IOMS permission', async () => {
+      const session = mockUserSession(['SOME_OTHER_PERMISSION']);
       await getIOMs({ session });
       expect(prisma.iOM.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             AND: expect.arrayContaining([
-              expect.objectContaining({ preparedById: session.user.id }),
+              {
+                OR: [
+                  { preparedById: session.user.id },
+                  { requestedById: session.user.id },
+                  { reviewedById: session.user.id },
+                  { approvedById: session.user.id },
+                ],
+              },
             ]),
           },
         })
       );
     });
 
-    it('should filter by reviewedById for REVIEWER role', async () => {
-      const session = mockUserSession('REVIEWER');
-      await getIOMs({ session });
-      expect(prisma.iOM.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            AND: expect.arrayContaining([
-              { OR: [{ reviewedById: session.user.id }, { preparedById: session.user.id }] },
-            ]),
-          },
-        })
-      );
-    });
-
-    it('should filter by approvedById for MANAGER role', async () => {
-      const session = mockUserSession('MANAGER');
-      await getIOMs({ session });
-      expect(prisma.iOM.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            AND: expect.arrayContaining([
-              { OR: [{ approvedById: session.user.id }, { preparedById: session.user.id }] },
-            ]),
-          },
-        })
-      );
-    });
-
-    it('should not apply any user-based filters for ADMIN role', async () => {
-      const session = mockUserSession('ADMIN');
+    it('should not apply user-based filters if user has READ_ALL_IOMS permission', async () => {
+      const session = mockUserSession(['READ_ALL_IOMS']);
       await getIOMs({ session });
       expect(prisma.iOM.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
