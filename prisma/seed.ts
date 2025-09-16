@@ -133,13 +133,13 @@ async function main() {
   // Create a default admin user
   const adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } });
   if (adminRole) {
-    const hashedPassword = await bcrypt.hash('password', 10);
+    const hashedPassword = await bcrypt.hash('password123', 10);
     await prisma.user.upsert({
-      where: { email: 'admin@example.com' },
+      where: { email: 'demo@nexusprocure.com' },
       update: {},
       create: {
         name: 'Admin User',
-        email: 'admin@example.com',
+        email: 'demo@nexusprocure.com',
         password: hashedPassword,
         roleId: adminRole.id,
       },
