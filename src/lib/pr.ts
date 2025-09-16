@@ -36,28 +36,21 @@ export async function getPRs(
     status = "",
   }: { page?: number; pageSize?: number; search?: string; status?: string }
 ) {
-  const user = session.user as unknown as {
-    id: string;
-    role: { name: string };
-  };
+  const user = session.user;
+  const userPermissions = user.permissions || [];
   const where: Prisma.PaymentRequestWhereInput = {
     AND: [],
   };
 
-  if (user.role.name === "ADMIN") {
-    // Admin sees all PRs
-  } else if (user.role.name === "MANAGER") {
+  // If user does not have permission to see all PRs, filter by their involvement.
+  if (!userPermissions.includes('READ_ALL_PRS')) {
     (where.AND as Prisma.PaymentRequestWhereInput[]).push({
-      OR: [{ approvedById: user.id }, { preparedById: user.id }],
-    });
-  } else if (user.role.name === "REVIEWER") {
-    (where.AND as Prisma.PaymentRequestWhereInput[]).push({
-      OR: [{ reviewedById: user.id }, { preparedById: user.id }],
-    });
-  } else {
-    // Regular user sees only their own PRs
-    (where.AND as Prisma.PaymentRequestWhereInput[]).push({
-      preparedById: user.id,
+      OR: [
+        { preparedById: user.id },
+        { requestedById: user.id },
+        { reviewedById: user.id },
+        { approvedById: user.id },
+      ],
     });
   }
 

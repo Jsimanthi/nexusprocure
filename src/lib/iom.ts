@@ -48,30 +48,25 @@ export async function getIOMs(
   if (!session || !session.user) {
     throw new Error("Authentication failed: No user session found.");
   }
-  const user = session.user as { id: string; role?: { name: string } };
-
-  if (!user.role?.name) {
-    throw new Error("User role not found in session.");
-  }
+  const user = session.user; // User object from session already has id and permissions
+  const userPermissions = user.permissions || [];
 
   const where: Prisma.IOMWhereInput = {
     AND: [],
   };
 
-  if (user.role.name === "ADMIN") {
-    // Admin sees all IOMs
-  } else if (user.role.name === "MANAGER") {
+  // If user does not have permission to see all IOMs, filter by their involvement.
+  if (!userPermissions.includes('READ_ALL_IOMS')) {
     (where.AND as Prisma.IOMWhereInput[]).push({
-      OR: [{ approvedById: user.id }, { preparedById: user.id }],
+      OR: [
+        { preparedById: user.id },
+        { requestedById: user.id },
+        { reviewedById: user.id },
+        { approvedById: user.id },
+      ],
     });
-  } else if (user.role.name === "REVIEWER") {
-    (where.AND as Prisma.IOMWhereInput[]).push({
-      OR: [{ reviewedById: user.id }, { preparedById: user.id }],
-    });
-  } else {
-    // Regular user sees only their own IOMs
-    (where.AND as Prisma.IOMWhereInput[]).push({ preparedById: user.id });
   }
+  // If they have the permission, no user-based filter is added, so they see all.
 
   if (status && status.length > 0) {
     (where.AND as Prisma.IOMWhereInput[]).push({ status: { in: status as IOMStatus[] } });

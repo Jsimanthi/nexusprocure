@@ -36,28 +36,21 @@ export async function getPOs(
     status = "",
   }: { page?: number; pageSize?: number; search?: string; status?: string }
 ) {
-  const user = session.user as unknown as {
-    id: string;
-    role: { name: string };
-  };
+  const user = session.user;
+  const userPermissions = user.permissions || [];
   const where: Prisma.PurchaseOrderWhereInput = {
     AND: [],
   };
 
-  if (user.role.name === "ADMIN") {
-    // Admin sees all POs
-  } else if (user.role.name === "MANAGER") {
+  // If user does not have permission to see all POs, filter by their involvement.
+  if (!userPermissions.includes('READ_ALL_POS')) {
     (where.AND as Prisma.PurchaseOrderWhereInput[]).push({
-      OR: [{ approvedById: user.id }, { preparedById: user.id }],
-    });
-  } else if (user.role.name === "REVIEWER") {
-    (where.AND as Prisma.PurchaseOrderWhereInput[]).push({
-      OR: [{ reviewedById: user.id }, { preparedById: user.id }],
-    });
-  } else {
-    // Regular user sees only their own POs
-    (where.AND as Prisma.PurchaseOrderWhereInput[]).push({
-      preparedById: user.id,
+      OR: [
+        { preparedById: user.id },
+        { requestedById: user.id },
+        { reviewedById: user.id },
+        { approvedById: user.id },
+      ],
     });
   }
 
