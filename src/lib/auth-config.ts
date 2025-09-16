@@ -1,10 +1,10 @@
-import NextAuth, { type NextAuthConfig } from "next-auth";
+import NextAuth, { type NextAuthConfig, type User } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import type { User as PrismaUser, Role, Permission } from "@prisma/client";
+import type { Role } from "@prisma/client";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -62,17 +62,21 @@ const authConfig: NextAuthConfig = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = (user as any).role;
-        token.permissions = (user as any).permissions;
+        const userWithRoleAndPermissions = user as User & {
+          role: Role;
+          permissions: string[];
+        };
+        token.id = userWithRoleAndPermissions.id;
+        token.role = userWithRoleAndPermissions.role;
+        token.permissions = userWithRoleAndPermissions.permissions;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role;
-        session.user.permissions = token.permissions;
+        session.user.role = token.role as Role;
+        session.user.permissions = token.permissions as string[];
       }
       return session;
     },

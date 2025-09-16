@@ -4,11 +4,6 @@ import { auth } from "@/lib/auth-config";
 import { getIOMById, updateIOMStatus } from "@/lib/iom";
 import { IOMStatus } from "@/types/iom";
 
-// Type definition for route context parameters for clarity.
-interface RouteParams {
-  params: { id: string };
-}
-
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
