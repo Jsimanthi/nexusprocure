@@ -143,3 +143,40 @@ Converts an approved IOM into a new Purchase Order.
     ```
 *   **Success Response** (`201 Created`): Returns the newly created Purchase Order object.
 *   **Side Effects**: Triggers all side effects associated with `createPurchaseOrder` (audit log, etc.).
+
+---
+
+## 6. Workflow Diagram: IOM Status Update
+
+This diagram illustrates the sequence of events when a user updates the status of an IOM (e.g., a reviewer submitting for approval).
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend (React Component)
+    participant API (`/api/iom/:id`)
+    participant Lib (`src/lib/iom.ts`)
+    participant AuthUtil (`src/lib/auth-utils.ts`)
+    participant DB (Prisma)
+    participant Services (Email, Notif, Audit, Pusher)
+
+    User->>Frontend (React Component): Clicks "Submit for Approval"
+    Frontend (React Component)->>API (`/api/iom/:id`): PATCH request with { status: 'PENDING_APPROVAL', approverId: '...' }
+    API (`/api/iom/:id`)-)Lib (`src/lib/iom.ts`): Calls updateIOMStatus(id, status, session, approverId)
+
+    Lib (`src/lib/iom.ts`)-)AuthUtil (`src/lib/auth-utils.ts`): Calls authorize(session, 'REVIEW_IOM')
+    AuthUtil (`src/lib/auth-utils.ts`)-->>Lib (`src/lib/iom.ts`): Returns true
+
+    Lib (`src/lib/iom.ts`)-)DB (Prisma): findUnique({ where: { id } })
+    DB (Prisma)-->>Lib (`src/lib/iom.ts`): Returns IOM data
+
+    Lib (`src/lib/iom.ts`)-)DB (Prisma): update({ where: { id }, data: { status, approvedById } })
+    DB (Prisma)-->>Lib (`src/lib/iom.ts`): Returns updated IOM
+
+    Lib (`src/lib/iom.ts`)-)Services (Email, Notif, Audit, Pusher): Calls createNotification, sendEmail, logAudit, triggerPusherEvent
+    Services (Email, Notif, Audit, Pusher)-->>Lib (`src/lib/iom.ts`): Acknowledges
+
+    Lib (`src/lib/iom.ts`)-->>API (`/api/iom/:id`): Returns updated IOM
+    API (`/api/iom/:id`)-->>Frontend (React Component): Returns 200 OK with updated IOM
+    Frontend (React Component)->>User: Displays success message
+```

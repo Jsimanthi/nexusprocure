@@ -120,3 +120,48 @@ Fetches approved IOMs that can be converted into a PO.
 *   **Business Logic**: Performs a direct Prisma query to find IOMs where `status` is `APPROVED` and they have no existing linked POs.
 *   **Authorization**: Requires an authenticated session.
 *   **Success Response** (`200 OK`): Returns an array of eligible IOM objects.
+
+---
+
+## 8. Workflow Diagram: IOM to PO Conversion
+
+This diagram illustrates the sequence of events when a user converts an approved IOM into a Purchase Order.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend (React Component)
+    participant IOM_API (`/api/iom/:id/convert`)
+    participant PO_Lib (`src/lib/po.ts`)
+    participant IOM_Lib (`src/lib/iom.ts`)
+    participant AuthUtil (`src/lib/auth-utils.ts`)
+    participant DB (Prisma)
+    participant Services (Audit)
+
+    User->>Frontend (React Component): Clicks "Convert to PO"
+    Frontend (React Component)->>IOM_API (`/api/iom/:id/convert`): POST request with vendor details
+
+    IOM_API (`/api/iom/:id/convert`)-)IOM_Lib (`src/lib/iom.ts`): Calls getIOMById(id)
+    IOM_Lib (`src/lib/iom.ts`)-)DB (Prisma): findUnique({ where: { id } })
+    DB (Prisma)-->>IOM_Lib (`src/lib/iom.ts`): Returns IOM data
+    IOM_Lib (`src/lib/iom.ts`)-->>IOM_API (`/api/iom/:id/convert`): Returns IOM data
+
+    IOM_API (`/api/iom/:id/convert`)-)IOM_API (`/api/iom/:id/convert`): Validates IOM status is 'APPROVED'
+
+    IOM_API (`/api/iom/:id/convert`)-)PO_Lib (`src/lib/po.ts`): Calls createPurchaseOrder(data, session)
+
+    PO_Lib (`src/lib/po.ts`)-)AuthUtil (`src/lib/auth-utils.ts`): Calls authorize(session, 'CREATE_PO')
+    AuthUtil (`src/lib/auth-utils.ts`)-->>PO_Lib (`src/lib/po.ts`): Returns true
+
+    PO_Lib (`src/lib/po.ts`)-)PO_Lib (`src/lib/po.ts`): Generates PO Number, calculates totals
+
+    PO_Lib (`src/lib/po.ts`)-)DB (Prisma): create({ data: { ... } })
+    DB (Prisma)-->>PO_Lib (`src/lib/po.ts`): Returns new PO
+
+    PO_Lib (`src/lib/po.ts`)-)Services (Audit): Calls logAudit("CREATE", ...)
+    Services (Audit)-->>PO_Lib (`src/lib/po.ts`): Acknowledges
+
+    PO_Lib (`src/lib/po.ts`)-->>IOM_API (`/api/iom/:id/convert`): Returns new PO
+    IOM_API (`/api/iom/:id/convert`)-->>Frontend (React Component): Returns 201 Created with new PO
+    Frontend (React Component)->>User: Displays success and redirects to new PO page
+```
