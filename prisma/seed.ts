@@ -28,9 +28,11 @@ const permissions = [
   'APPROVE_PO',
   'REJECT_PO',
   'REVIEW_PO',
+  'VIEW_PO',
   // PR Permissions
   'CREATE_PR',
   'READ_PR', // Added this permission
+  'VIEW_PR',
   'UPDATE_PR',
   'DELETE_PR',
   'APPROVE_PR',
