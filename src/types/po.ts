@@ -42,6 +42,8 @@ export interface IOMRef {
   requestedBy?: UserRef;
 }
 
+import { ActionStatus } from "./iom";
+
 export interface PurchaseOrder {
   id?: string;
   poNumber: string;
@@ -53,6 +55,8 @@ export interface PurchaseOrder {
   taxAmount: number;
   grandTotal: number;
   taxRate: number;
+  reviewerStatus: ActionStatus;
+  approverStatus: ActionStatus;
   
   // Company and Vendor Details
   companyName: string;

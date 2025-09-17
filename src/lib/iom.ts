@@ -140,6 +140,7 @@ type CreateIomData = z.infer<typeof createIomSchema> & {
 export async function createIOM(data: CreateIomData, session: Session) {
   authorize(session, 'CREATE_IOM');
   const { items, ...restOfData } = data;
+  const { reviewerId, approverId, ...actualRest } = restOfData;
   const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
   const maxRetries = 3;
@@ -148,10 +149,12 @@ export async function createIOM(data: CreateIomData, session: Session) {
   for (let i = 0; i < maxRetries; i++) {
     const iomNumber = await generateIOMNumber();
     const iomData = {
-      ...restOfData,
+      ...actualRest,
       iomNumber,
       totalAmount,
-      status: IOMStatus.DRAFT,
+      reviewedById: reviewerId,
+      approvedById: approverId,
+      status: IOMStatus.PENDING_APPROVAL,
       items: {
         create: items.map(item => ({
           ...item,
@@ -169,6 +172,12 @@ export async function createIOM(data: CreateIomData, session: Session) {
             select: { name: true, email: true }
           },
           requestedBy: {
+            select: { name: true, email: true }
+          },
+          reviewedBy: {
+            select: { name: true, email: true }
+          },
+          approvedBy: {
             select: { name: true, email: true }
           },
         }
@@ -199,78 +208,21 @@ export async function createIOM(data: CreateIomData, session: Session) {
 
 export async function updateIOMStatus(
   id: string,
-  status: IOMStatus | undefined,
-  session: Session,
-  approverId?: string,
-  reviewerId?: string,
+  action: "APPROVE" | "REJECT" | "COMPLETE",
+  session: Session
 ) {
-  if (!status && !approverId && !reviewerId) {
-    throw new Error("Either status, approverId, or reviewerId must be provided.");
-  }
-
-  // Authorize based on action
-  if (status) {
-    switch (status) {
-      case IOMStatus.APPROVED:
-        authorize(session, "APPROVE_IOM");
-        break;
-      case IOMStatus.REJECTED:
-        authorize(session, "REJECT_IOM");
-        break;
-      case IOMStatus.UNDER_REVIEW:
-        authorize(session, "REVIEW_IOM");
-        break;
-      case IOMStatus.PENDING_APPROVAL:
-        authorize(session, "REVIEW_IOM");
-        break;
-      default:
-        authorize(session, "UPDATE_IOM");
-        break;
-    }
-  } else {
-    // If only approverId is provided, it's an update action
-    authorize(session, "UPDATE_IOM");
-  }
-
-  interface UpdateData {
-    status?: IOMStatus;
-    reviewedById?: string | null;
-    approvedById?: string | null;
-  }
-
-  const updateData: UpdateData = {};
   const userId = session.user.id;
+  if (!userId) {
+    throw new Error("User not found in session");
+  }
 
-  if (status) {
-    updateData.status = status;
-    switch (status) {
-      case IOMStatus.DRAFT: // Withdrawing
-        updateData.reviewedById = null;
-        updateData.approvedById = null;
-        break;
-      case IOMStatus.SUBMITTED: // Submitting for review
-        if (!reviewerId) {
-          throw new Error("Reviewer ID is required when submitting for review");
-        }
-        updateData.reviewedById = reviewerId;
-        break;
-      case IOMStatus.UNDER_REVIEW: // Starting review
-        updateData.reviewedById = userId;
-        break;
-      case IOMStatus.PENDING_APPROVAL: // Submitting for approval
-        if (!approverId) {
-          throw new Error("Approver ID is required when moving to PENDING_APPROVAL");
-        }
-        updateData.approvedById = approverId;
-        break;
-      case IOMStatus.APPROVED: // Approving
-        updateData.approvedById = userId;
-        break;
-    }
-  } else if (approverId) {
-    // This case should not be used anymore, but we keep it for safety.
-    // The new flow always sets a status when assigning an approver.
-    updateData.approvedById = approverId;
+  // Handle simple status changes first
+  if (action === "COMPLETE") {
+    authorize(session, "COMPLETE_IOM");
+    return await prisma.iOM.update({
+      where: { id },
+      data: { status: IOMStatus.COMPLETED },
+    });
   }
 
   const iom = await prisma.iOM.findUnique({
@@ -281,66 +233,86 @@ export async function updateIOMStatus(
       approvedById: true,
       iomNumber: true,
       status: true,
-      preparedBy: {
-        select: { name: true, email: true }
-      }
+      reviewerStatus: true,
+      approverStatus: true,
+      preparedBy: { select: { name: true, email: true } },
     },
   });
 
-  if (!iom || !iom.preparedBy) {
-    throw new Error("IOM or originator not found.");
+  if (!iom) throw new Error("IOM not found.");
+  if (!iom.preparedBy) throw new Error("IOM originator not found.");
+
+  const isReviewer = userId === iom.reviewedById;
+  const isApprover = userId === iom.approvedById;
+
+  if (!isReviewer && !isApprover) {
+    throw new Error("Not authorized to perform this action on this IOM.");
   }
 
-  const updatedIom = await prisma.iOM.update({
+  const newActionStatus = action === "APPROVE" ? "APPROVED" : "REJECTED";
+  const updateData: Partial<Prisma.IOMUpdateInput> = {};
+
+  if (isReviewer) {
+    authorize(session, 'REVIEW_IOM');
+    updateData.reviewerStatus = newActionStatus;
+  }
+
+  if (isApprover) {
+    authorize(session, 'APPROVE_IOM');
+    updateData.approverStatus = newActionStatus;
+  }
+
+  const updatedSubStatusIom = await prisma.iOM.update({
     where: { id },
     data: updateData,
+  });
+
+  // Calculate overall status
+  const { reviewerStatus, approverStatus } = updatedSubStatusIom;
+  let finalStatus: IOMStatus = IOMStatus.PENDING_APPROVAL;
+
+  if (approverStatus === "APPROVED") {
+    finalStatus = IOMStatus.APPROVED;
+  } else if (approverStatus === "REJECTED" || reviewerStatus === "REJECTED") {
+    finalStatus = IOMStatus.REJECTED;
+  }
+
+  const finalUpdate = await prisma.iOM.update({
+    where: { id },
+    data: { status: finalStatus },
     include: {
       items: true,
       preparedBy: { select: { name: true, email: true } },
       requestedBy: { select: { name: true, email: true } },
       reviewedBy: { select: { name: true, email: true } },
       approvedBy: { select: { name: true, email: true } },
-    }
+    },
   });
 
-  if (status) {
-    const message = `The status of IOM ${iom.iomNumber} has been updated to ${status}.`;
-    // Notify the creator
-    await createNotification(iom.preparedById, message);
+  // Notifications and Audit Logging
+  const message = `IOM ${iom.iomNumber} has been ${action.toLowerCase()}d by ${session.user.name}. New status: ${finalStatus}.`;
 
-    // Notify other relevant parties
-    switch (status) {
-      case IOMStatus.SUBMITTED:
-        if (updatedIom.reviewedById) {
-          await createNotification(updatedIom.reviewedById, `An IOM ${iom.iomNumber} has been submitted for your review.`);
-        }
-        break;
-      case IOMStatus.PENDING_APPROVAL:
-        if (updatedIom.approvedById) {
-          await createNotification(updatedIom.approvedById, `An IOM ${iom.iomNumber} is pending your approval.`);
-        }
-        break;
-      case IOMStatus.APPROVED:
-      case IOMStatus.REJECTED:
-        if (iom.reviewedById) {
-          await createNotification(iom.reviewedById, `The IOM ${iom.iomNumber} you reviewed has been ${status.toLowerCase()}.`);
-        }
-        break;
-    }
+  // Notify creator
+  await createNotification(iom.preparedById, message);
 
-    const emailComponent = React.createElement(StatusUpdateEmail, {
-      userName: iom.preparedBy.name || 'User',
-      documentType: 'IOM',
-      documentNumber: iom.iomNumber,
-      newStatus: status,
-    });
-
-    await sendEmail({
-      to: iom.preparedBy.email,
-      subject: `Status Update for IOM: ${iom.iomNumber}`,
-      react: emailComponent,
-    });
+  // Notify the other party (reviewer or approver)
+  const otherPartyId = isReviewer ? iom.approvedById : iom.reviewedById;
+  if (otherPartyId) {
+    await createNotification(otherPartyId, `Your action is requested on IOM ${iom.iomNumber}. It was ${action.toLowerCase()}d by ${session.user.name}.`);
   }
+
+  const emailComponent = React.createElement(StatusUpdateEmail, {
+    userName: iom.preparedBy.name || 'User',
+    documentType: 'IOM',
+    documentNumber: iom.iomNumber,
+    newStatus: finalStatus,
+  });
+
+  await sendEmail({
+    to: iom.preparedBy.email,
+    subject: `Status Update for IOM: ${iom.iomNumber}`,
+    react: emailComponent,
+  });
 
   const auditUser = getAuditUser(session);
   await logAudit("UPDATE", {
@@ -349,15 +321,14 @@ export async function updateIOMStatus(
     userId: auditUser.userId,
     userName: auditUser.userName,
     changes: {
-      from: { status: iom.status },
-      to: { status, approverId, reviewerId },
+      from: { status: iom.status, reviewerStatus: iom.reviewerStatus, approverStatus: iom.approverStatus },
+      to: { status: finalStatus, reviewerStatus, approverStatus },
     },
   });
 
-  // Trigger a dashboard update
   await triggerPusherEvent("dashboard-channel", "dashboard-update", {});
 
-  return updatedIom;
+  return finalUpdate;
 }
 
 export async function deleteIOM(id: string, session: Session) {

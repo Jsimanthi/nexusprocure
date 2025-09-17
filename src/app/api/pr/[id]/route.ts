@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
 import { authorize } from "@/lib/auth-utils"; // Make sure to import authorize
 import { getPRById, updatePRStatus } from "@/lib/pr";
-import { PRStatus } from "@/types/pr";
 
 export async function GET(
   request: NextRequest,
@@ -55,26 +54,17 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, approverId } = body;
+    const { action } = body;
 
-    if (!status && !approverId) {
+    const validActions = ["APPROVE", "REJECT", "PROCESS", "CANCEL"];
+    if (!action || !validActions.includes(action)) {
       return NextResponse.json(
-        { error: "At least one of status or approverId is required" },
+        { error: "Invalid action provided." },
         { status: 400 }
       );
     }
 
-    if (status) {
-      const validStatuses = Object.values(PRStatus);
-      if (!validStatuses.includes(status)) {
-        return NextResponse.json(
-          { error: "Invalid status" },
-          { status: 400 }
-        );
-      }
-    }
-
-    const pr = await updatePRStatus(id, status, session, approverId);
+    const pr = await updatePRStatus(id, action as "APPROVE" | "REJECT" | "PROCESS" | "CANCEL", session);
 
     if (!pr) {
       return NextResponse.json({ error: "Payment Request not found" }, { status: 404 });

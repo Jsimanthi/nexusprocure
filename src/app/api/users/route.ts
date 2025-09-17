@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from "@/lib/auth-config";
 import { authorize } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { createUserSchema } from '@/lib/schemas';
 import bcrypt from 'bcryptjs';
 import { ZodError } from 'zod';
@@ -92,18 +93,23 @@ export async function GET(req: Request) {
       authorize(session, 'MANAGE_USERS');
     }
 
-    let whereClause: any = { role: {} };
+    const whereClause: Prisma.UserWhereInput = {};
+    const roleClause: Prisma.RoleWhereInput = {};
+
     if (roleName) {
-      whereClause.role.name = roleName;
+      roleClause.name = roleName;
     }
     if (permissionName) {
-      whereClause.role.permissions = {
+      roleClause.permissions = {
         some: {
           permission: {
             name: permissionName,
           },
         },
       };
+    }
+    if(roleName || permissionName) {
+      whereClause.role = roleClause;
     }
 
     const users = await prisma.user.findMany({

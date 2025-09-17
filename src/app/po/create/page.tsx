@@ -56,6 +56,8 @@ export default function CreatePOPage() {
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [ioms, setIoms] = useState<IOM[]>([]);
     const [selectedIom, setSelectedIom] = useState<IOM | null>(null);
+    const [reviewers, setReviewers] = useState<User[]>([]);
+    const [approvers, setApprovers] = useState<User[]>([]);
     const [formData, setFormData] = useState({
         title: "",
         iomId: "",
@@ -67,6 +69,8 @@ export default function CreatePOPage() {
         vendorAddress: "",
         vendorContact: "",
         taxRate: 18,
+        reviewerId: "",
+        approverId: "",
     });
     const [items, setItems] = useState<POItem[]>([
         { itemName: "", description: "", quantity: 1, unitPrice: 0, taxRate: 18, taxAmount: 0, totalPrice: 0 }
@@ -102,7 +106,21 @@ export default function CreatePOPage() {
     useEffect(() => {
         fetchVendors();
         fetchApprovedIOMs();
+        fetchUsers();
     }, []);
+
+    const fetchUsers = async () => {
+      try {
+        const [reviewersRes, approversRes] = await Promise.all([
+          fetch("/api/users?role=REVIEWER"),
+          fetch("/api/users?role=MANAGER"),
+        ]);
+        if (reviewersRes.ok) setReviewers(await reviewersRes.json());
+        if (approversRes.ok) setApprovers(await approversRes.json());
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      }
+    };
 
     const fetchVendors = async () => {
         try {
@@ -216,8 +234,10 @@ export default function CreatePOPage() {
                         url: att.url,
                         filename: att.pathname,
                         filetype: att.contentType,
-                        size: att.size, // This now works correctly
+                        size: att.size,
                     })),
+                    reviewerId: formData.reviewerId,
+                    approverId: formData.approverId,
                 }),
             });
             if (response.ok) {
@@ -314,6 +334,46 @@ export default function CreatePOPage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="border-t pt-6 col-span-1 md:col-span-2">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Approval Workflow</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Reviewer *</label>
+                  <select
+                    required
+                    value={formData.reviewerId}
+                    onChange={(e) => setFormData({ ...formData, reviewerId: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="">Select a reviewer</option>
+                    {reviewers.map((reviewer) => (
+                      <option key={reviewer.id} value={reviewer.id}>
+                        {reviewer.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.reviewerId && <p className="text-red-500 text-xs mt-1">{errors.reviewerId[0]}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Approver (Manager) *</label>
+                  <select
+                    required
+                    value={formData.approverId}
+                    onChange={(e) => setFormData({ ...formData, approverId: e.target.value })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="">Select an approver</option>
+                    {approvers.map((approver) => (
+                      <option key={approver.id} value={approver.id}>
+                        {approver.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.approverId && <p className="text-red-500 text-xs mt-1">{errors.approverId[0]}</p>}
+                </div>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

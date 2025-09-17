@@ -182,7 +182,7 @@ type CreatePoData = z.infer<typeof createPoSchema> & {
 
 export async function createPurchaseOrder(data: CreatePoData, session: Session) {
   authorize(session, 'CREATE_PO');
-  const { items, attachments, ...restOfData } = data;
+  const { items, attachments, reviewerId, approverId, ...restOfData } = data;
 
   let totalAmount = 0;
   let taxAmount = 0;
@@ -214,7 +214,9 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
       totalAmount,
       taxAmount,
       grandTotal,
-      status: POStatus.DRAFT,
+      reviewedById: reviewerId,
+      approvedById: approverId,
+      status: POStatus.PENDING_APPROVAL,
       items: {
         create: itemsWithTotals,
       },
@@ -238,6 +240,8 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
           attachments: true,
           preparedBy: { select: { name: true, email: true } },
           requestedBy: { select: { name: true, email: true } },
+          reviewedBy: { select: { name: true, email: true } },
+          approvedBy: { select: { name: true, email: true } },
           vendor: true,
           iom: {
             include: {
@@ -273,77 +277,34 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
 
 export async function updatePOStatus(
   id: string,
-  status: POStatus | undefined,
-  session: Session,
-  approverId?: string,
-  reviewerId?: string,
+  action: "APPROVE" | "REJECT" | "ORDER" | "DELIVER" | "CANCEL",
+  session: Session
 ) {
-  if (!status && !approverId && !reviewerId) {
-    throw new Error("Either status, approverId, or reviewerId must be provided.");
-  }
-
-  // Authorize based on action
-  if (status) {
-    switch (status) {
-      case POStatus.APPROVED:
-        authorize(session, "APPROVE_PO");
-        break;
-      case POStatus.REJECTED:
-        authorize(session, "REJECT_PO");
-        break;
-      case POStatus.UNDER_REVIEW:
-        authorize(session, "REVIEW_PO");
-        break;
-      case POStatus.PENDING_APPROVAL:
-        authorize(session, "REVIEW_PO");
-        break;
-      default:
-        authorize(session, "UPDATE_PO");
-        break;
-    }
-  } else {
-    authorize(session, "UPDATE_PO");
-  }
-
-  interface UpdateData {
-    status?: POStatus;
-    reviewedById?: string | null;
-    approvedById?: string | null;
-  }
-
-  const updateData: UpdateData = {};
   const userId = session.user.id;
+  if (!userId) {
+    throw new Error("User not found in session");
+  }
 
-  if (status) {
-    updateData.status = status;
-    switch (status) {
-      case POStatus.DRAFT: // Withdrawing
-        updateData.reviewedById = null;
-        updateData.approvedById = null;
+  // Handle simple status changes first
+  if (action === "ORDER" || action === "DELIVER" || action === "CANCEL") {
+    let newStatus: POStatus;
+    switch (action) {
+      case "ORDER":
+        authorize(session, "ORDER_PO");
+        newStatus = POStatus.ORDERED;
         break;
-      case POStatus.SUBMITTED: // Submitting for review
-        if (!reviewerId) {
-          throw new Error("Reviewer ID is required when submitting for review");
-        }
-        updateData.reviewedById = reviewerId;
+      case "DELIVER":
+        authorize(session, "DELIVER_PO");
+        newStatus = POStatus.DELIVERED;
         break;
-      case POStatus.UNDER_REVIEW: // Starting review
-        updateData.reviewedById = userId;
-        break;
-      case POStatus.PENDING_APPROVAL: // Submitting for approval
-        if (!approverId) {
-          throw new Error("Approver ID is required when moving to PENDING_APPROVAL");
-        }
-        updateData.approvedById = approverId;
-        break;
-      case POStatus.APPROVED: // Approving
-        updateData.approvedById = userId;
+      case "CANCEL":
+        authorize(session, "CANCEL_PO");
+        newStatus = POStatus.CANCELLED;
         break;
     }
-  } else if (approverId) {
-    updateData.approvedById = approverId;
+    return await prisma.purchaseOrder.update({ where: { id }, data: { status: newStatus } });
   }
-  
+
   const po = await prisma.purchaseOrder.findUnique({
     where: { id },
     select: {
@@ -352,19 +313,52 @@ export async function updatePOStatus(
       approvedById: true,
       poNumber: true,
       status: true,
-      preparedBy: {
-        select: { name: true, email: true }
-      }
+      reviewerStatus: true,
+      approverStatus: true,
+      preparedBy: { select: { name: true, email: true } },
     },
   });
 
-  if (!po || !po.preparedBy) {
-    throw new Error("Purchase Order or originator not found.");
+  if (!po) throw new Error("Purchase Order not found.");
+  if (!po.preparedBy) throw new Error("PO originator not found.");
+
+  const isReviewer = userId === po.reviewedById;
+  const isApprover = userId === po.approvedById;
+
+  if (!isReviewer && !isApprover) {
+    throw new Error("Not authorized to perform this action on this PO.");
   }
-  
-  const updatedPo = await prisma.purchaseOrder.update({
+
+  const newActionStatus = action === "APPROVE" ? "APPROVED" : "REJECTED";
+  const updateData: Partial<Prisma.PurchaseOrderUpdateInput> = {};
+
+  if (isReviewer) {
+    authorize(session, 'REVIEW_PO');
+    updateData.reviewerStatus = newActionStatus;
+  }
+
+  if (isApprover) {
+    authorize(session, 'APPROVE_PO');
+    updateData.approverStatus = newActionStatus;
+  }
+
+  const updatedSubStatusPo = await prisma.purchaseOrder.update({
     where: { id },
     data: updateData,
+  });
+
+  const { reviewerStatus, approverStatus } = updatedSubStatusPo;
+  let finalStatus: POStatus = POStatus.PENDING_APPROVAL;
+
+  if (approverStatus === "APPROVED") {
+    finalStatus = POStatus.APPROVED;
+  } else if (approverStatus === "REJECTED" || reviewerStatus === "REJECTED") {
+    finalStatus = POStatus.REJECTED;
+  }
+
+  const finalUpdate = await prisma.purchaseOrder.update({
+    where: { id },
+    data: { status: finalStatus },
     include: {
       items: true,
       preparedBy: { select: { name: true, email: true } },
@@ -378,47 +372,30 @@ export async function updatePOStatus(
           requestedBy: { select: { name: true, email: true } },
         }
       }
-    }
+    },
   });
 
-  if (status) {
-    const message = `The status of Purchase Order ${po.poNumber} has been updated to ${status}.`;
-    // Notify the creator
-    await createNotification(po.preparedById, message);
+  const message = `PO ${po.poNumber} has been ${action.toLowerCase()}d by ${session.user.name}. New status: ${finalStatus}.`;
 
-    // Notify other relevant parties
-    switch (status) {
-      case POStatus.SUBMITTED:
-        if (updatedPo.reviewedById) {
-          await createNotification(updatedPo.reviewedById, `A PO ${po.poNumber} has been submitted for your review.`);
-        }
-        break;
-      case POStatus.PENDING_APPROVAL:
-        if (updatedPo.approvedById) {
-          await createNotification(updatedPo.approvedById, `A PO ${po.poNumber} is pending your approval.`);
-        }
-        break;
-      case POStatus.APPROVED:
-      case POStatus.REJECTED:
-        if (po.reviewedById) {
-          await createNotification(po.reviewedById, `The PO ${po.poNumber} you reviewed has been ${status.toLowerCase()}.`);
-        }
-        break;
-    }
+  await createNotification(po.preparedById, message);
 
-    const emailComponent = React.createElement(StatusUpdateEmail, {
-      userName: po.preparedBy.name || 'User',
-      documentType: 'Purchase Order',
-      documentNumber: po.poNumber,
-      newStatus: status,
-    });
-
-    await sendEmail({
-      to: po.preparedBy.email,
-      subject: `Status Update for PO: ${po.poNumber}`,
-      react: emailComponent,
-    });
+  const otherPartyId = isReviewer ? po.approvedById : po.reviewedById;
+  if (otherPartyId) {
+    await createNotification(otherPartyId, `Your action is requested on PO ${po.poNumber}. It was ${action.toLowerCase()}d by ${session.user.name}.`);
   }
+
+  const emailComponent = React.createElement(StatusUpdateEmail, {
+    userName: po.preparedBy.name || 'User',
+    documentType: 'Purchase Order',
+    documentNumber: po.poNumber,
+    newStatus: finalStatus,
+  });
+
+  await sendEmail({
+    to: po.preparedBy.email,
+    subject: `Status Update for PO: ${po.poNumber}`,
+    react: emailComponent,
+  });
 
   const auditUser = getAuditUser(session);
   await logAudit("UPDATE", {
@@ -427,15 +404,14 @@ export async function updatePOStatus(
     userId: auditUser.userId,
     userName: auditUser.userName,
     changes: {
-      from: { status: po.status },
-      to: { status, approverId, reviewerId },
+      from: { status: po.status, reviewerStatus: po.reviewerStatus, approverStatus: po.approverStatus },
+      to: { status: finalStatus, reviewerStatus, approverStatus },
     },
   });
 
-  // Trigger a dashboard update
   await triggerPusherEvent("dashboard-channel", "dashboard-update", {});
 
-  return updatedPo;
+  return finalUpdate;
 }
 
 export async function getIOMsForPO() {

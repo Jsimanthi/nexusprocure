@@ -27,6 +27,22 @@ export async function POST(request: NextRequest) {
     }
 
     const { poIds, status } = validation.data;
+
+    const statusToActionMap = {
+      [POStatus.ORDERED]: "ORDER",
+      [POStatus.DELIVERED]: "DELIVER",
+      [POStatus.CANCELLED]: "CANCEL",
+    };
+
+    const action = statusToActionMap[status as keyof typeof statusToActionMap];
+
+    if (!action) {
+      return NextResponse.json(
+        { error: `Bulk update is not supported for status: ${status}` },
+        { status: 400 }
+      );
+    }
+
     const results = [];
 
     // This should ideally be a background job for large numbers of updates.
@@ -35,7 +51,7 @@ export async function POST(request: NextRequest) {
       try {
         // We assume the user has permission to update these.
         // A more robust check would verify ownership of each PO.
-        const updatedPo = await updatePOStatus(poId, status, session);
+        const updatedPo = await updatePOStatus(poId, action as "ORDER" | "DELIVER" | "CANCEL", session);
         results.push({ id: poId, success: true, data: updatedPo });
       } catch (error) {
         console.error(`Failed to update PO ${poId}:`, error);

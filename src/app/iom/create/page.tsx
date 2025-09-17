@@ -33,11 +33,37 @@ export default function CreateIOMPage() {
     to: "",
     subject: "",
     content: "",
+    reviewerId: "",
+    approverId: "",
   });
   const [items, setItems] = useState<IOMItem[]>([
     { itemName: "", description: "", quantity: 1, unitPrice: 0, totalPrice: 0 },
   ]);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [reviewers, setReviewers] = useState<User[]>([]);
+  const [approvers, setApprovers] = useState<User[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const [reviewersRes, approversRes] = await Promise.all([
+          fetch("/api/users?role=REVIEWER"),
+          fetch("/api/users?role=MANAGER"),
+        ]);
+        if (reviewersRes.ok) {
+          const data = await reviewersRes.json();
+          setReviewers(data);
+        }
+        if (approversRes.ok) {
+          const data = await approversRes.json();
+          setApprovers(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const addItem = () => {
     setItems([
@@ -78,7 +104,11 @@ export default function CreateIOMPage() {
 
     try {
       const payload: z.infer<typeof createIomSchema> = {
-        ...formData,
+        title: formData.title,
+        from: formData.from,
+        to: formData.to,
+        subject: formData.subject,
+        content: formData.content,
         items: items.map((item) => ({
           itemName: item.itemName,
           description: item.description,
@@ -86,6 +116,8 @@ export default function CreateIOMPage() {
           unitPrice: item.unitPrice,
         })),
         requestedById: session.user.id,
+        reviewerId: formData.reviewerId,
+        approverId: formData.approverId,
       };
 
       const response = await fetch("/api/iom", {
@@ -169,6 +201,47 @@ export default function CreateIOMPage() {
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
             {errors.to && <p className="text-red-500 text-xs mt-1">{errors.to[0]}</p>}
+          </div>
+        </div>
+
+        {/* Approval Workflow Section */}
+        <div className="border-t pt-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Approval Workflow</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Reviewer *</label>
+              <select
+                required
+                value={formData.reviewerId}
+                onChange={(e) => setFormData({ ...formData, reviewerId: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value="">Select a reviewer</option>
+                {reviewers.map((reviewer) => (
+                  <option key={reviewer.id} value={reviewer.id}>
+                    {reviewer.name}
+                  </option>
+                ))}
+              </select>
+              {errors.reviewerId && <p className="text-red-500 text-xs mt-1">{errors.reviewerId[0]}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Approver (Manager) *</label>
+              <select
+                required
+                value={formData.approverId}
+                onChange={(e) => setFormData({ ...formData, approverId: e.target.value })}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              >
+                <option value="">Select an approver</option>
+                {approvers.map((approver) => (
+                  <option key={approver.id} value={approver.id}>
+                    {approver.name}
+                  </option>
+                ))}
+              </select>
+              {errors.approverId && <p className="text-red-500 text-xs mt-1">{errors.approverId[0]}</p>}
+            </div>
           </div>
         </div>
 

@@ -4,13 +4,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { IOM, IOMStatus } from "@/types/iom";
+import { IOM } from "@/types/iom";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import { getIOMStatusColor } from "@/lib/utils";
 import { useHasPermission } from "@/hooks/useHasPermission";
-import { User } from "next-auth";
 import { useSession } from "next-auth/react";
 
 export default function IOMDetailPage() {
@@ -19,19 +18,8 @@ export default function IOMDetailPage() {
   const [iom, setIom] = useState<IOM | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [approvers, setApprovers] = useState<User[]>([]);
-  const [reviewers, setReviewers] = useState<User[]>([]);
-  const [selectedApprover, setSelectedApprover] = useState<string>('');
-  const [selectedReviewer, setSelectedReviewer] = useState<string>('');
-  const [showApproverSelection, setShowApproverSelection] = useState(false);
-  const [showReviewerSelection, setShowReviewerSelection] = useState(false);
 
-  const canApprove = useHasPermission('APPROVE_IOM');
-  const canReject = useHasPermission('REJECT_IOM');
-  const canReview = useHasPermission('REVIEW_IOM');
-  const canComplete = useHasPermission('COMPLETE_IOM');
   const canCreatePO = useHasPermission('CREATE_PO');
-  const isCreator = session?.user?.id === iom?.preparedById;
 
   const fetchIOM = useCallback(async () => {
     setLoading(true);
@@ -50,140 +38,34 @@ export default function IOMDetailPage() {
     }
   }, [params.id]);
 
-  const fetchApprovers = useCallback(async () => {
-    try {
-      const response = await fetch('/api/users?role=MANAGER');
-      if (response.ok) {
-        const data = await response.json();
-        setApprovers(data);
-      } else {
-        console.error("Failed to fetch approvers");
-      }
-    } catch (error) {
-      console.error("Error fetching approvers:", error);
-    }
-  }, []);
-
-  const fetchReviewers = useCallback(async () => {
-    try {
-      const response = await fetch('/api/users/role/REVIEWER');
-      if (response.ok) {
-        const data = await response.json();
-        setReviewers(data);
-      } else {
-        console.error("Failed to fetch reviewers");
-      }
-    } catch (error) {
-      console.error("Error fetching reviewers:", error);
-    }
-  }, []);
-
   useEffect(() => {
     if (params.id) {
       fetchIOM();
     }
-    // Fetch approvers if the user has review permission (to select the next step)
-    if (canReview) {
-      fetchApprovers();
-    }
-    // Fetch reviewers if the user is the creator of a draft (to select the next step)
-    if (isCreator && iom?.status === IOMStatus.DRAFT) {
-      fetchReviewers();
-    }
-  }, [params.id, canReview, isCreator, iom?.status, fetchIOM, fetchApprovers, fetchReviewers]);
+  }, [params.id, fetchIOM]);
 
-  const updateStatus = async (newStatus?: IOMStatus, approverId?: string, reviewerId?: string) => {
+  const handleAction = async (action: 'APPROVE' | 'REJECT') => {
     setUpdating(true);
     try {
-      const body: { status?: IOMStatus; approverId?: string; reviewerId?: string } = {};
-      if (newStatus) body.status = newStatus;
-      if (approverId) body.approverId = approverId;
-      if (reviewerId) body.reviewerId = reviewerId;
-
       const response = await fetch(`/api/iom/${params.id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
       });
 
       if (response.ok) {
         const updatedIOM = await response.json();
         setIom(updatedIOM);
       } else {
-        console.error("Failed to update status");
+        const errorData = await response.json();
+        console.error("Failed to update status:", errorData.error);
+        // You might want to show a toast notification here
       }
     } catch (error) {
       console.error("Error updating status:", error);
     } finally {
       setUpdating(false);
-      setShowApproverSelection(false);
-      setShowReviewerSelection(false);
     }
-  };
-
-  const handleApproverSubmit = () => {
-    if (selectedApprover) {
-      updateStatus(IOMStatus.PENDING_APPROVAL, selectedApprover);
-    }
-  };
-
-  const handleReviewerSubmit = () => {
-    if (selectedReviewer) {
-      updateStatus(IOMStatus.SUBMITTED, undefined, selectedReviewer);
-    }
-  };
-
-  const getAvailableStatusActions = (currentStatus: IOMStatus) => {
-    const actions: { status: IOMStatus; label: string; color: string; onClick: () => void }[] = [];
-    
-    switch (currentStatus) {
-      case IOMStatus.DRAFT:
-        if (isCreator) {
-          actions.push({
-            status: IOMStatus.SUBMITTED,
-            label: "Submit for Review",
-            color: "bg-blue-600 hover:bg-blue-700",
-            onClick: () => setShowReviewerSelection(true)
-          });
-        }
-        break;
-      case IOMStatus.SUBMITTED:
-        if (isCreator) {
-          actions.push({
-            status: IOMStatus.DRAFT,
-            label: "Withdraw Request",
-            color: "bg-gray-600 hover:bg-gray-700",
-            onClick: () => updateStatus(IOMStatus.DRAFT),
-          });
-        } else if (canReview) {
-          actions.push(
-            { status: IOMStatus.UNDER_REVIEW, label: "Start Review", color: "bg-yellow-600 hover:bg-yellow-700", onClick: () => updateStatus(IOMStatus.UNDER_REVIEW) }
-          );
-        }
-        break;
-      case IOMStatus.UNDER_REVIEW:
-        if (canReview) {
-          actions.push({ status: IOMStatus.PENDING_APPROVAL, label: "Submit for Approval", color: "bg-blue-600 hover:bg-blue-700", onClick: () => setShowApproverSelection(true) });
-        }
-        break;
-      case IOMStatus.PENDING_APPROVAL:
-        if (canApprove) {
-          actions.push({ status: IOMStatus.APPROVED, label: "Approve", color: "bg-green-600 hover:bg-green-700", onClick: () => updateStatus(IOMStatus.APPROVED) });
-        }
-        if (canReject) {
-          actions.push({ status: IOMStatus.REJECTED, label: "Reject", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(IOMStatus.REJECTED) });
-        }
-        break;
-      case IOMStatus.APPROVED:
-        if (canComplete) {
-          actions.push({ status: IOMStatus.COMPLETED, label: "Mark as Completed", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(IOMStatus.COMPLETED) });
-        }
-        break;
-    }
-    
-    return actions;
   };
 
   if (loading) {
@@ -210,7 +92,16 @@ export default function IOMDetailPage() {
     );
   }
 
-  const statusActions = getAvailableStatusActions(iom.status as IOMStatus);
+  const isReviewer = session?.user?.id === iom.reviewedById;
+  const isApprover = session?.user?.id === iom.approvedById;
+
+  const getActionStatusColor = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return 'text-green-600';
+      case 'REJECTED': return 'text-red-600';
+      default: return 'text-yellow-600';
+    }
+  };
 
   return (
     <PageLayout title={iom.title}>
@@ -329,100 +220,59 @@ export default function IOMDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Status Actions */}
-          {statusActions.length > 0 && (
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">IOM Actions</h3>
-              <div className="space-y-2">
-                {showReviewerSelection ? (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Select Reviewer</label>
-                      <select
-                        value={selectedReviewer}
-                        onChange={(e) => setSelectedReviewer(e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      >
-                        <option value="">Select a reviewer</option>
-                        {reviewers.map((reviewer) => (
-                          <option key={reviewer.id} value={reviewer.id}>
-                            {reviewer.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      onClick={handleReviewerSubmit}
-                      disabled={!selectedReviewer || updating}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
-                    >
-                      {updating ? "Submitting..." : "Confirm & Submit"}
-                    </button>
-                    <button
-                      onClick={() => setShowReviewerSelection(false)}
-                      disabled={updating}
-                      className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : showApproverSelection ? (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Select Approver</label>
-                      <select
-                        value={selectedApprover}
-                        onChange={(e) => setSelectedApprover(e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      >
-                        <option value="">Select an approver</option>
-                        {approvers.map((approver) => (
-                          <option key={approver.id} value={approver.id}>
-                            {approver.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      onClick={handleApproverSubmit}
-                      disabled={!selectedApprover || updating}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
-                    >
-                      {updating ? "Submitting..." : "Confirm & Submit"}
-                    </button>
-                    <button
-                      onClick={() => setShowApproverSelection(false)}
-                      disabled={updating}
-                      className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  statusActions.map((action) => (
-                    <button
-                      key={action.status}
-                      onClick={action.onClick}
-                      disabled={updating}
-                      className={`w-full ${action.color} text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50`}
-                    >
-                      {updating ? "Updating..." : action.label}
-                    </button>
-                  ))
-                )}
-
-                {/* Add Convert to PO button for approved IOMs */}
-                {iom.status === "APPROVED" && canCreatePO && !showApproverSelection && !showReviewerSelection && (
-                  <Link
-                    href={`/po/create?iomId=${iom.id}`}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center block"
-                  >
-                    Convert to Purchase Order
-                  </Link>
-                )}
-              </div>
+          {/* IOM Actions */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">IOM Actions</h3>
+            <div className="space-y-2">
+              {isReviewer && iom.reviewerStatus === 'PENDING' && (
+                <div className="flex space-x-2">
+                  <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                    {updating ? "Processing..." : "Approve (Review)"}
+                  </button>
+                  <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                    {updating ? "Processing..." : "Reject (Review)"}
+                  </button>
+                </div>
+              )}
+              {isApprover && iom.approverStatus === 'PENDING' && (
+                <div className="flex space-x-2">
+                  <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                    {updating ? "Processing..." : "Approve (Final)"}
+                  </button>
+                  <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                    {updating ? "Processing..." : "Reject (Final)"}
+                  </button>
+                </div>
+              )}
+              {iom.status === "APPROVED" && canCreatePO && (
+                <Link href={`/po/create?iomId=${iom.id}`} className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center block">
+                  Convert to Purchase Order
+                </Link>
+              )}
+              {iom.status !== 'DRAFT' && !isReviewer && !isApprover && iom.status !== 'APPROVED' && (
+                <p className="text-sm text-gray-600">You are not assigned to review or approve this IOM.</p>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Approval Status */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Approval Status</h3>
+            <dl className="space-y-3">
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Reviewer Status</dt>
+                <dd className={`text-sm font-semibold ${getActionStatusColor(iom.reviewerStatus)}`}>
+                  {iom.reviewerStatus}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Approver Status</dt>
+                <dd className={`text-sm font-semibold ${getActionStatusColor(iom.approverStatus)}`}>
+                  {iom.approverStatus}
+                </dd>
+              </div>
+            </dl>
+          </div>
 
           {/* People Involved */}
           <div className="bg-white shadow rounded-lg p-6">
@@ -442,7 +292,7 @@ export default function IOMDetailPage() {
               </div>
               {iom.reviewedBy && (
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Reviewed By</dt>
+                  <dt className="text-sm font-medium text-gray-500">Selected Reviewer</dt>
                   <dd className="text-sm text-gray-900">
                     {iom.reviewedBy.name} ({iom.reviewedBy.email})
                   </dd>
@@ -450,7 +300,7 @@ export default function IOMDetailPage() {
               )}
               {iom.approvedBy && (
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Approved By</dt>
+                  <dt className="text-sm font-medium text-gray-500">Selected Approver</dt>
                   <dd className="text-sm text-gray-900">
                     {iom.approvedBy.name} ({iom.approvedBy.email})
                   </dd>

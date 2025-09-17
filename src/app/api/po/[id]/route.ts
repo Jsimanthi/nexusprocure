@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
 import { getPOById, updatePOStatus } from "@/lib/po";
-import { POStatus } from "@/types/po";
 import { authorize } from "@/lib/auth-utils";
 
 export async function GET(
@@ -54,26 +53,17 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, approverId, reviewerId } = body;
+    const { action } = body;
 
-    if (!status && !approverId && !reviewerId) {
+    const validActions = ["APPROVE", "REJECT", "ORDER", "DELIVER", "CANCEL"];
+    if (!action || !validActions.includes(action)) {
       return NextResponse.json(
-        { error: "At least one of status, approverId, or reviewerId is required" },
+        { error: "Invalid action provided." },
         { status: 400 }
       );
     }
 
-    if (status) {
-      const validStatuses = Object.values(POStatus);
-      if (!validStatuses.includes(status)) {
-        return NextResponse.json(
-          { error: "Invalid status" },
-          { status: 400 }
-        );
-      }
-    }
-
-    const po = await updatePOStatus(id, status, session, approverId, reviewerId);
+    const po = await updatePOStatus(id, action as "APPROVE" | "REJECT" | "ORDER" | "DELIVER" | "CANCEL", session);
     
     if (!po) {
       return NextResponse.json({ error: "PO not found" }, { status: 404 });
@@ -83,6 +73,9 @@ export async function PATCH(
   } catch (error) {
     console.error("Error updating PO:", error);
     if (error instanceof Error) {
+      if (error.message.includes('Not authorized')) {
+        return NextResponse.json({ error: error.message }, { status: 403 });
+      }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     return NextResponse.json(

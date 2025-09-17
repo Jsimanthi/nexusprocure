@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from './route';
 import { auth } from '@/lib/auth-config';
-import { authorize } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 import { Session } from 'next-auth';

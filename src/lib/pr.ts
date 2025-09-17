@@ -154,10 +154,26 @@ export async function createPaymentRequest(data: CreatePrData, session: Session)
 
   for (let i = 0; i < maxRetries; i++) {
     const prNumber = await generatePRNumber();
+
+    // Explicitly construct the data for prisma create
     const prData = {
-      ...data,
-      prNumber,
-      status: PRStatus.DRAFT,
+      title: data.title,
+      poId: data.poId,
+      paymentTo: data.paymentTo,
+      paymentDate: data.paymentDate,
+      purpose: data.purpose,
+      paymentMethod: data.paymentMethod,
+      bankAccount: data.bankAccount,
+      referenceNumber: data.referenceNumber,
+      totalAmount: data.totalAmount,
+      taxAmount: data.taxAmount,
+      grandTotal: data.grandTotal,
+      preparedById: data.preparedById,
+      requestedById: data.requestedById,
+      reviewedById: data.reviewerId, // map reviewerId to reviewedById
+      approvedById: data.approverId, // map approverId to approvedById
+      prNumber: prNumber,
+      status: PRStatus.PENDING_APPROVAL,
     };
 
     try {
@@ -172,6 +188,7 @@ export async function createPaymentRequest(data: CreatePrData, session: Session)
           preparedBy: { select: { name: true, email: true } },
           requestedBy: { select: { name: true, email: true } },
           reviewedBy: { select: { name: true, email: true } },
+          approvedBy: { select: { name: true, email: true } },
         }
       });
 
@@ -200,119 +217,114 @@ export async function createPaymentRequest(data: CreatePrData, session: Session)
 
 export async function updatePRStatus(
   id: string,
-  status: PRStatus | undefined,
-  session: Session,
-  approverId?: string
+  action: "APPROVE" | "REJECT" | "PROCESS" | "CANCEL",
+  session: Session
 ) {
-  if (!status && !approverId) {
-    throw new Error("Either status or approverId must be provided.");
-  }
-
-  // Authorize based on action
-  if (status) {
-    switch (status) {
-      case PRStatus.APPROVED:
-        authorize(session, "APPROVE_PR");
-        break;
-      case PRStatus.REJECTED:
-        authorize(session, "REJECT_PR");
-        break;
-      default:
-        authorize(session, "UPDATE_PR");
-        break;
-    }
-  } else {
-    authorize(session, "UPDATE_PR");
-  }
-
-  interface UpdateData {
-    status?: PRStatus;
-    reviewedById?: string | null;
-    approvedById?: string | null;
-  }
-
-  const updateData: UpdateData = {};
   const userId = session.user.id;
+  if (!userId) {
+    throw new Error("User not found in session");
+  }
 
-  if (status) {
-    updateData.status = status;
-    switch (status) {
-      case PRStatus.DRAFT: // Withdrawing
-        updateData.reviewedById = null;
-        updateData.approvedById = null;
+  // Handle simple status changes first
+  if (action === "PROCESS" || action === "CANCEL") {
+    let newStatus: PRStatus;
+    switch (action) {
+      case "PROCESS":
+        authorize(session, "PROCESS_PR");
+        newStatus = PRStatus.PROCESSED;
         break;
-      case PRStatus.UNDER_REVIEW: // Starting review
-        updateData.reviewedById = userId;
-        break;
-      case PRStatus.PENDING_APPROVAL: // Submitting for approval
-        if (!approverId) {
-          throw new Error("Approver ID is required when moving to PENDING_APPROVAL");
-        }
-        updateData.approvedById = approverId;
-        break;
-      case PRStatus.APPROVED: // Approving
-        updateData.approvedById = userId;
+      case "CANCEL":
+        authorize(session, "CANCEL_PR");
+        newStatus = PRStatus.CANCELLED;
         break;
     }
-  } else if (approverId) {
-    updateData.approvedById = approverId;
+    return await prisma.paymentRequest.update({ where: { id }, data: { status: newStatus } });
   }
 
   const pr = await prisma.paymentRequest.findUnique({
     where: { id },
     select: {
       preparedById: true,
+      reviewedById: true,
+      approvedById: true,
       prNumber: true,
       status: true,
-      preparedBy: {
-        select: { name: true, email: true }
-      }
+      reviewerStatus: true,
+      approverStatus: true,
+      preparedBy: { select: { name: true, email: true } },
     },
   });
 
-  if (!pr || !pr.preparedBy) {
-    throw new Error("Payment Request or originator not found.");
+  if (!pr) throw new Error("Payment Request not found.");
+  if (!pr.preparedBy) throw new Error("PR originator not found.");
+
+  const isReviewer = userId === pr.reviewedById;
+  const isApprover = userId === pr.approvedById;
+
+  if (!isReviewer && !isApprover) {
+    throw new Error("Not authorized to perform this action on this PR.");
   }
 
-  const updatedPr = await prisma.paymentRequest.update({
+  const newActionStatus = action === "APPROVE" ? "APPROVED" : "REJECTED";
+  const updateData: Partial<Prisma.PaymentRequestUpdateInput> = {};
+
+  if (isReviewer) {
+    authorize(session, 'REVIEW_PR'); // Assuming REVIEW_PR permission exists
+    updateData.reviewerStatus = newActionStatus;
+  }
+
+  if (isApprover) {
+    authorize(session, 'APPROVE_PR');
+    updateData.approverStatus = newActionStatus;
+  }
+
+  const updatedSubStatusPr = await prisma.paymentRequest.update({
     where: { id },
     data: updateData,
+  });
+
+  const { reviewerStatus, approverStatus } = updatedSubStatusPr;
+  let finalStatus: PRStatus = PRStatus.PENDING_APPROVAL;
+
+  if (approverStatus === "APPROVED") {
+    finalStatus = PRStatus.APPROVED;
+  } else if (approverStatus === "REJECTED" || reviewerStatus === "REJECTED") {
+    finalStatus = PRStatus.REJECTED;
+  }
+
+  const finalUpdate = await prisma.paymentRequest.update({
+    where: { id },
+    data: { status: finalStatus },
     include: {
-      po: {
-        include: {
-          vendor: true
-        }
-      },
+      po: { include: { vendor: true, items: true } },
       preparedBy: { select: { name: true, email: true } },
       requestedBy: { select: { name: true, email: true } },
       reviewedBy: { select: { name: true, email: true } },
       approvedBy: { select: { name: true, email: true } },
-    }
+    },
   });
 
-  if (status) {
-    const message = `The status of Payment Request ${pr.prNumber} has been updated to ${status}.`;
-    // Notify the creator
-    await createNotification(pr.preparedById, message);
+  const message = `PR ${pr.prNumber} has been ${action.toLowerCase()}d by ${session.user.name}. New status: ${finalStatus}.`;
 
-    // Notify other relevant parties
-    if (status === PRStatus.PENDING_APPROVAL && updatedPr.approvedById) {
-      await createNotification(updatedPr.approvedById, `A PR ${pr.prNumber} is pending your approval.`);
-    }
+  await createNotification(pr.preparedById, message);
 
-    const emailComponent = React.createElement(StatusUpdateEmail, {
-      userName: pr.preparedBy.name || 'User',
-      documentType: 'Payment Request',
-      documentNumber: pr.prNumber,
-      newStatus: status,
-    });
-
-    await sendEmail({
-      to: pr.preparedBy.email,
-      subject: `Status Update for PR: ${pr.prNumber}`,
-      react: emailComponent,
-    });
+  const otherPartyId = isReviewer ? pr.approvedById : pr.reviewedById;
+  if (otherPartyId) {
+    await createNotification(otherPartyId, `Your action is requested on PR ${pr.prNumber}. It was ${action.toLowerCase()}d by ${session.user.name}.`);
   }
+
+  const emailComponent = React.createElement(StatusUpdateEmail, {
+    userName: pr.preparedBy.name || 'User',
+    documentType: 'Payment Request',
+    documentNumber: pr.prNumber,
+    newStatus: finalStatus,
+  });
+
+  await sendEmail({
+    to: pr.preparedBy.email,
+    subject: `Status Update for PR: ${pr.prNumber}`,
+    react: emailComponent,
+  });
 
   const auditUser = getAuditUser(session);
   await logAudit("UPDATE", {
@@ -321,13 +333,12 @@ export async function updatePRStatus(
     userId: auditUser.userId,
     userName: auditUser.userName,
     changes: {
-      from: { status: pr.status },
-      to: { status, approverId },
+      from: { status: pr.status, reviewerStatus: pr.reviewerStatus, approverStatus: pr.approverStatus },
+      to: { status: finalStatus, reviewerStatus, approverStatus },
     },
   });
 
-  // Trigger a dashboard update
   await triggerPusherEvent("dashboard-channel", "dashboard-update", {});
 
-  return updatedPr;
+  return finalUpdate;
 }
