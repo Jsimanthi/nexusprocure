@@ -54,11 +54,11 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, approverId } = body;
+    const { status, approverId, reviewerId } = body;
 
-    if (!status && !approverId) {
+    if (!status && !approverId && !reviewerId) {
       return NextResponse.json(
-        { error: "At least one of status or approverId is required" },
+        { error: "At least one of status, approverId, or reviewerId is required" },
         { status: 400 }
       );
     }
@@ -73,7 +73,7 @@ export async function PATCH(
       }
     }
 
-    const po = await updatePOStatus(id, status, session, approverId);
+    const po = await updatePOStatus(id, status, session, approverId, reviewerId);
     
     if (!po) {
       return NextResponse.json({ error: "PO not found" }, { status: 404 });

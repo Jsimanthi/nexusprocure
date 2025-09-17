@@ -60,4 +60,24 @@ Retrieves a single PR by its unique ID.
 *   **Business Logic**: Calls `getPRById(id)` from `src/lib/pr.ts`.
 *   **Authorization**: Requires the `READ_PR` permission.
 *   **Success Response** (`200 OK`): Returns the full PR object.
-*   **Note**: The API for updating a PR's status does not seem to exist in the file structure (`PATCH /api/pr/:id`), which might be an omission or intentional design. The business logic function `updatePRStatus` exists in `src/lib/pr.ts` but is not exposed via an API route.
+
+---
+
+## 4. `PATCH /api/pr/:id`
+
+Updates the status of an existing Payment Request.
+
+*   **Handler**: `src/app/api/pr/[id]/route.ts`
+*   **Business Logic**: Calls `updatePRStatus(id, status, session, approverId)` from `src/lib/pr.ts`.
+*   **Authorization**: Permissions are checked dynamically within `updatePRStatus`:
+    *   `APPROVE_PR` for setting status to `APPROVED`.
+    *   `REJECT_PR` for setting status to `REJECTED`.
+    *   `UPDATE_PR` for other changes.
+*   **Request Body**:
+    ```json
+    {
+      "status": "APPROVED"
+    }
+    ```
+*   **Success Response** (`200 OK`): Returns the updated PR object.
+*   **Side Effects**: Creates an `AuditLog` entry, sends notifications, and triggers a Pusher event.

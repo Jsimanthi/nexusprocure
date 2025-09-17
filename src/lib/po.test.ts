@@ -223,6 +223,26 @@ describe('Purchase Order Functions', () => {
         }
       }));
     });
+
+    it('should assign a reviewer when moving from DRAFT to SUBMITTED', async () => {
+      vi.mocked(authorize).mockReturnValue(true);
+      const reviewerId = 'reviewer-id';
+      await updatePOStatus(poId, POStatus.SUBMITTED, session, undefined, reviewerId);
+
+      expect(authorize).toHaveBeenCalledWith(session, 'UPDATE_PO');
+      expect(prisma.purchaseOrder.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: {
+          status: POStatus.SUBMITTED,
+          reviewedById: reviewerId,
+        }
+      }));
+      expect(logAudit).toHaveBeenCalledWith("UPDATE", expect.objectContaining({
+        changes: {
+          from: { status: POStatus.DRAFT },
+          to: { status: POStatus.SUBMITTED, approverId: undefined, reviewerId },
+        }
+      }));
+    });
   });
 
   describe('Vendor Functions', () => {

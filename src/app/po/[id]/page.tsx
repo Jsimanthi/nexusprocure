@@ -26,8 +26,11 @@ export default function PODetailPage() {
     PaymentMethod.CHEQUE
   );
   const [showApproverSelection, setShowApproverSelection] = useState(false);
+  const [showReviewerSelection, setShowReviewerSelection] = useState(false);
   const [approvers, setApprovers] = useState<User[]>([]);
+  const [reviewers, setReviewers] = useState<User[]>([]);
   const [selectedApprover, setSelectedApprover] = useState<string>('');
+  const [selectedReviewer, setSelectedReviewer] = useState<string>('');
 
   // Add permission check to view PO
   const canViewPO = useHasPermission('READ_PO');
@@ -71,6 +74,20 @@ export default function PODetailPage() {
     }
   }, []);
 
+  const fetchReviewers = useCallback(async () => {
+    try {
+      const response = await fetch('/api/users/role/REVIEWER');
+      if (response.ok) {
+        const data = await response.json();
+        setReviewers(data);
+      } else {
+        console.error("Failed to fetch reviewers");
+      }
+    } catch (error) {
+      console.error("Error fetching reviewers:", error);
+    }
+  }, []);
+
   useEffect(() => {
     // Check permission before fetching data
     if (!canViewPO) {
@@ -84,14 +101,18 @@ export default function PODetailPage() {
     if (canReview) {
       fetchApprovers();
     }
-  }, [params.id, canViewPO, canReview, fetchPO, fetchApprovers]);
+    if (isCreator && po?.status === POStatus.DRAFT) {
+      fetchReviewers();
+    }
+  }, [params.id, canViewPO, canReview, isCreator, po?.status, fetchPO, fetchApprovers, fetchReviewers]);
 
-  const updateStatus = async (newStatus?: POStatus, approverId?: string) => {
+  const updateStatus = async (newStatus?: POStatus, approverId?: string, reviewerId?: string) => {
     setUpdating(true);
     try {
-      const body: { status?: POStatus; approverId?: string } = {};
+      const body: { status?: POStatus; approverId?: string; reviewerId?: string } = {};
       if (newStatus) body.status = newStatus;
       if (approverId) body.approverId = approverId;
+      if (reviewerId) body.reviewerId = reviewerId;
 
       const response = await fetch(`/api/po/${params.id}`, {
         method: "PATCH",
@@ -110,12 +131,19 @@ export default function PODetailPage() {
     } finally {
       setUpdating(false);
       setShowApproverSelection(false);
+      setShowReviewerSelection(false);
     }
   };
 
   const handleApproverSubmit = () => {
     if (selectedApprover) {
       updateStatus(POStatus.PENDING_APPROVAL, selectedApprover);
+    }
+  };
+
+  const handleReviewerSubmit = () => {
+    if (selectedReviewer) {
+      updateStatus(POStatus.SUBMITTED, undefined, selectedReviewer);
     }
   };
 
@@ -150,7 +178,7 @@ export default function PODetailPage() {
     switch (currentStatus) {
       case POStatus.DRAFT:
         if (isCreator) {
-          actions.push({ status: POStatus.SUBMITTED, label: "Submit for Review", color: "bg-blue-600 hover:bg-blue-700", onClick: () => updateStatus(POStatus.SUBMITTED) });
+          actions.push({ status: POStatus.SUBMITTED, label: "Submit for Review", color: "bg-blue-600 hover:bg-blue-700", onClick: () => setShowReviewerSelection(true) });
         }
         break;
       case POStatus.SUBMITTED:
@@ -403,7 +431,39 @@ export default function PODetailPage() {
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">PO Actions</h3>
               <div className="space-y-2">
-                {showApproverSelection ? (
+                {showReviewerSelection ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Select Reviewer</label>
+                      <select
+                        value={selectedReviewer}
+                        onChange={(e) => setSelectedReviewer(e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="">Select a reviewer</option>
+                        {reviewers.map((reviewer) => (
+                          <option key={reviewer.id} value={reviewer.id}>
+                            {reviewer.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleReviewerSubmit}
+                      disabled={!selectedReviewer || updating}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
+                    >
+                      {updating ? "Submitting..." : "Confirm & Submit"}
+                    </button>
+                    <button
+                      onClick={() => setShowReviewerSelection(false)}
+                      disabled={updating}
+                      className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : showApproverSelection ? (
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Select Approver</label>

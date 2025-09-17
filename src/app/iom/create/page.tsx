@@ -33,30 +33,11 @@ export default function CreateIOMPage() {
     to: "",
     subject: "",
     content: "",
-    reviewedById: "",
   });
   const [items, setItems] = useState<IOMItem[]>([
     { itemName: "", description: "", quantity: 1, unitPrice: 0, totalPrice: 0 },
   ]);
-  const [reviewers, setReviewers] = useState<User[]>([]);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
-
-  useEffect(() => {
-    const fetchReviewers = async () => {
-      try {
-        const response = await fetch("/api/users/role/REVIEWER");
-        if (response.ok) {
-          const data = await response.json();
-          setReviewers(data);
-        } else {
-          console.error("Failed to fetch reviewers");
-        }
-      } catch (error) {
-        console.error("Error fetching reviewers:", error);
-      }
-    };
-    fetchReviewers();
-  }, []);
 
   const addItem = () => {
     setItems([
@@ -105,7 +86,6 @@ export default function CreateIOMPage() {
           unitPrice: item.unitPrice,
         })),
         requestedById: session.user.id,
-        reviewedById: formData.reviewedById || undefined,
       };
 
       const response = await fetch("/api/iom", {
@@ -189,25 +169,6 @@ export default function CreateIOMPage() {
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
             {errors.to && <p className="text-red-500 text-xs mt-1">{errors.to[0]}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Assign Reviewer
-            </label>
-            <select
-              value={formData.reviewedById}
-              onChange={(e) =>
-                setFormData({ ...formData, reviewedById: e.target.value })
-              }
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="">Select a reviewer</option>
-              {reviewers.map((reviewer) => (
-                <option key={reviewer.id} value={reviewer.id}>
-                  {reviewer.name}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
 

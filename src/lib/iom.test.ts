@@ -160,6 +160,26 @@ describe('IOM Functions', () => {
         }
       }));
     });
+
+    it('should assign a reviewer when moving from DRAFT to SUBMITTED', async () => {
+      vi.mocked(authorize).mockReturnValue(true);
+      const reviewerId = 'reviewer-id';
+      await updateIOMStatus(iomId, IOMStatus.SUBMITTED, session, undefined, reviewerId);
+
+      expect(authorize).toHaveBeenCalledWith(session, 'UPDATE_IOM');
+      expect(prisma.iOM.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: {
+          status: IOMStatus.SUBMITTED,
+          reviewedById: reviewerId,
+        }
+      }));
+      expect(logAudit).toHaveBeenCalledWith("UPDATE", expect.objectContaining({
+        changes: {
+          from: { status: IOMStatus.DRAFT },
+          to: { status: IOMStatus.SUBMITTED, approverId: undefined, reviewerId },
+        }
+      }));
+    });
   });
 
   describe('deleteIOM', () => {

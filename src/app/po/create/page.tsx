@@ -56,7 +56,6 @@ export default function CreatePOPage() {
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [ioms, setIoms] = useState<IOM[]>([]);
     const [selectedIom, setSelectedIom] = useState<IOM | null>(null);
-    const [reviewers, setReviewers] = useState<User[]>([]);
     const [formData, setFormData] = useState({
         title: "",
         iomId: "",
@@ -68,7 +67,6 @@ export default function CreatePOPage() {
         vendorAddress: "",
         vendorContact: "",
         taxRate: 18,
-        reviewedById: "",
     });
     const [items, setItems] = useState<POItem[]>([
         { itemName: "", description: "", quantity: 1, unitPrice: 0, taxRate: 18, taxAmount: 0, totalPrice: 0 }
@@ -104,20 +102,7 @@ export default function CreatePOPage() {
     useEffect(() => {
         fetchVendors();
         fetchApprovedIOMs();
-        fetchReviewers();
     }, []);
-
-    const fetchReviewers = async () => {
-        try {
-            const response = await fetch("/api/users/role/REVIEWER");
-            if (response.ok) {
-                const data = await response.json();
-                setReviewers(data);
-            }
-        } catch (error) {
-            console.error("Error fetching reviewers:", error);
-        }
-    };
 
     const fetchVendors = async () => {
         try {
@@ -233,7 +218,6 @@ export default function CreatePOPage() {
                         filetype: att.contentType,
                         size: att.size, // This now works correctly
                     })),
-                    ...(formData.reviewedById && { reviewedById: formData.reviewedById }),
                 }),
             });
             if (response.ok) {
@@ -313,25 +297,6 @@ export default function CreatePOPage() {
                   onChange={(e) => handleTaxRateChange(Number(e.target.value))}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Assign Reviewer
-                </label>
-                <select
-                  value={formData.reviewedById}
-                  onChange={(e) =>
-                    setFormData({ ...formData, reviewedById: e.target.value })
-                  }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option value="">Select a reviewer</option>
-                  {reviewers.map((reviewer) => (
-                    <option key={reviewer.id} value={reviewer.id}>
-                      {reviewer.name}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
             
