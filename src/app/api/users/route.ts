@@ -69,21 +69,46 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const roleName = searchParams.get('role');
+    const permissionName = searchParams.get('permission');
 
-    const permissions = session.user.permissions || [];
-    const canFetchManagers =
+    // Authorization logic
+    if (permissionName) {
+      // Any authenticated user can fetch users by permission for now.
+      // This is used for populating dropdowns for approvers/reviewers.
+      // The pages that use this endpoint should already have permission checks.
+    } else if (roleName) {
+      const permissions = session.user.permissions || [];
+      const canFetchManagers =
         permissions.includes('REVIEW_IOM') ||
         permissions.includes('REVIEW_PO') ||
         permissions.includes('CREATE_PR');
 
-    if (roleName === 'MANAGER' && canFetchManagers) {
-      // Allow users with specific permissions to fetch managers
+      if (roleName === 'MANAGER' && canFetchManagers) {
+        // Allow users with specific permissions to fetch managers
+      } else {
+        authorize(session, 'MANAGE_USERS');
+      }
     } else {
       authorize(session, 'MANAGE_USERS');
     }
 
+    let whereClause: any = {};
+    if (roleName) {
+      whereClause.role = { name: roleName };
+    } else if (permissionName) {
+      whereClause.role = {
+        permissions: {
+          some: {
+            permission: {
+              name: permissionName,
+            },
+          },
+        },
+      };
+    }
+
     const users = await prisma.user.findMany({
-      where: roleName ? { role: { name: roleName } } : {},
+      where: whereClause,
       select: {
         id: true,
         name: true,
