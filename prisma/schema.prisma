@@ -103,35 +103,43 @@ model VerificationToken {
 }
 
 model IOM {
-  id          String   @id @default(cuid())
-  iomNumber   String   @unique
-  title       String
-  from        String
-  to          String
-  subject     String
-  content     String?
-  status      IOMStatus @default(DRAFT)
-  totalAmount Float    @default(0)
-  
+  id             String       @id @default(cuid())
+  iomNumber      String       @unique
+  title          String
+  from           String
+  to             String
+  subject        String
+  content        String?
+  status         IOMStatus    @default(DRAFT)
+  totalAmount    Float        @default(0)
+  reviewerStatus ActionStatus @default(PENDING)
+  approverStatus ActionStatus @default(PENDING)
+
   // Relationships
   items       IOMItem[]
-  preparedBy  User     @relation(fields: [preparedById], references: [id], name: "IOMPreparedBy")
-  requestedBy User     @relation(fields: [requestedById], references: [id], name: "IOMRequestedBy")
-  reviewedBy  User?    @relation(fields: [reviewedById], references: [id], name: "IOMReviewedBy")
-  approvedBy  User?    @relation(fields: [approvedById], references: [id], name: "IOMApprovedBy")
-  
+  preparedBy  User      @relation(fields: [preparedById], references: [id], name: "IOMPreparedBy")
+  requestedBy User      @relation(fields: [requestedById], references: [id], name: "IOMRequestedBy")
+  reviewedBy  User?     @relation(fields: [reviewedById], references: [id], name: "IOMReviewedBy")
+  approvedBy  User?     @relation(fields: [approvedById], references: [id], name: "IOMApprovedBy")
+
   // Reverse relation for PurchaseOrder
   purchaseOrders PurchaseOrder[]
   attachments    Attachment[]
-  
+
   // Foreign keys
   preparedById  String
   requestedById String
   reviewedById  String?
   approvedById  String?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+enum ActionStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model AuditLog {
@@ -173,19 +181,21 @@ enum IOMStatus {
 }
 
 model PurchaseOrder {
-  id          String   @id @default(cuid())
-  poNumber    String   @unique
-  iomId       String?
-  vendorId    String?
-  title       String
-  status      POStatus @default(DRAFT)
-  totalAmount Float    @default(0)
-  taxAmount   Float    @default(0)
-  grandTotal  Float    @default(0)
-  taxRate     Float    @default(0) // GST tax rate in percentage
-  currency    String   @default("INR")
-  exchangeRate Float   @default(1.0)
-  
+  id             String       @id @default(cuid())
+  poNumber       String       @unique
+  iomId          String?
+  vendorId       String?
+  title          String
+  status         POStatus     @default(DRAFT)
+  totalAmount    Float        @default(0)
+  taxAmount      Float        @default(0)
+  grandTotal     Float        @default(0)
+  taxRate        Float        @default(0) // GST tax rate in percentage
+  currency       String       @default("INR")
+  exchangeRate   Float        @default(1.0)
+  reviewerStatus ActionStatus @default(PENDING)
+  approverStatus ActionStatus @default(PENDING)
+
   // Company and Vendor Details
   companyName     String
   companyAddress  String
@@ -193,26 +203,26 @@ model PurchaseOrder {
   vendorName      String
   vendorAddress   String
   vendorContact   String
-  
+
   // Relationships
-  items      POItem[]
-  iom        IOM?     @relation(fields: [iomId], references: [id])
-  vendor     Vendor?  @relation(fields: [vendorId], references: [id])
-  preparedBy User     @relation(fields: [preparedById], references: [id], name: "POPreparedBy")
-  requestedBy User    @relation(fields: [requestedById], references: [id], name: "PORequestedBy")
-  reviewedBy User?    @relation(fields: [reviewedById], references: [id], name: "POReviewedBy")
-  approvedBy User?    @relation(fields: [approvedById], references: [id], name: "POApprovedBy")
-  
+  items           POItem[]
+  iom             IOM?             @relation(fields: [iomId], references: [id])
+  vendor          Vendor?          @relation(fields: [vendorId], references: [id])
+  preparedBy      User             @relation(fields: [preparedById], references: [id], name: "POPreparedBy")
+  requestedBy     User             @relation(fields: [requestedById], references: [id], name: "PORequestedBy")
+  reviewedBy      User?            @relation(fields: [reviewedById], references: [id], name: "POReviewedBy")
+  approvedBy      User?            @relation(fields: [approvedById], references: [id], name: "POApprovedBy")
+
   // Reverse relation for PaymentRequest
   paymentRequests PaymentRequest[]
-  attachments   Attachment[]
-  
+  attachments     Attachment[]
+
   // Foreign keys
   preparedById  String
   requestedById String
   reviewedById  String?
   approvedById  String?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -266,17 +276,19 @@ enum POStatus {
 }
 
 model PaymentRequest {
-  id              String   @id @default(cuid())
-  prNumber        String   @unique
+  id              String        @id @default(cuid())
+  prNumber        String        @unique
   poId            String?
   title           String
-  status          PRStatus @default(DRAFT)
-  totalAmount     Float    @default(0)
-  taxAmount       Float    @default(0)
-  grandTotal      Float    @default(0)
-  currency        String   @default("INR")
-  exchangeRate    Float    @default(1.0)
-  
+  status          PRStatus      @default(DRAFT)
+  totalAmount     Float         @default(0)
+  taxAmount       Float         @default(0)
+  grandTotal      Float         @default(0)
+  currency        String        @default("INR")
+  exchangeRate    Float         @default(1.0)
+  reviewerStatus  ActionStatus  @default(PENDING)
+  approverStatus  ActionStatus  @default(PENDING)
+
   // Payment Details
   paymentTo       String
   paymentDate     DateTime
@@ -284,21 +296,21 @@ model PaymentRequest {
   paymentMethod   PaymentMethod @default(CHEQUE)
   bankAccount     String?
   referenceNumber String?
-  
+
   // Relationships
-  po         PurchaseOrder? @relation(fields: [poId], references: [id])
+  po          PurchaseOrder? @relation(fields: [poId], references: [id])
   attachments Attachment[]
-  preparedBy User           @relation(fields: [preparedById], references: [id], name: "PRPreparedBy")
-  requestedBy User          @relation(fields: [requestedById], references: [id], name: "PRRequestedBy")
-  reviewedBy User?          @relation(fields: [reviewedById], references: [id], name: "PRReviewedBy")
-  approvedBy User?          @relation(fields: [approvedById], references: [id], name: "PRApprovedBy")
-  
+  preparedBy  User           @relation(fields: [preparedById], references: [id], name: "PRPreparedBy")
+  requestedBy User           @relation(fields: [requestedById], references: [id], name: "PRRequestedBy")
+  reviewedBy  User?          @relation(fields: [reviewedById], references: [id], name: "PRReviewedBy")
+  approvedBy  User?          @relation(fields: [approvedById], references: [id], name: "PRApprovedBy")
+
   // Foreign keys
   preparedById  String
   requestedById String
   reviewedById  String?
   approvedById  String?
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

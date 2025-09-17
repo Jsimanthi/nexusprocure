@@ -25,12 +25,6 @@ export default function PODetailPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
     PaymentMethod.CHEQUE
   );
-  const [showApproverSelection, setShowApproverSelection] = useState(false);
-  const [showReviewerSelection, setShowReviewerSelection] = useState(false);
-  const [approvers, setApprovers] = useState<User[]>([]);
-  const [reviewers, setReviewers] = useState<User[]>([]);
-  const [selectedApprover, setSelectedApprover] = useState<string>('');
-  const [selectedReviewer, setSelectedReviewer] = useState<string>('');
 
   // Add permission check to view PO
   const canViewPO = useHasPermission('READ_PO');
@@ -59,35 +53,6 @@ export default function PODetailPage() {
     }
   }, [params.id]);
 
-  const fetchApprovers = useCallback(async () => {
-    try {
-      // Fetch users who are managers and have the permission to approve POs
-      const response = await fetch('/api/users?permission=APPROVE_PO&role=MANAGER');
-      if (response.ok) {
-        const data = await response.json();
-        setApprovers(data);
-      } else {
-        console.error("Failed to fetch approvers");
-      }
-    } catch (error) {
-      console.error("Error fetching approvers:", error);
-    }
-  }, []);
-
-  const fetchReviewers = useCallback(async () => {
-    try {
-      const response = await fetch('/api/users/role/REVIEWER');
-      if (response.ok) {
-        const data = await response.json();
-        setReviewers(data);
-      } else {
-        console.error("Failed to fetch reviewers");
-      }
-    } catch (error) {
-      console.error("Error fetching reviewers:", error);
-    }
-  }, []);
-
   useEffect(() => {
     // Check permission before fetching data
     if (!canViewPO) {
@@ -97,53 +62,28 @@ export default function PODetailPage() {
     if (params.id) {
       fetchPO();
     }
-    // Only fetch approvers if the user has a relevant permission
-    if (canReview) {
-      fetchApprovers();
-    }
-    if (isCreator && po?.status === POStatus.DRAFT) {
-      fetchReviewers();
-    }
-  }, [params.id, canViewPO, canReview, isCreator, po?.status, fetchPO, fetchApprovers, fetchReviewers]);
+  }, [params.id, canViewPO, fetchPO]);
 
-  const updateStatus = async (newStatus?: POStatus, approverId?: string, reviewerId?: string) => {
+  const handleAction = async (action: "APPROVE" | "REJECT" | "ORDER" | "DELIVER" | "CANCEL") => {
     setUpdating(true);
     try {
-      const body: { status?: POStatus; approverId?: string; reviewerId?: string } = {};
-      if (newStatus) body.status = newStatus;
-      if (approverId) body.approverId = approverId;
-      if (reviewerId) body.reviewerId = reviewerId;
-
       const response = await fetch(`/api/po/${params.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ action }),
       });
 
       if (response.ok) {
         const updatedPO = await response.json();
         setPo(updatedPO);
       } else {
-        console.error("Failed to update status");
+        const errorData = await response.json();
+        console.error("Failed to update status:", errorData.error);
       }
     } catch (error) {
       console.error("Error updating status:", error);
     } finally {
       setUpdating(false);
-      setShowApproverSelection(false);
-      setShowReviewerSelection(false);
-    }
-  };
-
-  const handleApproverSubmit = () => {
-    if (selectedApprover) {
-      updateStatus(POStatus.PENDING_APPROVAL, selectedApprover);
-    }
-  };
-
-  const handleReviewerSubmit = () => {
-    if (selectedReviewer) {
-      updateStatus(POStatus.SUBMITTED, undefined, selectedReviewer);
     }
   };
 
@@ -170,53 +110,6 @@ export default function PODetailPage() {
     } finally {
       setConverting(false);
     }
-  };
-
-  const getAvailableStatusActions = (currentStatus: POStatus) => {
-    const actions: { status: POStatus; label: string; color: string; onClick: () => void }[] = [];
-    
-    switch (currentStatus) {
-      case POStatus.DRAFT:
-        if (isCreator) {
-          actions.push({ status: POStatus.SUBMITTED, label: "Submit for Review", color: "bg-blue-600 hover:bg-blue-700", onClick: () => setShowReviewerSelection(true) });
-        }
-        break;
-      case POStatus.SUBMITTED:
-        if (isCreator) {
-          actions.push({ status: POStatus.DRAFT, label: "Withdraw Request", color: "bg-gray-600 hover:bg-gray-700", onClick: () => updateStatus(POStatus.DRAFT) });
-        } else if (canReview) {
-          actions.push({ status: POStatus.UNDER_REVIEW, label: "Start Review", color: "bg-yellow-600 hover:bg-yellow-700", onClick: () => updateStatus(POStatus.UNDER_REVIEW) });
-        }
-        break;
-      case POStatus.UNDER_REVIEW:
-        if (canReview) {
-          actions.push({ status: POStatus.PENDING_APPROVAL, label: "Submit for Approval", color: "bg-blue-600 hover:bg-blue-700", onClick: () => setShowApproverSelection(true) });
-        }
-        break;
-      case POStatus.PENDING_APPROVAL:
-        if (canApprove) {
-          actions.push({ status: POStatus.APPROVED, label: "Approve PO", color: "bg-green-600 hover:bg-green-700", onClick: () => updateStatus(POStatus.APPROVED) });
-        }
-        if (canReject) {
-          actions.push({ status: POStatus.REJECTED, label: "Reject PO", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(POStatus.REJECTED) });
-        }
-        break;
-      case POStatus.APPROVED:
-        if (canMarkAsOrdered) {
-          actions.push({ status: POStatus.ORDERED, label: "Mark as Ordered", color: "bg-purple-600 hover:bg-purple-700", onClick: () => updateStatus(POStatus.ORDERED) });
-        }
-        if (canCancel) {
-          actions.push({ status: POStatus.CANCELLED, label: "Cancel PO", color: "bg-red-600 hover:bg-red-700", onClick: () => updateStatus(POStatus.CANCELLED) });
-        }
-        break;
-      case POStatus.ORDERED:
-        if (canMarkAsDelivered) {
-          actions.push({ status: POStatus.DELIVERED, label: "Mark as Delivered", color: "bg-teal-600 hover:bg-teal-700", onClick: () => updateStatus(POStatus.DELIVERED) });
-        }
-        break;
-    }
-    
-    return actions;
   };
 
   const isAllowedToConvertToPR = (status: string) => {
@@ -264,7 +157,16 @@ export default function PODetailPage() {
     );
   }
 
-  const statusActions = getAvailableStatusActions(po.status as POStatus);
+  const isReviewer = session?.user?.id === po.reviewedById;
+  const isApprover = session?.user?.id === po.approvedById;
+
+  const getActionStatusColor = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return 'text-green-600';
+      case 'REJECTED': return 'text-red-600';
+      default: return 'text-yellow-600';
+    }
+  };
 
   return (
     <PageLayout title={po.title}>
@@ -427,87 +329,65 @@ export default function PODetailPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Status Actions */}
+            {/* PO Actions */}
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">PO Actions</h3>
               <div className="space-y-2">
-                {showReviewerSelection ? (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Select Reviewer</label>
-                      <select
-                        value={selectedReviewer}
-                        onChange={(e) => setSelectedReviewer(e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      >
-                        <option value="">Select a reviewer</option>
-                        {reviewers.map((reviewer) => (
-                          <option key={reviewer.id} value={reviewer.id}>
-                            {reviewer.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      onClick={handleReviewerSubmit}
-                      disabled={!selectedReviewer || updating}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
-                    >
-                      {updating ? "Submitting..." : "Confirm & Submit"}
+                {isReviewer && po.reviewerStatus === 'PENDING' && (
+                  <div className="flex space-x-2">
+                    <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                      {updating ? "Processing..." : "Approve (Review)"}
                     </button>
-                    <button
-                      onClick={() => setShowReviewerSelection(false)}
-                      disabled={updating}
-                      className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
-                    >
-                      Cancel
+                    <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                      {updating ? "Processing..." : "Reject (Review)"}
                     </button>
-                  </>
-                ) : showApproverSelection ? (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Select Approver</label>
-                      <select
-                        value={selectedApprover}
-                        onChange={(e) => setSelectedApprover(e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      >
-                        <option value="">Select an approver</option>
-                        {approvers.map((approver) => (
-                          <option key={approver.id} value={approver.id}>
-                            {approver.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      onClick={handleApproverSubmit}
-                      disabled={!selectedApprover || updating}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
-                    >
-                      {updating ? "Submitting..." : "Confirm & Submit"}
+                  </div>
+                )}
+                {isApprover && po.approverStatus === 'PENDING' && (
+                  <div className="flex space-x-2">
+                    <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                      {updating ? "Processing..." : "Approve (Final)"}
                     </button>
-                    <button
-                      onClick={() => setShowApproverSelection(false)}
-                      disabled={updating}
-                      className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
-                    >
-                      Cancel
+                    <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                      {updating ? "Processing..." : "Reject (Final)"}
                     </button>
-                  </>
-                ) : (
-                  statusActions.map((action) => (
-                    <button
-                      key={action.status}
-                      onClick={action.onClick}
-                      disabled={updating}
-                      className={`w-full ${action.color} text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50`}
-                    >
-                      {updating ? "Updating..." : action.label}
-                    </button>
-                  ))
+                  </div>
+                )}
+                {po.status === 'APPROVED' && canMarkAsOrdered && (
+                  <button onClick={() => handleAction('ORDER')} disabled={updating} className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                    {updating ? "Processing..." : "Mark as Ordered"}
+                  </button>
+                )}
+                {po.status === 'ORDERED' && canMarkAsDelivered && (
+                  <button onClick={() => handleAction('DELIVER')} disabled={updating} className="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                    {updating ? "Processing..." : "Mark as Delivered"}
+                  </button>
+                )}
+                {po.status === 'APPROVED' && canCancel && (
+                  <button onClick={() => handleAction('CANCEL')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                    {updating ? "Processing..." : "Cancel PO"}
+                  </button>
                 )}
               </div>
+            </div>
+
+            {/* Approval Status */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Approval Status</h3>
+              <dl className="space-y-3">
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Reviewer Status</dt>
+                  <dd className={`text-sm font-semibold ${getActionStatusColor(po.reviewerStatus)}`}>
+                    {po.reviewerStatus}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Approver Status</dt>
+                  <dd className={`text-sm font-semibold ${getActionStatusColor(po.approverStatus)}`}>
+                    {po.approverStatus}
+                  </dd>
+                </div>
+              </dl>
             </div>
 
             {/* Convert to PR Button */}
@@ -570,7 +450,7 @@ export default function PODetailPage() {
                 </div>
                 {po.reviewedBy && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Reviewed By</dt>
+                    <dt className="text-sm font-medium text-gray-500">Selected Reviewer</dt>
                     <dd className="text-sm text-gray-900">
                       {po.reviewedBy.name} ({po.reviewedBy.email})
                     </dd>
@@ -578,7 +458,7 @@ export default function PODetailPage() {
                 )}
                 {po.approvedBy && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Approved By</dt>
+                    <dt className="text-sm font-medium text-gray-500">Selected Approver</dt>
                     <dd className="text-sm text-gray-900">
                       {po.approvedBy.name} ({po.approvedBy.email})
                     </dd>
