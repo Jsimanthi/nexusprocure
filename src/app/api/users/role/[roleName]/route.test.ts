@@ -8,15 +8,13 @@ import { Session } from 'next-auth';
 
 // Mock dependencies
 vi.mock('@/lib/auth-config', () => ({ auth: vi.fn() }));
-vi.mock('@/lib/auth-utils', () => ({ authorize: vi.fn() }));
 vi.mock('@/lib/prisma');
 
-const mockUserSession = (hasPermission: boolean): Session => ({
+const mockUserSession = (): Session => ({
   user: {
     id: 'user-id',
     name: 'Test User',
     email: 'test@example.com',
-    permissions: hasPermission ? ['MANAGE_USERS'] : ['SOME_OTHER_PERMISSION'],
   },
   expires: '2099-01-01T00:00:00.000Z',
 });
@@ -42,29 +40,9 @@ describe('GET /api/users/role/:roleName', () => {
     expect(body.error).toBe('Unauthorized');
   });
 
-  it('should return 403 if user lacks MANAGE_USERS permission', async () => {
-    const session = mockUserSession(false);
+  it('should return 200 and a list of users for any authenticated user', async () => {
+    const session = mockUserSession();
     vi.mocked(auth).mockResolvedValue(session);
-    const authError = new Error('Not authorized. Missing required permission: MANAGE_USERS');
-    vi.mocked(authorize).mockImplementation(() => {
-      throw authError;
-    });
-
-    const request = {} as NextRequest;
-    const context = mockContext('MANAGER');
-
-    const response = await GET(request, context);
-    const body = await response.json();
-
-    expect(response.status).toBe(403);
-    expect(body.error).toContain('Not authorized');
-    expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_USERS');
-  });
-
-  it('should return 200 and a list of users if user has permission', async () => {
-    const session = mockUserSession(true);
-    vi.mocked(auth).mockResolvedValue(session);
-    vi.mocked(authorize).mockReturnValue(true);
     const mockUsers = [{ id: 'user-1', name: 'Manager One' }];
     vi.mocked(prisma.user.findMany).mockResolvedValue(mockUsers);
 
