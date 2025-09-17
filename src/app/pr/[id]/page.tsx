@@ -80,11 +80,15 @@ export default function PRDetailPage() {
     if (params.id) {
       fetchPR();
     }
-    // Only fetch approvers if the user has a relevant permission
-    if (canApprove) {
+  }, [params.id, canViewPR, fetchPR]);
+
+  useEffect(() => {
+    // Fetch approvers when the creator is viewing a draft PR,
+    // so they can select an approver when submitting.
+    if (isCreator && pr?.status === PRStatus.DRAFT) {
       fetchApprovers();
     }
-  }, [params.id, canViewPR, canApprove, fetchPR, fetchApprovers]);
+  }, [isCreator, pr, fetchApprovers]);
 
   const updateStatus = async (newStatus?: PRStatus, approverId?: string) => {
     setUpdating(true);
