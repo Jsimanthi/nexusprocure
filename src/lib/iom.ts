@@ -201,10 +201,11 @@ export async function updateIOMStatus(
   id: string,
   status: IOMStatus | undefined,
   session: Session,
-  approverId?: string
+  approverId?: string,
+  reviewerId?: string,
 ) {
-  if (!status && !approverId) {
-    throw new Error("Either status or approverId must be provided.");
+  if (!status && !approverId && !reviewerId) {
+    throw new Error("Either status, approverId, or reviewerId must be provided.");
   }
 
   // Authorize based on action
@@ -246,6 +247,12 @@ export async function updateIOMStatus(
       case IOMStatus.DRAFT: // Withdrawing
         updateData.reviewedById = null;
         updateData.approvedById = null;
+        break;
+      case IOMStatus.SUBMITTED: // Submitting for review
+        if (!reviewerId) {
+          throw new Error("Reviewer ID is required when submitting for review");
+        }
+        updateData.reviewedById = reviewerId;
         break;
       case IOMStatus.UNDER_REVIEW: // Starting review
         updateData.reviewedById = userId;
@@ -343,7 +350,7 @@ export async function updateIOMStatus(
     userName: auditUser.userName,
     changes: {
       from: { status: iom.status },
-      to: { status, approverId },
+      to: { status, approverId, reviewerId },
     },
   });
 

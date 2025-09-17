@@ -275,10 +275,11 @@ export async function updatePOStatus(
   id: string,
   status: POStatus | undefined,
   session: Session,
-  approverId?: string
+  approverId?: string,
+  reviewerId?: string,
 ) {
-  if (!status && !approverId) {
-    throw new Error("Either status or approverId must be provided.");
+  if (!status && !approverId && !reviewerId) {
+    throw new Error("Either status, approverId, or reviewerId must be provided.");
   }
 
   // Authorize based on action
@@ -319,6 +320,12 @@ export async function updatePOStatus(
       case POStatus.DRAFT: // Withdrawing
         updateData.reviewedById = null;
         updateData.approvedById = null;
+        break;
+      case POStatus.SUBMITTED: // Submitting for review
+        if (!reviewerId) {
+          throw new Error("Reviewer ID is required when submitting for review");
+        }
+        updateData.reviewedById = reviewerId;
         break;
       case POStatus.UNDER_REVIEW: // Starting review
         updateData.reviewedById = userId;
@@ -421,7 +428,7 @@ export async function updatePOStatus(
     userName: auditUser.userName,
     changes: {
       from: { status: po.status },
-      to: { status, approverId },
+      to: { status, approverId, reviewerId },
     },
   });
 

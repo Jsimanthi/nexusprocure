@@ -54,11 +54,11 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { status, approverId } = body;
+    const { status, approverId, reviewerId } = body;
 
-    if (!status && !approverId) {
+    if (!status && !approverId && !reviewerId) {
       return NextResponse.json(
-        { error: "At least one of status or approverId is required" },
+        { error: "At least one of status, approverId, or reviewerId is required" },
         { status: 400 }
       );
     }
@@ -73,7 +73,7 @@ export async function PATCH(
       }
     }
 
-    const iom = await updateIOMStatus(id, status, session, approverId);
+    const iom = await updateIOMStatus(id, status, session, approverId, reviewerId);
     
     if (!iom) {
       return NextResponse.json({ error: "IOM not found" }, { status: 404 });

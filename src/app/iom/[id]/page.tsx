@@ -20,8 +20,11 @@ export default function IOMDetailPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [approvers, setApprovers] = useState<User[]>([]);
+  const [reviewers, setReviewers] = useState<User[]>([]);
   const [selectedApprover, setSelectedApprover] = useState<string>('');
+  const [selectedReviewer, setSelectedReviewer] = useState<string>('');
   const [showApproverSelection, setShowApproverSelection] = useState(false);
+  const [showReviewerSelection, setShowReviewerSelection] = useState(false);
 
   const canApprove = useHasPermission('APPROVE_IOM');
   const canReject = useHasPermission('REJECT_IOM');
@@ -61,21 +64,41 @@ export default function IOMDetailPage() {
     }
   }, []);
 
+  const fetchReviewers = useCallback(async () => {
+    try {
+      const response = await fetch('/api/users/role/REVIEWER');
+      if (response.ok) {
+        const data = await response.json();
+        setReviewers(data);
+      } else {
+        console.error("Failed to fetch reviewers");
+      }
+    } catch (error) {
+      console.error("Error fetching reviewers:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (params.id) {
       fetchIOM();
     }
+    // Fetch approvers if the user has review permission (to select the next step)
     if (canReview) {
       fetchApprovers();
     }
-  }, [params.id, canReview, fetchIOM, fetchApprovers]);
+    // Fetch reviewers if the user is the creator of a draft (to select the next step)
+    if (isCreator && iom?.status === IOMStatus.DRAFT) {
+      fetchReviewers();
+    }
+  }, [params.id, canReview, isCreator, iom?.status, fetchIOM, fetchApprovers, fetchReviewers]);
 
-  const updateStatus = async (newStatus?: IOMStatus, approverId?: string) => {
+  const updateStatus = async (newStatus?: IOMStatus, approverId?: string, reviewerId?: string) => {
     setUpdating(true);
     try {
-      const body: { status?: IOMStatus; approverId?: string } = {};
+      const body: { status?: IOMStatus; approverId?: string; reviewerId?: string } = {};
       if (newStatus) body.status = newStatus;
       if (approverId) body.approverId = approverId;
+      if (reviewerId) body.reviewerId = reviewerId;
 
       const response = await fetch(`/api/iom/${params.id}`, {
         method: "PATCH",
@@ -96,12 +119,19 @@ export default function IOMDetailPage() {
     } finally {
       setUpdating(false);
       setShowApproverSelection(false);
+      setShowReviewerSelection(false);
     }
   };
 
   const handleApproverSubmit = () => {
     if (selectedApprover) {
       updateStatus(IOMStatus.PENDING_APPROVAL, selectedApprover);
+    }
+  };
+
+  const handleReviewerSubmit = () => {
+    if (selectedReviewer) {
+      updateStatus(IOMStatus.SUBMITTED, undefined, selectedReviewer);
     }
   };
 
@@ -115,7 +145,7 @@ export default function IOMDetailPage() {
             status: IOMStatus.SUBMITTED,
             label: "Submit for Review",
             color: "bg-blue-600 hover:bg-blue-700",
-            onClick: () => updateStatus(IOMStatus.SUBMITTED)
+            onClick: () => setShowReviewerSelection(true)
           });
         }
         break;
@@ -304,7 +334,39 @@ export default function IOMDetailPage() {
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">IOM Actions</h3>
               <div className="space-y-2">
-                {showApproverSelection ? (
+                {showReviewerSelection ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Select Reviewer</label>
+                      <select
+                        value={selectedReviewer}
+                        onChange={(e) => setSelectedReviewer(e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="">Select a reviewer</option>
+                        {reviewers.map((reviewer) => (
+                          <option key={reviewer.id} value={reviewer.id}>
+                            {reviewer.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleReviewerSubmit}
+                      disabled={!selectedReviewer || updating}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
+                    >
+                      {updating ? "Submitting..." : "Confirm & Submit"}
+                    </button>
+                    <button
+                      onClick={() => setShowReviewerSelection(false)}
+                      disabled={updating}
+                      className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : showApproverSelection ? (
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Select Approver</label>
@@ -350,7 +412,7 @@ export default function IOMDetailPage() {
                 )}
 
                 {/* Add Convert to PO button for approved IOMs */}
-                {iom.status === "APPROVED" && canCreatePO && !showApproverSelection && (
+                {iom.status === "APPROVED" && canCreatePO && !showApproverSelection && !showReviewerSelection && (
                   <Link
                     href={`/po/create?iomId=${iom.id}`}
                     className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center block"

@@ -37,6 +37,7 @@ The `callbacks` in `auth-config.ts` are critical for enriching the JWT and sessi
     *   This callback runs when the client requests the session (e.g., via `useSession()`).
     *   It populates the `session.user` object with the data from the JWT `token`.
     *   This makes `session.user.id`, `session.user.role`, and `session.user.permissions` available throughout the application.
+    *   **Note (Bug Fix)**: The user's `name` and `email` were previously missing from the token and session. These were added to both callbacks to ensure the user's full details are available to the frontend.
 
 ## 2. Authorization (AuthZ)
 
