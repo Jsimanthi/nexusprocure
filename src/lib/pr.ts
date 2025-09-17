@@ -201,6 +201,20 @@ export async function createPaymentRequest(data: CreatePrData, session: Session)
         changes: createdPr,
       });
 
+      // Notify the assigned reviewer and approver
+      if (createdPr.reviewedById) {
+        await createNotification(
+          createdPr.reviewedById,
+          `You have been assigned to review PR: ${createdPr.prNumber}`
+        );
+      }
+      if (createdPr.approvedById) {
+        await createNotification(
+          createdPr.approvedById,
+          `Your approval is requested for PR: ${createdPr.prNumber}`
+        );
+      }
+
       return createdPr;
     } catch (error) {
       lastError = error;
@@ -304,15 +318,28 @@ export async function updatePRStatus(
     },
   });
 
-  const message = `PR ${pr.prNumber} has been ${action.toLowerCase()}d by ${session.user.name}. New status: ${finalStatus}.`;
+  const actorName = session.user.name || 'A user';
+  const finalStatusMessage = `PR ${pr.prNumber} has been ${finalStatus.toLowerCase()} by the approval process.`;
 
-  await createNotification(pr.preparedById, message);
+  if (finalStatus === PRStatus.APPROVED || finalStatus === PRStatus.REJECTED) {
+    // Notify all parties about the final decision
+    const partiesToNotify = [pr.preparedById, pr.reviewedById, pr.approvedById].filter(id => id) as string[];
+    for (const partyId of partiesToNotify) {
+      await createNotification(partyId, finalStatusMessage);
+    }
+  } else {
+    // It's still pending, notify the next person in line
+    const messageToCreator = `Your PR ${pr.prNumber} was ${action.toLowerCase()}d by ${actorName} and is now pending further action.`;
+    await createNotification(pr.preparedById, messageToCreator);
 
-  const otherPartyId = isReviewer ? pr.approvedById : pr.reviewedById;
-  if (otherPartyId) {
-    await createNotification(otherPartyId, `Your action is requested on PR ${pr.prNumber}. It was ${action.toLowerCase()}d by ${session.user.name}.`);
+    const otherPartyId = isReviewer ? pr.approvedById : pr.reviewedById;
+    if (otherPartyId) {
+      const messageToOtherParty = `Action required on PR ${pr.prNumber}. It was ${action.toLowerCase()}d by ${actorName}.`;
+      await createNotification(otherPartyId, messageToOtherParty);
+    }
   }
 
+  // Send email to the creator
   const emailComponent = React.createElement(StatusUpdateEmail, {
     userName: pr.preparedBy.name || 'User',
     documentType: 'Payment Request',

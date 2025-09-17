@@ -261,6 +261,20 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
         changes: createdPo,
       });
 
+      // Notify the assigned reviewer and approver
+      if (createdPo.reviewedById) {
+        await createNotification(
+          createdPo.reviewedById,
+          `You have been assigned to review PO: ${createdPo.poNumber}`
+        );
+      }
+      if (createdPo.approvedById) {
+        await createNotification(
+          createdPo.approvedById,
+          `Your approval is requested for PO: ${createdPo.poNumber}`
+        );
+      }
+
       return createdPo;
     } catch (error) {
       lastError = error;
@@ -375,15 +389,28 @@ export async function updatePOStatus(
     },
   });
 
-  const message = `PO ${po.poNumber} has been ${action.toLowerCase()}d by ${session.user.name}. New status: ${finalStatus}.`;
+  const actorName = session.user.name || 'A user';
+  const finalStatusMessage = `PO ${po.poNumber} has been ${finalStatus.toLowerCase()} by the approval process.`;
 
-  await createNotification(po.preparedById, message);
+  if (finalStatus === POStatus.APPROVED || finalStatus === POStatus.REJECTED) {
+    // Notify all parties about the final decision
+    const partiesToNotify = [po.preparedById, po.reviewedById, po.approvedById].filter(id => id) as string[];
+    for (const partyId of partiesToNotify) {
+      await createNotification(partyId, finalStatusMessage);
+    }
+  } else {
+    // It's still pending, notify the next person in line
+    const messageToCreator = `Your PO ${po.poNumber} was ${action.toLowerCase()}d by ${actorName} and is now pending further action.`;
+    await createNotification(po.preparedById, messageToCreator);
 
-  const otherPartyId = isReviewer ? po.approvedById : po.reviewedById;
-  if (otherPartyId) {
-    await createNotification(otherPartyId, `Your action is requested on PO ${po.poNumber}. It was ${action.toLowerCase()}d by ${session.user.name}.`);
+    const otherPartyId = isReviewer ? po.approvedById : po.reviewedById;
+    if (otherPartyId) {
+      const messageToOtherParty = `Action required on PO ${po.poNumber}. It was ${action.toLowerCase()}d by ${actorName}.`;
+      await createNotification(otherPartyId, messageToOtherParty);
+    }
   }
 
+  // Send email to the creator
   const emailComponent = React.createElement(StatusUpdateEmail, {
     userName: po.preparedBy.name || 'User',
     documentType: 'Purchase Order',
