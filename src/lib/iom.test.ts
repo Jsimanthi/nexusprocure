@@ -88,97 +88,114 @@ describe('IOM Functions', () => {
 
   describe('updateIOMStatus', () => {
     const iomId = 'iom-123';
-    const session = mockUserSession(['APPROVE_IOM', 'REVIEW_IOM']);
+    const approverId = 'approver-id';
+    const reviewerId = 'reviewer-id';
+    const approverSession = mockUserSession(['APPROVE_IOM']);
+    approverSession.user.id = approverId;
+    const reviewerSession = mockUserSession(['REVIEW_IOM']);
+    reviewerSession.user.id = reviewerId;
+
+    const baseIom = {
+      id: iomId,
+      preparedById: 'user-prepared-id',
+      iomNumber: 'IOM-2024-0001',
+      status: IOMStatus.PENDING_APPROVAL,
+      reviewerStatus: "PENDING",
+      approverStatus: "PENDING",
+      approvedById: approverId,
+      reviewedById: reviewerId,
+      preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+    };
 
     beforeEach(() => {
-      const user = { id: 'user-id', name: 'Test User', email: 'test@example.com' };
-      // @ts-expect-error - We're providing a partial mock object
-      vi.mocked(prisma.iOM.findUnique).mockResolvedValue({
-        id: iomId,
-        preparedById: 'user-prepared-id',
-        iomNumber: 'IOM-2024-0001',
-        status: IOMStatus.DRAFT,
-        preparedBy: user,
+      // Mock the final update call that sets the overall status
+      vi.mocked(prisma.iOM.update).mockImplementation(async (args) => {
+        // This is a bit tricky. We need to return the result of the *first* update
+        // when the test is checking the sub-status, and the result of the *second*
+        // update for the final result.
+        // For simplicity, we'll just return a mock that works for all cases.
+        return {
+          ...baseIom,
+          // @ts-ignore
+          ...(args.data),
+        };
       });
-      // @ts-expect-error - We're providing a partial mock object
-      vi.mocked(prisma.iOM.update).mockResolvedValue({});
     });
 
-    it('should throw an error if user lacks APPROVE_IOM permission', async () => {
-      const authError = new Error('Not authorized');
-      vi.mocked(authorize).mockImplementation(() => {
-        throw authError;
-      });
+    it('should throw an error if user is not the designated reviewer or approver', async () => {
+      const unrelatedUserSession = mockUserSession(['REVIEW_IOM', 'APPROVE_IOM']);
+      unrelatedUserSession.user.id = 'unrelated-user';
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue(baseIom as any);
+
       await expect(
-        updateIOMStatus(iomId, IOMStatus.APPROVED, session)
-      ).rejects.toThrow(authError);
-      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_IOM');
+        updateIOMStatus(iomId, "APPROVE", unrelatedUserSession)
+      ).rejects.toThrow("Not authorized to perform this action on this IOM.");
     });
 
-    it('should allow a user with APPROVE_IOM permission to approve', async () => {
+    it('should allow reviewer to approve and update reviewerStatus', async () => {
       vi.mocked(authorize).mockReturnValue(true);
-      // Set initial state to PENDING_APPROVAL for this test
-      vi.mocked(prisma.iOM.findUnique).mockResolvedValue({
-        id: iomId,
-        preparedById: 'user-prepared-id',
-        iomNumber: 'IOM-2024-0001',
-        status: IOMStatus.PENDING_APPROVAL,
-        preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any);
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue(baseIom as any);
 
-      await updateIOMStatus(iomId, IOMStatus.APPROVED, session);
+      // This is the first update call for the sub-status
+      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...baseIom, reviewerStatus: "APPROVED" } as any);
+      // This is the second, final update call
+      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...baseIom, reviewerStatus: "APPROVED", status: IOMStatus.PENDING_APPROVAL } as any);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_IOM');
-      expect(prisma.iOM.update).toHaveBeenCalled();
-      expect(logAudit).toHaveBeenCalledWith("UPDATE", expect.objectContaining({
-        recordId: iomId,
-        changes: {
-          from: { status: IOMStatus.PENDING_APPROVAL },
-          to: { status: IOMStatus.APPROVED, approverId: undefined }
-        }
-      }));
+
+      await updateIOMStatus(iomId, "APPROVE", reviewerSession);
+
+      expect(authorize).toHaveBeenCalledWith(reviewerSession, 'REVIEW_IOM');
+      // Check that the first update sets the reviewerStatus
+      expect(prisma.iOM.update).toHaveBeenCalledWith({
+        where: { id: iomId },
+        data: { reviewerStatus: "APPROVED" },
+      });
     });
 
-    it('should move to PENDING_APPROVAL when reviewer submits for approval', async () => {
+    it('should allow approver to approve and update approverStatus, leading to final APPROVAL', async () => {
       vi.mocked(authorize).mockReturnValue(true);
-      const approverId = 'manager-id';
-      await updateIOMStatus(iomId, IOMStatus.PENDING_APPROVAL, session, approverId);
+      // For this test, let's assume the reviewer has already approved.
+      const iomPendingManagerApproval = { ...baseIom, reviewerStatus: 'APPROVED' };
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue(iomPendingManagerApproval as any);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'REVIEW_IOM');
-      expect(prisma.iOM.update).toHaveBeenCalledWith(expect.objectContaining({
-        data: {
-          status: IOMStatus.PENDING_APPROVAL,
-          approvedById: approverId
-        }
-      }));
-      expect(logAudit).toHaveBeenCalledWith("UPDATE", expect.objectContaining({
-        recordId: iomId,
-        changes: {
-          from: { status: IOMStatus.DRAFT },
-          to: { status: IOMStatus.PENDING_APPROVAL, approverId }
-        }
-      }));
+      // Mock the sub-status update
+      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...iomPendingManagerApproval, approverStatus: 'APPROVED' } as any);
+      // Mock the final status update
+      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...iomPendingManagerApproval, approverStatus: 'APPROVED', status: IOMStatus.APPROVED } as any);
+
+
+      await updateIOMStatus(iomId, "APPROVE", approverSession);
+
+      expect(authorize).toHaveBeenCalledWith(approverSession, 'APPROVE_IOM');
+      // Check sub-status update
+      expect(prisma.iOM.update).toHaveBeenCalledWith({
+        where: { id: iomId },
+        data: { approverStatus: "APPROVED" },
+      });
+      // Check final status update
+      expect(prisma.iOM.update).toHaveBeenCalledWith({
+        where: { id: iomId },
+        data: { status: IOMStatus.APPROVED },
+        include: expect.any(Object),
+      });
     });
 
-    it('should assign a reviewer when moving from DRAFT to SUBMITTED', async () => {
+    it('should set final status to REJECTED if reviewer rejects', async () => {
       vi.mocked(authorize).mockReturnValue(true);
-      const reviewerId = 'reviewer-id';
-      await updateIOMStatus(iomId, IOMStatus.SUBMITTED, session, undefined, reviewerId);
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue(baseIom as any);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'UPDATE_IOM');
-      expect(prisma.iOM.update).toHaveBeenCalledWith(expect.objectContaining({
-        data: {
-          status: IOMStatus.SUBMITTED,
-          reviewedById: reviewerId,
-        }
-      }));
-      expect(logAudit).toHaveBeenCalledWith("UPDATE", expect.objectContaining({
-        changes: {
-          from: { status: IOMStatus.DRAFT },
-          to: { status: IOMStatus.SUBMITTED, approverId: undefined, reviewerId },
-        }
-      }));
+      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...baseIom, reviewerStatus: 'REJECTED' } as any);
+      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...baseIom, reviewerStatus: 'REJECTED', status: IOMStatus.REJECTED } as any);
+
+      await updateIOMStatus(iomId, "REJECT", reviewerSession);
+
+      expect(authorize).toHaveBeenCalledWith(reviewerSession, 'REVIEW_IOM');
+      // Check final status update
+      expect(prisma.iOM.update).toHaveBeenCalledWith({
+        where: { id: iomId },
+        data: { status: IOMStatus.REJECTED },
+        include: expect.any(Object),
+      });
     });
   });
 
