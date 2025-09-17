@@ -310,7 +310,7 @@ export default function CreateIOMPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Unit Price ($)
+                    Unit Price (₹)
                   </label>
                   <input
                     type="number"
@@ -325,7 +325,7 @@ export default function CreateIOMPage() {
                 </div>
               </div>
               <div className="mt-2 text-right">
-                <span className="text-sm font-medium">Total: ${item.totalPrice.toFixed(2)}</span>
+                <span className="text-sm font-medium">Total: ₹{item.totalPrice.toFixed(2)}</span>
               </div>
             </div>
           ))}
@@ -333,7 +333,7 @@ export default function CreateIOMPage() {
           <div className="mt-4 p-4 bg-gray-50 rounded-lg">
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold">Grand Total:</span>
-              <span className="text-xl font-bold">${totalAmount.toFixed(2)}</span>
+              <span className="text-xl font-bold">₹{totalAmount.toFixed(2)}</span>
             </div>
           </div>
         </div>
