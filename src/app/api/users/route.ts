@@ -92,16 +92,15 @@ export async function GET(req: Request) {
       authorize(session, 'MANAGE_USERS');
     }
 
-    let whereClause: any = {};
+    let whereClause: any = { role: {} };
     if (roleName) {
-      whereClause.role = { name: roleName };
-    } else if (permissionName) {
-      whereClause.role = {
-        permissions: {
-          some: {
-            permission: {
-              name: permissionName,
-            },
+      whereClause.role.name = roleName;
+    }
+    if (permissionName) {
+      whereClause.role.permissions = {
+        some: {
+          permission: {
+            name: permissionName,
           },
         },
       };

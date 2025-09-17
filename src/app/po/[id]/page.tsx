@@ -61,8 +61,8 @@ export default function PODetailPage() {
 
   const fetchApprovers = useCallback(async () => {
     try {
-      // FIX: Fetch users by permission instead of hardcoded role
-      const response = await fetch('/api/users?permission=APPROVE_PO');
+      // Fetch users who are managers and have the permission to approve POs
+      const response = await fetch('/api/users?permission=APPROVE_PO&role=MANAGER');
       if (response.ok) {
         const data = await response.json();
         setApprovers(data);
