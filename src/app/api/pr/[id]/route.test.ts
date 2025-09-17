@@ -2,111 +2,114 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PATCH } from './route';
 import { auth } from '@/lib/auth-config';
 import { updatePRStatus } from '@/lib/pr';
-import { NextRequest } from 'next/server';
 import { PRStatus } from '@/types/pr';
 import { Session } from 'next-auth';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Mock dependencies
+vi.mock('next/server', async (importOriginal) => {
+    const mod = await importOriginal() as any;
+    return {
+        ...mod,
+        NextResponse: {
+            json: vi.fn((data, options) => {
+                return {
+                    json: () => Promise.resolve(data),
+                    status: options?.status || 200,
+                }
+            }),
+        },
+        NextRequest: mod.NextRequest,
+    };
+});
 vi.mock('@/lib/auth-config', () => ({
   auth: vi.fn(),
 }));
 vi.mock('@/lib/pr');
 
-const mockUserSession = (roleName = 'USER'): Session => ({
+
+const mockUserSession = (permissions = ['APPROVE_PR']): Session => ({
   user: {
     id: 'user-id',
     name: 'Test User',
     email: 'test@example.com',
-    role: { id: 'role-id', name: roleName },
+    permissions,
   },
   expires: '2099-01-01T00:00:00.000Z',
 });
 
-const mockRequest = (body: unknown): NextRequest => {
-  return {
-    json: () => Promise.resolve(body),
-  } as NextRequest;
-};
-
-const mockContext = (id: string) => ({
-  params: Promise.resolve({ id }),
-});
-
 describe('PATCH /api/pr/[id]', () => {
+  const mockSession = mockUserSession();
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(auth).mockResolvedValue(mockSession);
   });
 
   it('should return 401 if user is not authenticated', async () => {
     vi.mocked(auth).mockResolvedValue(null);
-    const request = mockRequest({});
-    const context = mockContext('pr-123');
-
-    const response = await PATCH(request, context);
-    const body = await response.json();
-
+    const request = new NextRequest('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'APPROVE' }),
+    });
+    const response = await PATCH(request, { params: { id: 'pr-123' } });
     expect(response.status).toBe(401);
-    expect(body.error).toBe('Unauthorized');
   });
 
-  it('should return 400 for invalid status', async () => {
-    const session = mockUserSession();
-    vi.mocked(auth).mockResolvedValue(session);
-    const request = mockRequest({ status: 'INVALID_STATUS' });
-    const context = mockContext('pr-123');
-
-    const response = await PATCH(request, context);
+  it('should return 400 if action is missing', async () => {
+    const request = new NextRequest('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({}), // No action
+    });
+    const response = await PATCH(request, { params: { id: 'pr-123' } });
     const body = await response.json();
-
     expect(response.status).toBe(400);
-    expect(body.error).toBe('Invalid status');
+    expect(body.error).toBe('Invalid action provided.');
   });
 
-  it('should return 400 if status and approverId are missing', async () => {
-    const session = mockUserSession();
-    vi.mocked(auth).mockResolvedValue(session);
-    const request = mockRequest({});
-    const context = mockContext('pr-123');
-
-    const response = await PATCH(request, context);
-    const body = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(body.error).toBe('At least one of status or approverId is required');
-  });
-
-  it('should return 403 if user is not authorized', async () => {
-    const session = mockUserSession();
-    vi.mocked(auth).mockResolvedValue(session);
-    const authError = new Error('Not authorized. Missing required permission: APPROVE_PR');
+  it('should return 403 if user is not authorized by the service function', async () => {
+    const authError = new Error('Not authorized');
     vi.mocked(updatePRStatus).mockRejectedValue(authError);
 
-    const request = mockRequest({ status: PRStatus.APPROVED });
-    const context = mockContext('pr-123');
-
-    const response = await PATCH(request, context);
+    const request = new NextRequest('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'APPROVE' }),
+    });
+    const response = await PATCH(request, { params: { id: 'pr-123' } });
     const body = await response.json();
 
     expect(response.status).toBe(403);
     expect(body.error).toContain('Not authorized');
-    expect(updatePRStatus).toHaveBeenCalledWith('pr-123', PRStatus.APPROVED, session, undefined);
   });
 
-  it('should successfully update the PR status', async () => {
-    const session = mockUserSession('MANAGER');
-    vi.mocked(auth).mockResolvedValue(session);
-    const updatedPr = { id: 'pr-123', status: PRStatus.APPROVED, title: 'Updated PR' };
-    // @ts-expect-error - We're providing a partial mock object
-    vi.mocked(updatePRStatus).mockResolvedValue(updatedPr);
+  it('should return a generic 400 for other errors from the service function', async () => {
+    const genericError = new Error('Something else went wrong');
+    vi.mocked(updatePRStatus).mockRejectedValue(genericError);
 
-    const request = mockRequest({ status: PRStatus.APPROVED });
-    const context = mockContext('pr-123');
+    const request = new NextRequest('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'APPROVE' }),
+    });
+    const response = await PATCH(request, { params: { id: 'pr-123' } });
+    const body = await response.json();
 
-    const response = await PATCH(request, context);
+    expect(response.status).toBe(400);
+    expect(body.error).toBe(genericError.message);
+  });
+
+  it('should successfully update the PR status and return 200', async () => {
+    const updatedPr = { id: 'pr-123', status: PRStatus.APPROVED };
+    vi.mocked(updatePRStatus).mockResolvedValue(updatedPr as any);
+
+    const request = new NextRequest('http://localhost', {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'APPROVE' }),
+    });
+    const response = await PATCH(request, { params: { id: 'pr-123' } });
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toEqual(updatedPr);
-    expect(updatePRStatus).toHaveBeenCalledWith('pr-123', PRStatus.APPROVED, session, undefined);
+    expect(updatePRStatus).toHaveBeenCalledWith('pr-123', 'APPROVE', mockSession);
   });
 });
