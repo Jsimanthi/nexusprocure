@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PATCH } from './route';
 import { auth } from '@/lib/auth-config';
 import { updatePRStatus } from '@/lib/pr';
-import { PRStatus } from '@/types/pr';
+import { PRStatus, PaymentRequest as PaymentRequestType } from '@/types/pr';
 import { Session } from 'next-auth';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
 // Mock dependencies
 vi.mock('next/server', async (importOriginal) => {
-    const mod = await importOriginal() as any;
+    const mod = await importOriginal<typeof import('next/server')>();
     return {
         ...mod,
         NextResponse: {
@@ -19,7 +19,6 @@ vi.mock('next/server', async (importOriginal) => {
                 }
             }),
         },
-        NextRequest: mod.NextRequest,
     };
 });
 vi.mock('@/lib/auth-config', () => ({
@@ -99,7 +98,7 @@ describe('PATCH /api/pr/[id]', () => {
 
   it('should successfully update the PR status and return 200', async () => {
     const updatedPr = { id: 'pr-123', status: PRStatus.APPROVED };
-    vi.mocked(updatePRStatus).mockResolvedValue(updatedPr as any);
+    vi.mocked(updatePRStatus).mockResolvedValue(updatedPr as PaymentRequestType);
 
     const request = new NextRequest('http://localhost', {
       method: 'PATCH',

@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getIOMs, createIOM, updateIOMStatus, deleteIOM } from './iom';
 import { prisma } from './prisma';
-import { IOMStatus } from '@/types/iom';
+import { IOM, IOMStatus } from '@/types/iom';
 import { Session } from 'next-auth';
 import { Prisma } from '@prisma/client';
 
@@ -46,8 +46,8 @@ describe('IOM Functions', () => {
       };
       const session = mockUserSession(['CREATE_IOM']);
       vi.mocked(authorize).mockReturnValue(true);
-      // @ts-expect-error - We're providing a partial mock object
-      vi.mocked(prisma.iOM.create).mockResolvedValue({ id: 'new-iom-id', ...iomData });
+
+      vi.mocked(prisma.iOM.create).mockResolvedValue({ id: 'new-iom-id', ...iomData } as unknown as IOM);
 
       await createIOM(iomData, session);
 
@@ -77,10 +77,10 @@ describe('IOM Functions', () => {
       vi.mocked(prisma.iOM.count).mockResolvedValue(0);
       vi.mocked(prisma.iOM.create)
         .mockRejectedValueOnce(uniqueConstraintError)
-        // @ts-expect-error - We're providing a partial mock object
-        .mockResolvedValue({ id: 'new-iom-id', ...iomData });
 
-      await createIOM(iomData, session);
+        .mockResolvedValue({ id: 'new-iom-id', ...iomData } as unknown as IOM);
+
+      await createIOM(iOMData, session);
 
       expect(prisma.iOM.create).toHaveBeenCalledTimes(2);
     });
@@ -116,16 +116,15 @@ describe('IOM Functions', () => {
         // For simplicity, we'll just return a mock that works for all cases.
         return {
           ...baseIom,
-          // @ts-ignore
-          ...(args.data),
-        };
+          ...(args.data as object),
+        } as unknown as IOM;
       });
     });
 
     it('should throw an error if user is not the designated reviewer or approver', async () => {
       const unrelatedUserSession = mockUserSession(['REVIEW_IOM', 'APPROVE_IOM']);
       unrelatedUserSession.user.id = 'unrelated-user';
-      vi.mocked(prisma.iOM.findUnique).mockResolvedValue(baseIom as any);
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue(baseIom as IOM);
 
       await expect(
         updateIOMStatus(iomId, "APPROVE", unrelatedUserSession)
@@ -134,12 +133,12 @@ describe('IOM Functions', () => {
 
     it('should allow reviewer to approve and update reviewerStatus', async () => {
       vi.mocked(authorize).mockReturnValue(true);
-      vi.mocked(prisma.iOM.findUnique).mockResolvedValue(baseIom as any);
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue(baseIom as IOM);
 
       // This is the first update call for the sub-status
-      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...baseIom, reviewerStatus: "APPROVED" } as any);
+      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...baseIom, reviewerStatus: "APPROVED" } as IOM);
       // This is the second, final update call
-      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...baseIom, reviewerStatus: "APPROVED", status: IOMStatus.PENDING_APPROVAL } as any);
+      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...baseIom, reviewerStatus: "APPROVED", status: IOMStatus.PENDING_APPROVAL } as IOM);
 
 
       await updateIOMStatus(iomId, "APPROVE", reviewerSession);
@@ -156,12 +155,12 @@ describe('IOM Functions', () => {
       vi.mocked(authorize).mockReturnValue(true);
       // For this test, let's assume the reviewer has already approved.
       const iomPendingManagerApproval = { ...baseIom, reviewerStatus: 'APPROVED' };
-      vi.mocked(prisma.iOM.findUnique).mockResolvedValue(iomPendingManagerApproval as any);
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue(iomPendingManagerApproval as IOM);
 
       // Mock the sub-status update
-      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...iomPendingManagerApproval, approverStatus: 'APPROVED' } as any);
+      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...iomPendingManagerApproval, approverStatus: 'APPROVED' } as IOM);
       // Mock the final status update
-      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...iomPendingManagerApproval, approverStatus: 'APPROVED', status: IOMStatus.APPROVED } as any);
+      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...iomPendingManagerApproval, approverStatus: 'APPROVED', status: IOMStatus.APPROVED } as IOM);
 
 
       await updateIOMStatus(iomId, "APPROVE", approverSession);
@@ -182,10 +181,10 @@ describe('IOM Functions', () => {
 
     it('should set final status to REJECTED if reviewer rejects', async () => {
       vi.mocked(authorize).mockReturnValue(true);
-      vi.mocked(prisma.iOM.findUnique).mockResolvedValue(baseIom as any);
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue(baseIom as IOM);
 
-      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...baseIom, reviewerStatus: 'REJECTED' } as any);
-      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...baseIom, reviewerStatus: 'REJECTED', status: IOMStatus.REJECTED } as any);
+      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...baseIom, reviewerStatus: 'REJECTED' } as IOM);
+      vi.mocked(prisma.iOM.update).mockResolvedValueOnce({ ...baseIom, reviewerStatus: 'REJECTED', status: IOMStatus.REJECTED } as IOM);
 
       await updateIOMStatus(iomId, "REJECT", reviewerSession);
 
@@ -204,8 +203,8 @@ describe('IOM Functions', () => {
       const iomId = 'iom-to-delete';
       const session = mockUserSession(['DELETE_IOM']);
       vi.mocked(authorize).mockReturnValue(true);
-      // @ts-expect-error - We're providing a partial mock object
-      vi.mocked(prisma.iOM.findUnique).mockResolvedValue({ id: iomId, title: 'IOM to Delete' });
+
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue({ id: iomId, title: 'IOM to Delete' } as IOM);
 
       await deleteIOM(iomId, session);
 
@@ -219,7 +218,7 @@ describe('IOM Functions', () => {
     beforeEach(() => {
       vi.mocked(prisma.iOM.findMany).mockResolvedValue([]);
       vi.mocked(prisma.iOM.count).mockResolvedValue(0);
-      vi.mocked(prisma.$transaction).mockImplementation(async (promises) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (promises: [Prisma.PrismaPromise<IOM[]>, Prisma.PrismaPromise<number>]) => {
         const [findManyResult, countResult] = await Promise.all(promises);
         return [findManyResult, countResult];
       });

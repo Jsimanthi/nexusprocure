@@ -4,7 +4,7 @@ import { getPRs, createPaymentRequest, updatePRStatus } from './pr';
 import { prisma } from './prisma';
 import { PRStatus, CreatePrData, PaymentRequest, PaymentMethod } from '@/types/pr';
 import { Session } from 'next-auth';
-import { Prisma, POStatus } from '@prisma/client';
+import { Prisma, POStatus, PurchaseOrder } from '@prisma/client';
 
 import { logAudit, getAuditUser } from './audit';
 
@@ -54,7 +54,7 @@ const mockPaymentRequest: PaymentRequest = {
 };
 
 // A complete mock object for the Purchase Order
-const mockPurchaseOrder = {
+const mockPurchaseOrder: PurchaseOrder = {
   id: 'po-123',
   poNumber: 'PO-2024-001',
   iomId: null,
@@ -226,16 +226,15 @@ describe('Payment Request (PR) Functions', () => {
       vi.mocked(prisma.paymentRequest.update).mockImplementation(async (args) => {
         return {
           ...basePr,
-          // @ts-ignore
-          ...(args.data),
-        };
+          ...(args.data as object),
+        } as unknown as PaymentRequest;
       });
     });
 
     it('should throw an error if user is not the designated reviewer or approver', async () => {
       const unrelatedUserSession = mockUserSession(['REVIEW_PR', 'APPROVE_PR']);
       unrelatedUserSession.user.id = 'unrelated-user';
-      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(basePr as any);
+      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(basePr as PaymentRequest);
 
       await expect(
         updatePRStatus(prId, "APPROVE", unrelatedUserSession)
@@ -244,10 +243,10 @@ describe('Payment Request (PR) Functions', () => {
 
     it('should allow reviewer to approve and update reviewerStatus', async () => {
       vi.mocked(authorize).mockReturnValue(true);
-      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(basePr as any);
+      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(basePr as PaymentRequest);
 
-      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...basePr, reviewerStatus: "APPROVED" } as any);
-      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...basePr, reviewerStatus: "APPROVED", status: PRStatus.PENDING_APPROVAL } as any);
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...basePr, reviewerStatus: "APPROVED" } as PaymentRequest);
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...basePr, reviewerStatus: "APPROVED", status: PRStatus.PENDING_APPROVAL } as PaymentRequest);
 
       await updatePRStatus(prId, "APPROVE", reviewerSession);
 
@@ -261,10 +260,10 @@ describe('Payment Request (PR) Functions', () => {
     it('should allow approver to approve and update approverStatus, leading to final APPROVAL', async () => {
       vi.mocked(authorize).mockReturnValue(true);
       const prPendingManagerApproval = { ...basePr, reviewerStatus: 'APPROVED' };
-      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(prPendingManagerApproval as any);
+      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(prPendingManagerApproval as PaymentRequest);
 
-      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...prPendingManagerApproval, approverStatus: 'APPROVED' } as any);
-      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...prPendingManagerApproval, approverStatus: 'APPROVED', status: PRStatus.APPROVED } as any);
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...prPendingManagerApproval, approverStatus: 'APPROVED' } as PaymentRequest);
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...prPendingManagerApproval, approverStatus: 'APPROVED', status: PRStatus.APPROVED } as PaymentRequest);
 
       await updatePRStatus(prId, "APPROVE", approverSession);
 
@@ -282,10 +281,10 @@ describe('Payment Request (PR) Functions', () => {
 
     it('should set final status to REJECTED if reviewer rejects', async () => {
       vi.mocked(authorize).mockReturnValue(true);
-      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(basePr as any);
+      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(basePr as PaymentRequest);
 
-      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...basePr, reviewerStatus: 'REJECTED' } as any);
-      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...basePr, reviewerStatus: 'REJECTED', status: PRStatus.REJECTED } as any);
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...basePr, reviewerStatus: 'REJECTED' } as PaymentRequest);
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...basePr, reviewerStatus: 'REJECTED', status: PRStatus.REJECTED } as PaymentRequest);
 
       await updatePRStatus(prId, "REJECT", reviewerSession);
 
@@ -302,7 +301,7 @@ describe('Payment Request (PR) Functions', () => {
     beforeEach(() => {
       vi.mocked(prisma.paymentRequest.findMany).mockResolvedValue([]);
       vi.mocked(prisma.paymentRequest.count).mockResolvedValue(0);
-      vi.mocked(prisma.$transaction).mockImplementation(async (promises) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (promises: [Prisma.PrismaPromise<PaymentRequest[]>, Prisma.PrismaPromise<number>]) => {
         const [findManyResult, countResult] = await Promise.all(promises);
         return [findManyResult, countResult];
       });
