@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getPOs, createPurchaseOrder, updatePOStatus, createVendor, updateVendor, deleteVendor } from './po';
 import { prisma } from './prisma';
-import { POStatus } from '@/types/po';
+import { PurchaseOrder, POStatus } from '@/types/po';
 import { Session } from 'next-auth';
 import { Prisma } from '@prisma/client';
 import { createVendorSchema } from './schemas';
@@ -19,7 +19,7 @@ vi.mock('@/lib/email');
 vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
 vi.mock('@/lib/auth-utils');
-import { getAuditUser, logAudit } from './audit';
+import { getAuditUser } from './audit';
 
 const mockUserSession = (permissions: string[] = []): Session => ({
   user: {
@@ -63,8 +63,8 @@ describe('Purchase Order Functions', () => {
       const session = mockUserSession(['CREATE_PO']);
       vi.mocked(authorize).mockReturnValue(true);
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
-      // @ts-expect-error - We are providing a partial mock object to resolve the promise
-      vi.mocked(prisma.purchaseOrder.create).mockResolvedValue({ id: 'po-123', ...inputData });
+
+      vi.mocked(prisma.purchaseOrder.create).mockResolvedValue({ id: 'po-123', ...inputData } as unknown as PurchaseOrder);
 
       // Act
       await createPurchaseOrder(inputData, session);
@@ -99,8 +99,8 @@ describe('Purchase Order Functions', () => {
       const session = mockUserSession(['CREATE_PO']);
       vi.mocked(authorize).mockReturnValue(true);
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
-      // @ts-expect-error - We are providing a partial mock object to resolve the promise
-      vi.mocked(prisma.purchaseOrder.create).mockResolvedValue({ id: 'po-124', ...inputData });
+
+      vi.mocked(prisma.purchaseOrder.create).mockResolvedValue({ id: 'po-124', ...inputData } as unknown as PurchaseOrder);
 
       // Act
       await createPurchaseOrder(inputData, session);
@@ -146,8 +146,8 @@ describe('Purchase Order Functions', () => {
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
       vi.mocked(prisma.purchaseOrder.create)
         .mockRejectedValueOnce(uniqueConstraintError) // Fail first time
-        // @ts-expect-error - We are providing a partial mock object to resolve the promise
-        .mockResolvedValue({ id: 'po-125', ...inputData }); // Succeed second time
+
+        .mockResolvedValue({ id: 'po-125', ...inputData } as unknown as PurchaseOrder); // Succeed second time
 
       // Act
       await createPurchaseOrder(inputData, session);
@@ -182,16 +182,15 @@ describe('Purchase Order Functions', () => {
       vi.mocked(prisma.purchaseOrder.update).mockImplementation(async (args) => {
         return {
           ...basePo,
-          // @ts-ignore
-          ...(args.data),
-        };
+          ...(args.data as object),
+        } as unknown as PurchaseOrder;
       });
     });
 
     it('should throw an error if user is not the designated reviewer or approver', async () => {
       const unrelatedUserSession = mockUserSession(['REVIEW_PO', 'APPROVE_PO']);
       unrelatedUserSession.user.id = 'unrelated-user';
-      vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue(basePo as any);
+      vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue(basePo as PurchaseOrder);
 
       await expect(
         updatePOStatus(poId, "APPROVE", unrelatedUserSession)
@@ -200,10 +199,10 @@ describe('Purchase Order Functions', () => {
 
     it('should allow reviewer to approve and update reviewerStatus', async () => {
       vi.mocked(authorize).mockReturnValue(true);
-      vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue(basePo as any);
+      vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue(basePo as PurchaseOrder);
 
-      vi.mocked(prisma.purchaseOrder.update).mockResolvedValueOnce({ ...basePo, reviewerStatus: "APPROVED" } as any);
-      vi.mocked(prisma.purchaseOrder.update).mockResolvedValueOnce({ ...basePo, reviewerStatus: "APPROVED", status: POStatus.PENDING_APPROVAL } as any);
+      vi.mocked(prisma.purchaseOrder.update).mockResolvedValueOnce({ ...basePo, reviewerStatus: "APPROVED" } as PurchaseOrder);
+      vi.mocked(prisma.purchaseOrder.update).mockResolvedValueOnce({ ...basePo, reviewerStatus: "APPROVED", status: POStatus.PENDING_APPROVAL } as PurchaseOrder);
 
       await updatePOStatus(poId, "APPROVE", reviewerSession);
 
@@ -217,10 +216,10 @@ describe('Purchase Order Functions', () => {
     it('should allow approver to approve and update approverStatus, leading to final APPROVAL', async () => {
       vi.mocked(authorize).mockReturnValue(true);
       const poPendingManagerApproval = { ...basePo, reviewerStatus: 'APPROVED' };
-      vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue(poPendingManagerApproval as any);
+      vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue(poPendingManagerApproval as PurchaseOrder);
 
-      vi.mocked(prisma.purchaseOrder.update).mockResolvedValueOnce({ ...poPendingManagerApproval, approverStatus: 'APPROVED' } as any);
-      vi.mocked(prisma.purchaseOrder.update).mockResolvedValueOnce({ ...poPendingManagerApproval, approverStatus: 'APPROVED', status: POStatus.APPROVED } as any);
+      vi.mocked(prisma.purchaseOrder.update).mockResolvedValueOnce({ ...poPendingManagerApproval, approverStatus: 'APPROVED' } as PurchaseOrder);
+      vi.mocked(prisma.purchaseOrder.update).mockResolvedValueOnce({ ...poPendingManagerApproval, approverStatus: 'APPROVED', status: POStatus.APPROVED } as PurchaseOrder);
 
       await updatePOStatus(poId, "APPROVE", approverSession);
 
@@ -238,10 +237,10 @@ describe('Purchase Order Functions', () => {
 
     it('should set final status to REJECTED if reviewer rejects', async () => {
       vi.mocked(authorize).mockReturnValue(true);
-      vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue(basePo as any);
+      vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue(basePo as PurchaseOrder);
 
-      vi.mocked(prisma.purchaseOrder.update).mockResolvedValueOnce({ ...basePo, reviewerStatus: 'REJECTED' } as any);
-      vi.mocked(prisma.purchaseOrder.update).mockResolvedValueOnce({ ...basePo, reviewerStatus: 'REJECTED', status: POStatus.REJECTED } as any);
+      vi.mocked(prisma.purchaseOrder.update).mockResolvedValueOnce({ ...basePo, reviewerStatus: 'REJECTED' } as PurchaseOrder);
+      vi.mocked(prisma.purchaseOrder.update).mockResolvedValueOnce({ ...basePo, reviewerStatus: 'REJECTED', status: POStatus.REJECTED } as PurchaseOrder);
 
       await updatePOStatus(poId, "REJECT", reviewerSession);
 
@@ -314,7 +313,7 @@ describe('Purchase Order Functions', () => {
     beforeEach(() => {
       vi.mocked(prisma.purchaseOrder.findMany).mockResolvedValue([]);
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
-      vi.mocked(prisma.$transaction).mockImplementation(async (promises) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (promises: [Prisma.PrismaPromise<PurchaseOrder[]>, Prisma.PrismaPromise<number>]) => {
         const [findManyResult, countResult] = await Promise.all(promises);
         return [findManyResult, countResult];
       });
