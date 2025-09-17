@@ -4,13 +4,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { IOM, IOMStatus } from "@/types/iom";
+import { IOM } from "@/types/iom";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import { getIOMStatusColor } from "@/lib/utils";
 import { useHasPermission } from "@/hooks/useHasPermission";
-import { User } from "next-auth";
 import { useSession } from "next-auth/react";
 
 export default function IOMDetailPage() {
@@ -20,12 +19,7 @@ export default function IOMDetailPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
-  const canApprove = useHasPermission('APPROVE_IOM');
-  const canReject = useHasPermission('REJECT_IOM');
-  const canReview = useHasPermission('REVIEW_IOM');
-  const canComplete = useHasPermission('COMPLETE_IOM');
   const canCreatePO = useHasPermission('CREATE_PO');
-  const isCreator = session?.user?.id === iom?.preparedById;
 
   const fetchIOM = useCallback(async () => {
     setLoading(true);

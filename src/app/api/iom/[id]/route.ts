@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
 import { getIOMById, updateIOMStatus } from "@/lib/iom";
-import { IOMStatus } from "@/types/iom";
 import { authorize } from "@/lib/auth-utils";
 
 export async function GET(

@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { PurchaseOrder, POStatus } from "@/types/po";
+import { PurchaseOrder } from "@/types/po";
 import { PaymentMethod } from "@/types/pr";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -12,7 +12,6 @@ import ErrorDisplay from "@/components/ErrorDisplay";
 import { getPOStatusColor } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useHasPermission } from "@/hooks/useHasPermission";
-import { User } from "next-auth";
 
 export default function PODetailPage() {
   const params = useParams();
@@ -28,14 +27,10 @@ export default function PODetailPage() {
 
   // Add permission check to view PO
   const canViewPO = useHasPermission('READ_PO');
-  const canApprove = useHasPermission('APPROVE_PO');
-  const canReject = useHasPermission('REJECT_PO');
-  const canReview = useHasPermission('REVIEW_PO');
   const canCancel = useHasPermission('CANCEL_PO');
   const canMarkAsOrdered = useHasPermission('ORDER_PO');
   const canMarkAsDelivered = useHasPermission('DELIVER_PO');
   const canConvertToPR = useHasPermission('CREATE_PR');
-  const isCreator = session?.user?.id === po?.preparedById;
 
   const fetchPO = useCallback(async () => {
     try {

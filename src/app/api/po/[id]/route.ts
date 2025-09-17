@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
 import { getPOById, updatePOStatus } from "@/lib/po";
-import { POStatus } from "@/types/po";
 import { authorize } from "@/lib/auth-utils";
 
 export async function GET(
@@ -64,7 +63,7 @@ export async function PATCH(
       );
     }
 
-    const po = await updatePOStatus(id, action as any, session);
+    const po = await updatePOStatus(id, action as "APPROVE" | "REJECT" | "ORDER" | "DELIVER" | "CANCEL", session);
     
     if (!po) {
       return NextResponse.json({ error: "PO not found" }, { status: 404 });

@@ -65,6 +65,13 @@ export async function POST(
       taxRate: body.taxRate || 0,
     }));
 
+    if (!iom.reviewedById || !iom.approvedById) {
+      return NextResponse.json(
+        { error: "IOM is missing a reviewer or approver and cannot be converted." },
+        { status: 400 }
+      );
+    }
+
     const po = await createPurchaseOrder({
       title: `PO for ${iom.title}`,
       iomId: iom.id,
@@ -79,7 +86,9 @@ export async function POST(
       items: poItems,
       preparedById: session.user.id,
       requestedById: iom.requestedById,
-    }, session); // <-- Add session as second argument
+      reviewerId: iom.reviewedById,
+      approverId: iom.approvedById,
+    }, session);
 
     return NextResponse.json(po, { status: 201 });
   } catch (error) {

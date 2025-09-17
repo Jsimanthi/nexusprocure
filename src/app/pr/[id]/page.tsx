@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { PaymentRequest, PRStatus, PaymentMethod } from "@/types/pr";
+import { PaymentRequest, PaymentMethod } from "@/types/pr";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
@@ -13,7 +13,6 @@ import { UserRef } from "@/types/iom";
 import { PurchaseOrder } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import { useHasPermission } from "@/hooks/useHasPermission";
-import { User } from "next-auth";
 
 type FullPaymentRequest = PaymentRequest & {
   po?: Partial<PurchaseOrder> | null;
@@ -32,11 +31,8 @@ export default function PRDetailPage() {
 
   // Added permission check to view PR
   const canViewPR = useHasPermission('READ_PR');
-  const canApprove = useHasPermission('APPROVE_PR');
-  const canReject = useHasPermission('REJECT_PR');
   const canCancel = useHasPermission('CANCEL_PR');
   const canMarkAsProcessed = useHasPermission('PROCESS_PR');
-  const isCreator = session?.user?.id === pr?.preparedById;
 
   const fetchPR = useCallback(async () => {
     try {

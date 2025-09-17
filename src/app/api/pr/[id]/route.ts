@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
 import { authorize } from "@/lib/auth-utils"; // Make sure to import authorize
 import { getPRById, updatePRStatus } from "@/lib/pr";
-import { PRStatus } from "@/types/pr";
 
 export async function GET(
   request: NextRequest,
@@ -65,7 +64,7 @@ export async function PATCH(
       );
     }
 
-    const pr = await updatePRStatus(id, action as any, session);
+    const pr = await updatePRStatus(id, action as "APPROVE" | "REJECT" | "PROCESS" | "CANCEL", session);
 
     if (!pr) {
       return NextResponse.json({ error: "Payment Request not found" }, { status: 404 });

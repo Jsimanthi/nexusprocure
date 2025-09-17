@@ -26,6 +26,8 @@ export interface IOM {
   content?: string;
   status: IOMStatus;
   totalAmount: number;
+  reviewerStatus: ActionStatus;
+  approverStatus: ActionStatus;
   items: IOMItem[];
   preparedById: string;
   requestedById: string;
@@ -39,6 +41,12 @@ export interface IOM {
   requestedBy?: UserRef;
   reviewedBy?: UserRef;
   approvedBy?: UserRef;
+}
+
+export enum ActionStatus {
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED"
 }
 
 export enum IOMStatus {

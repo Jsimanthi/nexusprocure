@@ -57,6 +57,13 @@ export async function POST(
       );
     }
 
+    if (!po.reviewedById || !po.approvedById) {
+      return NextResponse.json(
+        { error: "PO is missing a reviewer or approver and cannot be converted." },
+        { status: 400 }
+      );
+    }
+
     const pr = await createPaymentRequest({
       title: `PR for ${po.title}`,
       poId: po.id,
@@ -69,6 +76,8 @@ export async function POST(
       preparedById: session.user.id,
       requestedById: po.requestedById,
       purpose: `Payment for PO #${po.poNumber}`,
+      reviewerId: po.reviewedById,
+      approverId: po.approvedById,
     }, session);
 
     return NextResponse.json(pr, { status: 201 });
