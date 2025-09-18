@@ -137,7 +137,7 @@ type CreatePrData = z.infer<typeof createPrSchema> & {
 
 export async function createPaymentRequest(data: CreatePrData, session: Session) {
   authorize(session, 'CREATE_PR');
-  const { status, ...restOfData } = data;
+  const { status, reviewerId, approverId, ...restOfData } = data;
   if (restOfData.poId) {
     const po = await prisma.purchaseOrder.findUnique({
       where: { id: restOfData.poId },
@@ -160,8 +160,8 @@ export async function createPaymentRequest(data: CreatePrData, session: Session)
     // Explicitly construct the data for prisma create
     const prData = {
       ...restOfData,
-      reviewedById: restOfData.reviewerId, // map reviewerId to reviewedById
-      approvedById: restOfData.approverId, // map approverId to approvedById
+      reviewedById: reviewerId, // map reviewerId to reviewedById
+      approvedById: approverId, // map approverId to approvedById
       prNumber: prNumber,
       status: status || PRStatus.PENDING_APPROVAL,
     };
