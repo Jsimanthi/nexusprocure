@@ -25,6 +25,13 @@ export const pusherServer = new Pusher({
  * @param data The payload for the event.
  */
 export async function triggerPusherEvent<T>(channel: string, event: string, data: T) {
+  // Gracefully handle cases where Pusher is not configured, especially in test environments
+  if (!process.env.PUSHER_APP_ID || !process.env.PUSHER_KEY || !process.env.PUSHER_SECRET || !process.env.PUSHER_CLUSTER) {
+    // You can log a message here if you want to be explicit during development
+    // console.log("Pusher not configured, skipping event trigger.");
+    return;
+  }
+
   try {
     await pusherServer.trigger(channel, event, data);
   } catch (error) {

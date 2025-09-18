@@ -6,6 +6,7 @@ import { PurchaseOrder, POStatus } from "@/types/po";
 import SearchAndFilter from "@/components/SearchAndFilter";
 import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
+import ConfirmationModal from "@/components/ConfirmationModal";
 import { formatCurrency, getPOStatusColor } from "@/lib/utils";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
@@ -31,6 +32,8 @@ export default function POListPage() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPoId, setSelectedPoId] = useState<string | null>(null);
   const pageSize = 10;
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -60,10 +63,17 @@ export default function POListPage() {
     },
   });
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this PO?")) {
-      deleteMutation.mutate(id);
+  const handleDelete = (id:string) => {
+    setSelectedPoId(id);
+    setIsModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedPoId) {
+      deleteMutation.mutate(selectedPoId);
     }
+    setIsModalOpen(false);
+    setSelectedPoId(null);
   };
 
   const pos = data?.pos || [];
@@ -103,6 +113,13 @@ export default function POListPage() {
   return (
     <PageLayout title="Purchase Orders">
       <>
+        <ConfirmationModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onConfirm={confirmDelete}
+          title="Confirm Deletion"
+          message="Are you sure you want to delete this Purchase Order? This action cannot be undone."
+        />
         <div className="flex justify-end mb-6">
           {canCreate && (
             <Link

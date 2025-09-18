@@ -5,6 +5,7 @@ import { PaymentRequest, PRStatus } from "@/types/pr";
 import SearchAndFilter from "@/components/SearchAndFilter";
 import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
+import ConfirmationModal from "@/components/ConfirmationModal";
 import { formatCurrency, getPRStatusColor } from "@/lib/utils";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
@@ -32,6 +33,8 @@ export default function PRListPage() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPrId, setSelectedPrId] = useState<string | null>(null);
   const pageSize = 10;
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -62,12 +65,19 @@ export default function PRListPage() {
   });
 
   const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this PR?")) {
-      deleteMutation.mutate(id);
-    }
+    setSelectedPrId(id);
+    setIsModalOpen(true);
   };
 
-  const prs = data?.prs || [];
+  const confirmDelete = () => {
+    if (selectedPrId) {
+      deleteMutation.mutate(selectedPrId);
+    }
+    setIsModalOpen(false);
+    setSelectedPrId(null);
+  };
+
+  const prs = data?.paymentRequests || [];
   const total = data?.total || 0;
   const pageCount = Math.ceil(total / pageSize);
 
@@ -104,6 +114,13 @@ export default function PRListPage() {
   return (
     <PageLayout title="Payment Requests">
       <>
+        <ConfirmationModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onConfirm={confirmDelete}
+          title="Confirm Deletion"
+          message="Are you sure you want to delete this Payment Request? This action cannot be undone."
+        />
         <div className="flex justify-end mb-6">
           {canCreate && (
             <Link

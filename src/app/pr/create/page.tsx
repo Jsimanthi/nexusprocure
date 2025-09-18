@@ -37,6 +37,7 @@ export default function CreatePRPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
+  const [draftLoading, setDraftLoading] = useState(false);
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string[]>>>({});
@@ -122,15 +123,19 @@ export default function CreatePRPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleSave = async (isDraft: boolean) => {
+    if (isDraft) {
+      setDraftLoading(true);
+    } else {
+      setLoading(true);
+    }
     setErrors({});
 
     const requestedById = formData.requestedById || session?.user?.id;
     if (!requestedById) {
       toast.error("You must be logged in to create a Payment Request.");
       setLoading(false);
+      setDraftLoading(false);
       return;
     }
 
@@ -142,6 +147,7 @@ export default function CreatePRPage() {
         requestedById,
         reviewerId: formData.reviewerId,
         approverId: formData.approverId,
+        status: isDraft ? 'DRAFT' : 'PENDING_APPROVAL',
       };
 
       const response = await fetch("/api/pr", {
@@ -153,7 +159,7 @@ export default function CreatePRPage() {
       });
 
       if (response.ok) {
-        toast.success("Payment Request created successfully!");
+        toast.success(`Payment Request ${isDraft ? 'saved as draft' : 'submitted'} successfully!`);
         router.push("/pr");
       } else {
         const errorData = await response.json();
@@ -168,7 +174,11 @@ export default function CreatePRPage() {
       console.error("Error creating PR:", error);
       toast.error("An unexpected error occurred.");
     } finally {
-      setLoading(false);
+      if (isDraft) {
+        setDraftLoading(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -177,7 +187,7 @@ export default function CreatePRPage() {
       <div className="mb-6">
         <BackButton href="/pr" />
       </div>
-      <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
+      <form onSubmit={(e) => { e.preventDefault(); handleSave(false); }} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
           {/* PO Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Select Purchase Order</label>
@@ -373,17 +383,26 @@ export default function CreatePRPage() {
             <button
               type="button"
               onClick={() => router.push("/pr")}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md"
             >
               Cancel
             </button>
             <button
-              type="submit"
-              disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
+              type="button"
+              onClick={() => handleSave(true)}
+              disabled={draftLoading || loading}
+              className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
             >
-            {loading && <LoadingSpinner />}
-              {loading ? "Creating..." : "Create PR"}
+              {draftLoading && <LoadingSpinner />}
+              {draftLoading ? "Saving..." : "Save as Draft"}
+            </button>
+            <button
+              type="submit"
+              disabled={draftLoading || loading}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
+            >
+              {loading && <LoadingSpinner />}
+              {loading ? "Submitting..." : "Submit for Approval"}
             </button>
           </div>
         </form>

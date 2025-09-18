@@ -132,20 +132,22 @@ export async function getPOsForPR() {
 
 type CreatePrData = z.infer<typeof createPrSchema> & {
   preparedById: string;
+  status?: PRStatus;
 };
 
 export async function createPaymentRequest(data: CreatePrData, session: Session) {
   authorize(session, 'CREATE_PR');
-  if (data.poId) {
+  const { status, ...restOfData } = data;
+  if (restOfData.poId) {
     const po = await prisma.purchaseOrder.findUnique({
-      where: { id: data.poId },
+      where: { id: restOfData.poId },
       select: { grandTotal: true },
     });
     if (!po) {
       throw new Error("Associated Purchase Order not found.");
     }
-    if (data.grandTotal > po.grandTotal) {
-      throw new Error(`Payment Request total (${data.grandTotal}) cannot exceed Purchase Order total (${po.grandTotal}).`);
+    if (restOfData.grandTotal > po.grandTotal) {
+      throw new Error(`Payment Request total (${restOfData.grandTotal}) cannot exceed Purchase Order total (${po.grandTotal}).`);
     }
   }
 
@@ -157,23 +159,11 @@ export async function createPaymentRequest(data: CreatePrData, session: Session)
 
     // Explicitly construct the data for prisma create
     const prData = {
-      title: data.title,
-      poId: data.poId,
-      paymentTo: data.paymentTo,
-      paymentDate: data.paymentDate,
-      purpose: data.purpose,
-      paymentMethod: data.paymentMethod,
-      bankAccount: data.bankAccount,
-      referenceNumber: data.referenceNumber,
-      totalAmount: data.totalAmount,
-      taxAmount: data.taxAmount,
-      grandTotal: data.grandTotal,
-      preparedById: data.preparedById,
-      requestedById: data.requestedById,
-      reviewedById: data.reviewerId, // map reviewerId to reviewedById
-      approvedById: data.approverId, // map approverId to approvedById
+      ...restOfData,
+      reviewedById: restOfData.reviewerId, // map reviewerId to reviewedById
+      approvedById: restOfData.approverId, // map approverId to approvedById
       prNumber: prNumber,
-      status: PRStatus.PENDING_APPROVAL,
+      status: status || PRStatus.PENDING_APPROVAL,
     };
 
     try {
@@ -201,18 +191,26 @@ export async function createPaymentRequest(data: CreatePrData, session: Session)
         changes: createdPr,
       });
 
-      // Notify the assigned reviewer and approver
-      if (createdPr.reviewedById) {
-        await createNotification(
-          createdPr.reviewedById,
-          `You have been assigned to review PR: ${createdPr.prNumber}`
-        );
-      }
-      if (createdPr.approvedById) {
-        await createNotification(
-          createdPr.approvedById,
-          `Your approval is requested for PR: ${createdPr.prNumber}`
-        );
+      // Notify the assigned reviewer and approver, but only if it's not a draft
+      if (createdPr.status !== PRStatus.DRAFT) {
+        if (createdPr.reviewedById) {
+          await createNotification(
+            createdPr.reviewedById,
+            `You have been assigned to review PR: ${createdPr.prNumber}`
+          );
+        }
+        if (createdPr.approvedById) {
+          await createNotification(
+            createdPr.approvedById,
+            `Your approval is requested for PR: ${createdPr.prNumber}`
+          );
+        }
+        if (createdPr.preparedById) {
+          await createNotification(
+            createdPr.preparedById,
+            `Your PR ${createdPr.prNumber} has been submitted for review.`
+          );
+        }
       }
 
       return createdPr;
