@@ -135,12 +135,12 @@ export async function getIOMById(id: string) {
 
 type CreateIomData = z.infer<typeof createIomSchema> & {
   preparedById: string;
+  status?: string;
 };
 
 export async function createIOM(data: CreateIomData, session: Session) {
   authorize(session, 'CREATE_IOM');
-  const { items, ...restOfData } = data;
-  const { reviewerId, approverId, ...actualRest } = restOfData;
+  const { items, reviewerId, approverId, status, ...actualRest } = data;
   const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
   const maxRetries = 3;
@@ -154,7 +154,7 @@ export async function createIOM(data: CreateIomData, session: Session) {
       totalAmount,
       reviewedById: reviewerId,
       approvedById: approverId,
-      status: IOMStatus.PENDING_APPROVAL,
+      status: status === 'DRAFT' ? IOMStatus.DRAFT : IOMStatus.PENDING_APPROVAL,
       items: {
         create: items.map(item => ({
           ...item,
@@ -192,18 +192,20 @@ export async function createIOM(data: CreateIomData, session: Session) {
         changes: createdIom,
       });
 
-      // Notify the assigned reviewer and approver
-      if (createdIom.reviewedById) {
-        await createNotification(
-          createdIom.reviewedById,
-          `You have been assigned to review IOM: ${createdIom.iomNumber}`
-        );
-      }
-      if (createdIom.approvedById) {
-        await createNotification(
-          createdIom.approvedById,
-          `Your approval is requested for IOM: ${createdIom.iomNumber}`
-        );
+      // Only send notifications if it's not a draft
+      if (createdIom.status !== IOMStatus.DRAFT) {
+        if (createdIom.reviewedById) {
+          await createNotification(
+            createdIom.reviewedById,
+            `You have been assigned to review IOM: ${createdIom.iomNumber}`
+          );
+        }
+        if (createdIom.approvedById) {
+          await createNotification(
+            createdIom.approvedById,
+            `Your approval is requested for IOM: ${createdIom.iomNumber}`
+          );
+        }
       }
 
       return createdIom;

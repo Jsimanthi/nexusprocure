@@ -8,6 +8,7 @@ import Link from "next/link";
 import FileUpload, { UploadedFileResult } from "@/components/FileUpload"; // 1. Import the new type
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { useSession } from "next-auth/react";
 
 interface User {
   id: string;
@@ -50,7 +51,9 @@ interface IOM {
 
 export default function CreatePOPage() {
     const router = useRouter();
+    const { data: session } = useSession();
     const [loading, setLoading] = useState(false);
+    const [draftLoading, setDraftLoading] = useState(false);
     // 2. Use the new type for the attachments state
     const [attachments, setAttachments] = useState<UploadedFileResult[]>([]);
     const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -210,10 +213,19 @@ export default function CreatePOPage() {
         setItems(updatedItems);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
+    const handleSave = async (isDraft: boolean) => {
+        if (!session?.user?.id) {
+            console.error("User session not found. Cannot create PO.");
+            return;
+        }
+
+        if (isDraft) {
+            setDraftLoading(true);
+        } else {
+            setLoading(true);
+        }
         setErrors({});
+
         try {
             const response = await fetch("/api/po", {
                 method: "POST",
@@ -236,8 +248,10 @@ export default function CreatePOPage() {
                         filetype: att.contentType,
                         size: att.size,
                     })),
+                    requestedById: session.user.id,
                     reviewerId: formData.reviewerId,
                     approverId: formData.approverId,
+                    status: isDraft ? 'DRAFT' : 'PENDING_APPROVAL',
                 }),
             });
             if (response.ok) {
@@ -254,7 +268,11 @@ export default function CreatePOPage() {
         } catch (error) {
             console.error("Error creating PO:", error);
         } finally {
-            setLoading(false);
+            if (isDraft) {
+                setDraftLoading(false);
+            } else {
+                setLoading(false);
+            }
         }
     };
 
@@ -269,7 +287,7 @@ export default function CreatePOPage() {
               &larr; Back to PO List
             </Link>
           </div>
-          <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
+          <form onSubmit={(e) => { e.preventDefault(); handleSave(false); }} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700">Select Approved IOM (Optional)</label>
               <select
@@ -564,17 +582,26 @@ export default function CreatePOPage() {
             <div className="flex justify-end space-x-4">
               <Link
                 href="/po"
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md"
               >
                 Cancel
               </Link>
               <button
-                type="submit"
-                disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
+                type="button"
+                onClick={() => handleSave(true)}
+                disabled={draftLoading || loading}
+                className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
               >
-            {loading && <LoadingSpinner />}
-                {loading ? "Creating..." : "Create PO"}
+                {draftLoading && <LoadingSpinner />}
+                {draftLoading ? "Saving..." : "Save as Draft"}
+              </button>
+              <button
+                type="submit"
+                disabled={draftLoading || loading}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
+              >
+                {loading && <LoadingSpinner />}
+                {loading ? "Submitting..." : "Submit for Approval"}
               </button>
             </div>
           </form>

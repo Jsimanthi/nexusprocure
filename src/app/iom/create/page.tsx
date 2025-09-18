@@ -27,6 +27,7 @@ export default function CreateIOMPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
+  const [draftLoading, setDraftLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     from: "",
@@ -91,19 +92,21 @@ export default function CreateIOMPage() {
     setItems(newItems);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSave = async (isDraft: boolean) => {
     if (!session?.user?.id) {
       console.error("User session not found. Cannot create IOM.");
       return;
     }
 
-    setLoading(true);
+    if (isDraft) {
+      setDraftLoading(true);
+    } else {
+      setLoading(true);
+    }
     setErrors({});
 
     try {
-      const payload: z.infer<typeof createIomSchema> = {
+      const payload: z.infer<typeof createIomSchema> & { status?: string } = {
         title: formData.title,
         from: formData.from,
         to: formData.to,
@@ -118,6 +121,7 @@ export default function CreateIOMPage() {
         requestedById: session.user.id,
         reviewerId: formData.reviewerId,
         approverId: formData.approverId,
+        status: isDraft ? 'DRAFT' : 'PENDING_APPROVAL',
       };
 
       const response = await fetch("/api/iom", {
@@ -141,7 +145,11 @@ export default function CreateIOMPage() {
     } catch (error) {
       console.error("Error creating IOM:", error);
     } finally {
-      setLoading(false);
+      if (isDraft) {
+        setDraftLoading(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -154,7 +162,7 @@ export default function CreateIOMPage() {
           &larr; Back to IOM List
         </Link>
       </div>
-      <form onSubmit={handleSubmit} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
+      <form onSubmit={(e) => { e.preventDefault(); handleSave(false); }} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
         {/* Basic IOM Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -209,9 +217,8 @@ export default function CreateIOMPage() {
           <h3 className="text-lg font-medium text-gray-900 mb-4">Approval Workflow</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Reviewer *</label>
+              <label className="block text-sm font-medium text-gray-700">Reviewer</label>
               <select
-                required
                 value={formData.reviewerId}
                 onChange={(e) => setFormData({ ...formData, reviewerId: e.target.value })}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -226,9 +233,8 @@ export default function CreateIOMPage() {
               {errors.reviewerId && <p className="text-red-500 text-xs mt-1">{errors.reviewerId[0]}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Approver (Manager) *</label>
+              <label className="block text-sm font-medium text-gray-700">Approver (Manager)</label>
               <select
-                required
                 value={formData.approverId}
                 onChange={(e) => setFormData({ ...formData, approverId: e.target.value })}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -341,17 +347,26 @@ export default function CreateIOMPage() {
         <div className="flex justify-end space-x-4">
           <Link
             href="/iom"
-            className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md"
           >
             Cancel
           </Link>
           <button
+            type="button"
+            onClick={() => handleSave(true)}
+            disabled={draftLoading || loading}
+            className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
+          >
+            {draftLoading && <LoadingSpinner />}
+            {draftLoading ? "Saving..." : "Save as Draft"}
+          </button>
+          <button
             type="submit"
-            disabled={loading}
+            disabled={draftLoading || loading}
             className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
           >
             {loading && <LoadingSpinner />}
-            {loading ? "Creating..." : "Create IOM"}
+            {loading ? "Submitting..." : "Submit for Approval"}
           </button>
         </div>
       </form>

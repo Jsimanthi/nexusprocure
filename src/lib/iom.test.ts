@@ -80,7 +80,7 @@ describe('IOM Functions', () => {
 
         .mockResolvedValue({ id: 'new-iom-id', ...iomData } as unknown as IOM);
 
-      await createIOM(iOMData, session);
+      await createIOM(iomData, session);
 
       expect(prisma.iOM.create).toHaveBeenCalledTimes(2);
     });

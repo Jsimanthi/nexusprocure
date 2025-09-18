@@ -178,11 +178,12 @@ export async function deleteVendor(id: string, session: Session) {
 type CreatePoData = z.infer<typeof createPoSchema> & {
   preparedById: string;
   requestedById: string;
+  status?: POStatus;
 };
 
 export async function createPurchaseOrder(data: CreatePoData, session: Session) {
   authorize(session, 'CREATE_PO');
-  const { items, attachments, reviewerId, approverId, ...restOfData } = data;
+  const { items, attachments, reviewerId, approverId, status, ...restOfData } = data;
 
   let totalAmount = 0;
   let taxAmount = 0;
@@ -216,7 +217,7 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
       grandTotal,
       reviewedById: reviewerId,
       approvedById: approverId,
-      status: POStatus.PENDING_APPROVAL,
+      status: status || POStatus.PENDING_APPROVAL,
       items: {
         create: itemsWithTotals,
       },
@@ -261,18 +262,26 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
         changes: createdPo,
       });
 
-      // Notify the assigned reviewer and approver
-      if (createdPo.reviewedById) {
-        await createNotification(
-          createdPo.reviewedById,
-          `You have been assigned to review PO: ${createdPo.poNumber}`
-        );
-      }
-      if (createdPo.approvedById) {
-        await createNotification(
-          createdPo.approvedById,
-          `Your approval is requested for PO: ${createdPo.poNumber}`
-        );
+      // Notify the assigned reviewer and approver, but only if it's not a draft
+      if (createdPo.status !== POStatus.DRAFT) {
+        if (createdPo.reviewedById) {
+          await createNotification(
+            createdPo.reviewedById,
+            `You have been assigned to review PO: ${createdPo.poNumber}`
+          );
+        }
+        if (createdPo.approvedById) {
+          await createNotification(
+            createdPo.approvedById,
+            `Your approval is requested for PO: ${createdPo.poNumber}`
+          );
+        }
+        if (createdPo.preparedById) {
+           await createNotification(
+            createdPo.preparedById,
+            `Your PO ${createdPo.poNumber} has been submitted for review.`
+          );
+        }
       }
 
       return createdPo;

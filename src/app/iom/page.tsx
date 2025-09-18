@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Eye, Trash2, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import ConfirmationModal from "@/components/ConfirmationModal";
 
 const fetchIOMs = async (page = 1, pageSize = 10, searchTerm = "", status = "") => {
   const params = new URLSearchParams({
@@ -32,6 +33,8 @@ export default function IOMListPage() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIomId, setSelectedIomId] = useState<string | null>(null);
   const pageSize = 10;
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -62,9 +65,16 @@ export default function IOMListPage() {
   });
 
   const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this IOM?")) {
-      deleteMutation.mutate(id);
+    setSelectedIomId(id);
+    setIsModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedIomId) {
+      deleteMutation.mutate(selectedIomId);
     }
+    setIsModalOpen(false);
+    setSelectedIomId(null);
   };
 
   const ioms = data?.ioms || [];
@@ -104,6 +114,13 @@ if (isError) {
 return (
   <PageLayout title="IOM Management">
     <>
+      <ConfirmationModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this IOM? This action cannot be undone."
+      />
       <div className="flex justify-end mb-6">
         {canCreate && (
           <Link
