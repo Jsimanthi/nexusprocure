@@ -4,7 +4,7 @@ import { getPRs, createPaymentRequest, updatePRStatus } from './pr';
 import { prisma } from './prisma';
 import { PRStatus, CreatePrData, PaymentRequest, PaymentMethod } from '@/types/pr';
 import { Session } from 'next-auth';
-import { Prisma, POStatus } from '@prisma/client';
+import { Prisma, POStatus, PurchaseOrder } from '@prisma/client';
 
 import { logAudit, getAuditUser } from './audit';
 
@@ -54,7 +54,7 @@ const mockPaymentRequest: PaymentRequest = {
 };
 
 // A complete mock object for the Purchase Order
-const mockPurchaseOrder = {
+const mockPurchaseOrder: PurchaseOrder = {
   id: 'po-123',
   poNumber: 'PO-2024-001',
   iomId: null,
@@ -204,74 +204,96 @@ describe('Payment Request (PR) Functions', () => {
 
   describe('updatePRStatus', () => {
     const prId = 'pr-123';
-    const session = mockUserSession(['APPROVE_PR', 'UPDATE_PR']);
+    const approverId = 'approver-id';
+    const reviewerId = 'reviewer-id';
+    const approverSession = mockUserSession(['APPROVE_PR']);
+    approverSession.user.id = approverId;
+    const reviewerSession = mockUserSession(['REVIEW_PR']);
+    reviewerSession.user.id = reviewerId;
+
+    const basePr = {
+      ...mockPaymentRequest,
+      id: prId,
+      status: PRStatus.PENDING_APPROVAL,
+      reviewerStatus: "PENDING",
+      approverStatus: "PENDING",
+      approvedById: approverId,
+      reviewedById: reviewerId,
+      preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+    };
 
     beforeEach(() => {
-      const user = { id: 'user-id', name: 'Test User', email: 'test@example.com' };
-      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue({
-        ...mockPaymentRequest,
-        id: prId,
-        status: PRStatus.DRAFT,
-        preparedBy: user,
-        preparedById: user.id,
-      });
-      vi.mocked(prisma.paymentRequest.update).mockResolvedValue({
-        ...mockPaymentRequest,
-        id: prId,
-        status: PRStatus.APPROVED,
-        preparedBy: user,
-        preparedById: user.id,
+      vi.mocked(prisma.paymentRequest.update).mockImplementation(async (args) => {
+        return {
+          ...basePr,
+          ...(args.data as object),
+        } as unknown as PaymentRequest;
       });
     });
 
-    it('should throw an error if user does not have APPROVE_PR permission', async () => {
-      const authError = new Error('Not authorized. Missing required permission: APPROVE_PR');
-      vi.mocked(authorize).mockImplementation(() => {
-        throw authError;
-      });
+    it('should throw an error if user is not the designated reviewer or approver', async () => {
+      const unrelatedUserSession = mockUserSession(['REVIEW_PR', 'APPROVE_PR']);
+      unrelatedUserSession.user.id = 'unrelated-user';
+      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(basePr as PaymentRequest);
 
       await expect(
-        updatePRStatus(prId, PRStatus.APPROVED, session)
-      ).rejects.toThrow(authError);
-
-      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_PR');
-      expect(prisma.paymentRequest.update).not.toHaveBeenCalled();
+        updatePRStatus(prId, "APPROVE", unrelatedUserSession)
+      ).rejects.toThrow("Not authorized to perform this action on this PR.");
     });
 
-    it('should allow a user with APPROVE_PR permission to approve a PR', async () => {
+    it('should allow reviewer to approve and update reviewerStatus', async () => {
       vi.mocked(authorize).mockReturnValue(true);
-      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue({
-        ...mockPaymentRequest,
-        id: prId,
-        status: PRStatus.PENDING_APPROVAL,
-        preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(basePr as PaymentRequest);
+
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...basePr, reviewerStatus: "APPROVED" } as PaymentRequest);
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...basePr, reviewerStatus: "APPROVED", status: PRStatus.PENDING_APPROVAL } as PaymentRequest);
+
+      await updatePRStatus(prId, "APPROVE", reviewerSession);
+
+      expect(authorize).toHaveBeenCalledWith(reviewerSession, 'REVIEW_PR');
+      expect(prisma.paymentRequest.update).toHaveBeenCalledWith({
+        where: { id: prId },
+        data: { reviewerStatus: "APPROVED" },
       });
-
-      await updatePRStatus(prId, PRStatus.APPROVED, session);
-
-      expect(authorize).toHaveBeenCalledWith(session, 'APPROVE_PR');
-      expect(prisma.paymentRequest.update).toHaveBeenCalled();
-      expect(logAudit).toHaveBeenCalledWith("UPDATE", expect.objectContaining({
-        recordId: prId,
-        changes: {
-          from: { status: PRStatus.PENDING_APPROVAL },
-          to: { status: PRStatus.APPROVED, approverId: undefined }
-        }
-      }));
     });
 
-    it('should move to PENDING_APPROVAL when reviewer submits for approval', async () => {
+    it('should allow approver to approve and update approverStatus, leading to final APPROVAL', async () => {
       vi.mocked(authorize).mockReturnValue(true);
-      const approverId = 'manager-id';
-      await updatePRStatus(prId, PRStatus.PENDING_APPROVAL, session, approverId);
+      const prPendingManagerApproval = { ...basePr, reviewerStatus: 'APPROVED' };
+      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(prPendingManagerApproval as PaymentRequest);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'UPDATE_PR');
-      expect(prisma.paymentRequest.update).toHaveBeenCalledWith(expect.objectContaining({
-        data: {
-          status: PRStatus.PENDING_APPROVAL,
-          approvedById: approverId
-        }
-      }));
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...prPendingManagerApproval, approverStatus: 'APPROVED' } as PaymentRequest);
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...prPendingManagerApproval, approverStatus: 'APPROVED', status: PRStatus.APPROVED } as PaymentRequest);
+
+      await updatePRStatus(prId, "APPROVE", approverSession);
+
+      expect(authorize).toHaveBeenCalledWith(approverSession, 'APPROVE_PR');
+      expect(prisma.paymentRequest.update).toHaveBeenCalledWith({
+        where: { id: prId },
+        data: { approverStatus: "APPROVED" },
+      });
+      expect(prisma.paymentRequest.update).toHaveBeenCalledWith({
+        where: { id: prId },
+        data: { status: PRStatus.APPROVED },
+        include: expect.any(Object),
+      });
+    });
+
+    it('should set final status to REJECTED if reviewer rejects', async () => {
+      vi.mocked(authorize).mockReturnValue(true);
+      vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(basePr as PaymentRequest);
+
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...basePr, reviewerStatus: 'REJECTED' } as PaymentRequest);
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValueOnce({ ...basePr, reviewerStatus: 'REJECTED', status: PRStatus.REJECTED } as PaymentRequest);
+
+      await updatePRStatus(prId, "REJECT", reviewerSession);
+
+      expect(authorize).toHaveBeenCalledWith(reviewerSession, 'REVIEW_PR');
+      expect(prisma.paymentRequest.update).toHaveBeenCalledWith({
+        where: { id: prId },
+        data: { status: PRStatus.REJECTED },
+        include: expect.any(Object),
+      });
     });
   });
 
@@ -279,7 +301,7 @@ describe('Payment Request (PR) Functions', () => {
     beforeEach(() => {
       vi.mocked(prisma.paymentRequest.findMany).mockResolvedValue([]);
       vi.mocked(prisma.paymentRequest.count).mockResolvedValue(0);
-      vi.mocked(prisma.$transaction).mockImplementation(async (promises) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (promises: [Prisma.PrismaPromise<PaymentRequest[]>, Prisma.PrismaPromise<number>]) => {
         const [findManyResult, countResult] = await Promise.all(promises);
         return [findManyResult, countResult];
       });

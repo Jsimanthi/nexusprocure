@@ -192,6 +192,20 @@ export async function createIOM(data: CreateIomData, session: Session) {
         changes: createdIom,
       });
 
+      // Notify the assigned reviewer and approver
+      if (createdIom.reviewedById) {
+        await createNotification(
+          createdIom.reviewedById,
+          `You have been assigned to review IOM: ${createdIom.iomNumber}`
+        );
+      }
+      if (createdIom.approvedById) {
+        await createNotification(
+          createdIom.approvedById,
+          `Your approval is requested for IOM: ${createdIom.iomNumber}`
+        );
+      }
+
       return createdIom;
     } catch (error) {
       lastError = error;
@@ -290,17 +304,28 @@ export async function updateIOMStatus(
   });
 
   // Notifications and Audit Logging
-  const message = `IOM ${iom.iomNumber} has been ${action.toLowerCase()}d by ${session.user.name}. New status: ${finalStatus}.`;
+  const actorName = session.user.name || 'A user';
+  const finalStatusMessage = `IOM ${iom.iomNumber} has been ${finalStatus.toLowerCase()} by the approval process.`;
 
-  // Notify creator
-  await createNotification(iom.preparedById, message);
+  if (finalStatus === IOMStatus.APPROVED || finalStatus === IOMStatus.REJECTED) {
+    // Notify all parties about the final decision
+    const partiesToNotify = [iom.preparedById, iom.reviewedById, iom.approvedById].filter(id => id) as string[];
+    for (const partyId of partiesToNotify) {
+      await createNotification(partyId, finalStatusMessage);
+    }
+  } else {
+    // It's still pending, notify the next person in line
+    const messageToCreator = `Your IOM ${iom.iomNumber} was ${action.toLowerCase()}d by ${actorName} and is now pending further action.`;
+    await createNotification(iom.preparedById, messageToCreator);
 
-  // Notify the other party (reviewer or approver)
-  const otherPartyId = isReviewer ? iom.approvedById : iom.reviewedById;
-  if (otherPartyId) {
-    await createNotification(otherPartyId, `Your action is requested on IOM ${iom.iomNumber}. It was ${action.toLowerCase()}d by ${session.user.name}.`);
+    const otherPartyId = isReviewer ? iom.approvedById : iom.reviewedById;
+    if (otherPartyId) {
+      const messageToOtherParty = `Action required on IOM ${iom.iomNumber}. It was ${action.toLowerCase()}d by ${actorName}.`;
+      await createNotification(otherPartyId, messageToOtherParty);
+    }
   }
 
+  // Send email to the creator
   const emailComponent = React.createElement(StatusUpdateEmail, {
     userName: iom.preparedBy.name || 'User',
     documentType: 'IOM',

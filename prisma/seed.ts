@@ -154,6 +154,55 @@ async function main() {
     console.log('Default admin user created.');
   }
 
+  // Create additional users
+  const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
+  const reviewerRole = await prisma.role.findUnique({ where: { name: 'REVIEWER' } });
+  const managerRole = await prisma.role.findUnique({ where: { name: 'MANAGER' } });
+  const hashedPassword123 = await bcrypt.hash('password123', 10);
+
+  if (userRole) {
+    await prisma.user.upsert({
+      where: { email: 'j@s.com' },
+      update: {},
+      create: {
+        name: 'JS User',
+        email: 'j@s.com',
+        password: hashedPassword123,
+        roleId: userRole.id,
+      },
+    });
+    console.log('Created user: j@s.com');
+  }
+
+  if (reviewerRole) {
+    await prisma.user.upsert({
+      where: { email: 's@j.com' },
+      update: {},
+      create: {
+        name: 'SJ Reviewer',
+        email: 's@j.com',
+        password: hashedPassword123,
+        roleId: reviewerRole.id,
+      },
+    });
+    console.log('Created user: s@j.com');
+  }
+
+  if (managerRole) {
+    await prisma.user.upsert({
+      where: { email: 'svel@d.com' },
+      update: {},
+      create: {
+        name: 'Svel Manager',
+        email: 'svel@d.com',
+        password: hashedPassword123,
+        roleId: managerRole.id,
+      },
+    });
+    console.log('Created user: svel@d.com');
+  }
+
+
   console.log('Seeding finished.');
 }
 

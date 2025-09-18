@@ -85,8 +85,8 @@ export default function CreatePRPage() {
   const fetchUsers = async () => {
     try {
       const [reviewersRes, approversRes] = await Promise.all([
-        fetch("/api/users?role=REVIEWER"),
-        fetch("/api/users?role=MANAGER"),
+        fetch("/api/users/role/REVIEWER"),
+        fetch("/api/users/role/MANAGER"),
       ]);
       if (reviewersRes.ok) setReviewers(await reviewersRes.json());
       if (approversRes.ok) setApprovers(await approversRes.json());
