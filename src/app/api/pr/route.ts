@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       status,
     });
 
-    return NextResponse.json({ prs: paymentRequests, total });
+    return NextResponse.json({ paymentRequests, total });
   } catch (error) {
     console.error("Error fetching PRs:", error);
     return NextResponse.json(
