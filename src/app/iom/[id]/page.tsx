@@ -143,12 +143,14 @@ export default function IOMDetailPage() {
                 <dt className="text-sm font-medium text-gray-500">Subject</dt>
                 <dd className="mt-1 text-sm text-gray-900">{iom.subject}</dd>
               </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Total Amount</dt>
-                <dd className="mt-1 text-sm font-semibold text-gray-900">
-                  ₹{iom.totalAmount.toFixed(2)}
-                </dd>
-              </div>
+              {iom.items && iom.items.length > 0 && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Total Amount</dt>
+                  <dd className="mt-1 text-sm font-semibold text-gray-900">
+                    ₹{iom.totalAmount.toFixed(2)}
+                  </dd>
+                </div>
+              )}
               <div className="md:col-span-2">
                 <dt className="text-sm font-medium text-gray-500">Content</dt>
                 <dd className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">
@@ -159,63 +161,65 @@ export default function IOMDetailPage() {
           </div>
 
           {/* Items List */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Items</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Item
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Qty
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Unit Price
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {iom.items.map((item, index) => (
-                    <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {item.itemName}
+          {iom.items && iom.items.length > 0 && (
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4">Items</h2>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Item
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Description
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Qty
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Unit Price
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {iom.items.map((item, index) => (
+                      <tr key={index}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {item.itemName}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {item.description || "-"}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.quantity}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          ₹{item.unitPrice.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                          ₹{item.totalPrice.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-50">
+                    <tr>
+                      <td colSpan={4} className="px-6 py-4 text-sm font-medium text-gray-900 text-right">
+                        Grand Total:
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {item.description || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {item.quantity}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        ₹{item.unitPrice.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                        ₹{item.totalPrice.toFixed(2)}
+                      <td className="px-6 py-4 text-sm font-bold text-gray-900">
+                        ₹{iom.totalAmount.toFixed(2)}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-gray-50">
-                  <tr>
-                    <td colSpan={4} className="px-6 py-4 text-sm font-medium text-gray-900 text-right">
-                      Grand Total:
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-gray-900">
-                      ₹{iom.totalAmount.toFixed(2)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                  </tfoot>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Sidebar */}
