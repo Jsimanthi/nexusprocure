@@ -45,7 +45,7 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
     <div className="bg-white shadow-lg p-8 md:p-12" id="iom-print-view">
       {/* Header */}
       <header className="text-center mb-8">
-        {/* Logo could go here if available */}
+        <img src="/file.svg" alt="Company Logo" className="mx-auto h-12 w-auto mb-4" />
         <h1 className="text-2xl font-bold text-gray-800">Sri Bhagyalakshmi Enterprises</h1>
         {loadingHeader ? (
           <p>Loading header...</p>
@@ -124,7 +124,7 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
       )}
 
       {/* Footer Signatures */}
-      <footer className="mt-24 pt-8">
+      <footer className="mt-24 pt-8 iom-footer">
         <div className="grid grid-cols-4 gap-4 text-center text-xs">
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Prepared By</p>
