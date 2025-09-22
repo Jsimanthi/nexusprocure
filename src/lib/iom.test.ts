@@ -84,6 +84,42 @@ describe('IOM Functions', () => {
 
       expect(prisma.iOM.create).toHaveBeenCalledTimes(2);
     });
+
+    it('should correctly create an IOM when the items array is not provided (undefined)', async () => {
+      const iomData = {
+        title: 'Test IOM without items',
+        from: 'Dept C',
+        to: 'Dept D',
+        subject: 'No Items Test',
+        preparedById: 'user-2',
+        requestedById: 'user-2',
+        // 'items' property is intentionally omitted
+      };
+      const session = mockUserSession(['CREATE_IOM']);
+      vi.mocked(authorize).mockReturnValue(true);
+
+      const createdIomMock = { id: 'new-iom-id-no-items', ...iomData, items: [] } as unknown as IOM;
+      vi.mocked(prisma.iOM.create).mockResolvedValue(createdIomMock);
+
+      // We need to cast because the base type expects `items`
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await createIOM(iomData as any, session);
+
+      expect(authorize).toHaveBeenCalledWith(session, 'CREATE_IOM');
+
+      // Check that prisma.create was called with an empty array for items
+      expect(prisma.iOM.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            items: {
+              create: [], // This is the crucial check
+            },
+            totalAmount: 0, // And this one
+          }),
+        })
+      );
+      expect(logAudit).toHaveBeenCalledWith("CREATE", expect.any(Object));
+    });
   });
 
   describe('updateIOMStatus', () => {
