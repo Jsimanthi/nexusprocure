@@ -73,7 +73,7 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
           <p><span className="font-bold">SUB:</span> {iom.subject}</p>
         </div>
         <div>
-          <p><span className="font-bold">Date:</span> {new Date(iom.createdAt).toLocaleDateString()}</p>
+          {iom.createdAt && <p><span className="font-bold">Date:</span> {new Date(iom.createdAt).toLocaleDateString()}</p>}
         </div>
       </div>
 

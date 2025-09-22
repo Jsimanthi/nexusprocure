@@ -1,17 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { auth } from '@/lib/auth-config';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { key: string } }
+  request: NextRequest,
+  context: { params: Promise<{ key: string }> }
 ) {
   const session = await auth();
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { key } = params;
+  const { key } = await context.params;
 
   if (!key) {
     return NextResponse.json({ error: 'Key is required' }, { status: 400 });
