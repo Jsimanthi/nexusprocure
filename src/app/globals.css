@@ -187,4 +187,23 @@
   .text-card-foreground {
     color: black !important;
   }
+
+  /* More specific print styles for the IOM view */
+  body * {
+    visibility: hidden;
+  }
+  #iom-print-view, #iom-print-view * {
+    visibility: visible;
+  }
+  #iom-print-view {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+  }
 }
