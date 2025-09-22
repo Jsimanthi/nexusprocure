@@ -202,22 +202,6 @@ async function main() {
     console.log('Created user: svel@d.com');
   }
 
-  // Seed default settings
-  console.log('Seeding default settings...');
-  const iomHeaderText = `Sri Bhagyalakshmi Enterprises
-Corp.Office: No.1038, Thandarai Main Road | Vayalanallur, Pattabiram, | Chennai-600072.
-Regd. Office: Plot No.1310, 13th Main Road, | Anna Nagar, | Chennai - 600040. | Ph: 044-46664666`;
-
-  await prisma.setting.upsert({
-    where: { key: 'iomHeaderText' },
-    update: { value: iomHeaderText },
-    create: {
-      key: 'iomHeaderText',
-      value: iomHeaderText,
-    },
-  });
-  console.log('Default settings seeded.');
-
 
   console.log('Seeding finished.');
 }

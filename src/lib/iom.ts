@@ -141,7 +141,7 @@ type CreateIomData = z.infer<typeof createIomSchema> & {
 export async function createIOM(data: CreateIomData, session: Session) {
   authorize(session, 'CREATE_IOM');
   const { items, reviewerId, approverId, status, ...actualRest } = data;
-  const totalAmount = (items || []).reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
   const maxRetries = 3;
   let lastError: unknown;
@@ -156,7 +156,7 @@ export async function createIOM(data: CreateIomData, session: Session) {
       approvedById: approverId,
       status: status === 'DRAFT' ? IOMStatus.DRAFT : IOMStatus.PENDING_APPROVAL,
       items: {
-        create: (items || []).map(item => ({
+        create: items.map(item => ({
           ...item,
           totalPrice: item.quantity * item.unitPrice,
         })),

@@ -44,3 +44,4 @@ next-env.d.ts
 
 # Prisma
 /prisma/schema.prod.prisma
+/prisma/dev.db
