@@ -102,6 +102,7 @@ describe('IOM Functions', () => {
       vi.mocked(prisma.iOM.create).mockResolvedValue(createdIomMock);
 
       // We need to cast because the base type expects `items`
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await createIOM(iomData as any, session);
 
       expect(authorize).toHaveBeenCalledWith(session, 'CREATE_IOM');
