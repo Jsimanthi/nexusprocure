@@ -123,68 +123,40 @@
 
 /* Add print styles at the end */
 @media print {
-  .dashboard-header,
-  .status-actions,
-  .print-button {
-    display: none !important;
+  /* Hide everything by default */
+  body * {
+    visibility: hidden;
   }
-  
-  body {
-    font-size: 12pt;
-    line-height: 1.4;
-    background: white !important;
-    color: black !important;
+
+  /* Make only the printable area and its children visible */
+  #iom-print-view, #iom-print-view * {
+    visibility: visible;
   }
-  
-  .container {
-    width: 100% !important;
-    max-width: none !important;
-    margin: 0 !important;
+
+  /* Position the printable area to take up the whole page */
+  #iom-print-view {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
     padding: 0 !important;
-  }
-  
-  .shadow {
+    margin: 0 !important;
+    border: none !important;
     box-shadow: none !important;
+
+    /* Use flexbox for layout */
+    display: flex;
+    flex-direction: column;
+    min-height: 98vh; /* Use vh to approximate page height, leaving a small margin */
   }
-  
-  .rounded-lg {
-    border-radius: 0 !important;
+
+  /* Allow the main content to expand and push the footer down */
+  .iom-main-content {
+    flex-grow: 1;
   }
-  
-  .bg-gray-100 {
-    background-color: #f7fafc !important;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-  
-  /* Ensure good contrast for printing */
-  .text-gray-900 {
-    color: #000 !important;
-  }
-  
-  .text-gray-600 {
-    color: #333 !important;
-  }
-  
-  .text-gray-500 {
-    color: #666 !important;
-  }
-  
-  /* Reset background colors for print */
-  .bg-background {
-    background: white !important;
-  }
-  
-  .bg-card {
-    background: white !important;
-  }
-  
-  /* Reset text colors for print */
-  .text-foreground {
-    color: black !important;
-  }
-  
-  .text-card-foreground {
-    color: black !important;
+
+  /* Ensure the footer doesn't shrink */
+  .iom-footer {
+    flex-shrink: 0;
   }
 }
