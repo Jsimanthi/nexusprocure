@@ -104,6 +104,86 @@ export default function IOMDetailPage() {
     }
   };
 
+  const handlePrint = () => {
+    const printContent = document.getElementById('iom-print-view');
+    if (!printContent) return;
+
+    // Create a new iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    // Get stylesheets from the main document
+    const styles = Array.from(document.styleSheets)
+      .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : (s.ownerNode as HTMLStyleElement)?.outerHTML)
+      .join('');
+
+    // Get the HTML content to print
+    const content = printContent.outerHTML;
+
+    // Write the content and styles to the iframe
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <title>Print IOM</title>
+          ${styles}
+          <style>
+            @page {
+              size: auto;
+              margin: 0;
+            }
+            body, html {
+              margin: 0;
+              padding: 0;
+              height: 100%;
+            }
+            body {
+              padding: 2rem; /* Add some margin to the printed page */
+              box-sizing: border-box;
+            }
+            #iom-print-view {
+              display: flex;
+              flex-direction: column;
+              height: 100%; /* Make the container fill the body height */
+              box-shadow: none !important;
+              border: none !important;
+            }
+            .iom-main-content {
+              flex-grow: 1;
+            }
+            .iom-footer {
+              flex-shrink: 0;
+              margin-top: auto; /* Push footer to the bottom */
+            }
+          </style>
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    // Wait for the iframe to load before printing
+    iframe.onload = function() {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      }
+      // Remove the iframe after a delay
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 500);
+    };
+  };
+
   return (
     <PageLayout title={iom.title}>
       <div className="mb-6">
@@ -225,7 +305,7 @@ export default function IOMDetailPage() {
           {/* Print Button */}
           <div className="bg-white shadow rounded-lg p-6">
             <button
-              onClick={() => window.print()}
+              onClick={handlePrint}
               className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
             >
               Print IOM

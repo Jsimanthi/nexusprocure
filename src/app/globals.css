@@ -120,24 +120,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-@media print {
-  body * {
-    visibility: hidden;
-  }
-
-  #iom-print-view,
-  #iom-print-view * {
-    visibility: visible;
-  }
-
-  #iom-print-view {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 2rem !important; /* Add some padding for aesthetics */
-    box-shadow: none !important;
-    border: none !important;
-  }
-}
