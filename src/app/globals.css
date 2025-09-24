@@ -122,26 +122,21 @@
 }
 
 @media print {
-  /* Hide the main header and the IOM page's sidebar */
-  header.bg-white,
-  [class~="lg:col-span-2"] + .space-y-6 {
-    display: none !important;
+  body * {
+    visibility: hidden;
   }
 
-  /* Remove padding and other layout styles from the main layout containers */
-  .max-w-7xl,
-  .px-4.py-6,
-  .min-h-screen {
-    padding: 0 !important;
-    margin: 0 !important;
-    max-width: none !important;
-    min-height: 0 !important;
+  #iom-print-view,
+  #iom-print-view * {
+    visibility: visible;
   }
 
-  /* Ensure the print view itself has no extra layout styling */
   #iom-print-view {
-    padding: 0 !important;
-    margin: 0 !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 2rem !important; /* Add some padding for aesthetics */
     box-shadow: none !important;
     border: none !important;
   }
