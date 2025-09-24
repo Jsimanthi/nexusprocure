@@ -121,47 +121,42 @@
   }
 }
 
-/* Add print styles at the end */
 @media print {
-  /* Resetting default margin and padding */
-  body, html {
+  html, body {
+    height: 100%;
     margin: 0;
     padding: 0;
-    height: 100%;
   }
 
-  /* Hide everything by default */
   body * {
     visibility: hidden;
   }
 
-  /* Make only the printable area and its children visible */
-  #iom-print-view, #iom-print-view * {
+  #iom-print-view,
+  #iom-print-view * {
     visibility: visible;
   }
 
-  /* Use a robust flexbox layout for the print view */
   #iom-print-view {
-    position: static; /* Use static positioning */
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    min-height: 100vh; /* Use vh for full page height */
-    width: 100%;
-    padding: 2rem !important; /* Add some padding */
-    margin: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    box-sizing: border-box; /* Ensure padding is included in height */
+    padding: 2rem !important;
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact; /* Chrome, Safari */
+    color-adjust: exact; /* Firefox */
   }
 
-  /* Allow the main content to expand */
   .iom-main-content {
     flex-grow: 1;
   }
 
-  /* Push the footer to the bottom */
   .iom-footer {
     flex-shrink: 0;
-    margin-top: auto !important;
+    margin-top: auto;
   }
 }
