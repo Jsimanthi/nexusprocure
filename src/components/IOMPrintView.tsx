@@ -45,7 +45,7 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
     <div className="bg-white shadow-lg p-8 md:p-12" id="iom-print-view">
       {/* Header */}
       <header className="text-center mb-8">
-        <img src="/file.svg" alt="Company Logo" className="mx-auto h-12 w-auto mb-4" />
+        <img src="/logo.png" alt="Company Logo" className="mx-auto h-12 w-auto mb-4" />
         <h1 className="text-2xl font-bold text-gray-800">Sri Bhagyalakshmi Enterprises</h1>
         {loadingHeader ? (
           <p>Loading header...</p>
