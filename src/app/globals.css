@@ -149,6 +149,8 @@
     box-sizing: border-box;
     -webkit-print-color-adjust: exact; /* Chrome, Safari */
     color-adjust: exact; /* Firefox */
+    box-shadow: none !important;
+    border: none !important;
   }
 
   .iom-main-content {
