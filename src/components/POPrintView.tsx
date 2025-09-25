@@ -1,19 +1,59 @@
 import { PurchaseOrder } from "@/types/po";
 import { formatCurrency } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 interface POPrintViewProps {
   po: PurchaseOrder;
 }
 
+// Define a type for the setting object we expect from the API
+interface Setting {
+  key: string;
+  value: string;
+}
+
 export default function POPrintView({ po }: POPrintViewProps) {
+  const [headerText, setHeaderText] = useState("");
+  const [loadingHeader, setLoadingHeader] = useState(true);
+
+  useEffect(() => {
+    const fetchHeaderSetting = async () => {
+      try {
+        const response = await fetch('/api/settings/iomHeaderText');
+        if (response.ok) {
+          const setting: Setting = await response.json();
+          setHeaderText(setting.value);
+        } else {
+          setHeaderText("Sri Bhagyalakshmi Enterprises\nDefault Header");
+        }
+      } catch (error) {
+        console.error("Failed to fetch header setting:", error);
+        setHeaderText("Sri Bhagyalakshmi Enterprises\nError Loading Header");
+      } finally {
+        setLoadingHeader(false);
+      }
+    };
+
+    fetchHeaderSetting();
+  }, []);
+
   return (
     <div className="bg-white shadow-lg p-8 md:p-12" id="po-print-view">
       {/* Header */}
       <header className="text-center mb-8">
         <img src="/logo.png" alt="Company Logo" className="mx-auto h-12 w-auto mb-4" />
-        <h1 className="text-2xl font-bold text-gray-800">{po.companyName}</h1>
-        <p className="text-xs text-gray-600 whitespace-pre-wrap">{po.companyAddress}</p>
-        <p className="text-xs text-gray-600">{po.companyContact}</p>
+        <h1 className="text-2xl font-bold text-gray-800">
+          {loadingHeader ? 'Loading...' : headerText.split('\n')[0]}
+        </h1>
+        {loadingHeader ? (
+          <p>Loading header...</p>
+        ) : (
+          <div className="text-xs text-gray-600 mt-2">
+            {headerText.split('\n').slice(1).map((line, index) => (
+              <p key={index}>{line.replace(/\|/g, ' | ')}</p>
+            ))}
+          </div>
+        )}
       </header>
 
       {/* Title */}
@@ -80,14 +120,10 @@ export default function POPrintView({ po }: POPrintViewProps) {
 
       {/* Footer Signatures */}
       <footer className="mt-24 pt-8 po-footer">
-        <div className="grid grid-cols-4 gap-4 text-center text-xs">
+        <div className="grid grid-cols-3 gap-4 text-center text-xs">
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Prepared By</p>
             <p className="mt-8">{po.preparedBy?.name || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="font-bold border-t border-gray-400 pt-2">Requested By</p>
-            <p className="mt-8">{po.requestedBy?.name || 'N/A'}</p>
           </div>
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Reviewed By</p>

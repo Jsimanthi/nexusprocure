@@ -125,14 +125,10 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
 
       {/* Footer Signatures */}
       <footer className="mt-24 pt-8 iom-footer">
-        <div className="grid grid-cols-4 gap-4 text-center text-xs">
+        <div className="grid grid-cols-3 gap-4 text-center text-xs">
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Prepared By</p>
             <p className="mt-8">{iom.preparedBy?.name || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="font-bold border-t border-gray-400 pt-2">Requested By</p>
-            <p className="mt-8">{iom.requestedBy?.name || 'N/A'}</p>
           </div>
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Reviewed By</p>
