@@ -12,6 +12,7 @@ import ErrorDisplay from "@/components/ErrorDisplay";
 import { getPOStatusColor } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useHasPermission } from "@/hooks/useHasPermission";
+import POPrintView from "@/components/POPrintView";
 
 export default function PODetailPage() {
   const params = useParams();
@@ -163,6 +164,65 @@ export default function PODetailPage() {
     }
   };
 
+  const handlePrint = () => {
+    const printContent = document.getElementById('po-print-view');
+    if (!printContent) return;
+
+    // Create a new iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    // Get stylesheets from the main document
+    const styles = Array.from(document.styleSheets)
+      .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : (s.ownerNode as HTMLStyleElement)?.outerHTML)
+      .join('');
+
+    // Get the HTML content to print
+    const content = printContent.outerHTML;
+
+    // Write the content and styles to the iframe
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <title>Print Purchase Order</title>
+          ${styles}
+          <style>
+            @page { size: auto; margin: 0; }
+            body, html { margin: 0; padding: 0; height: 100%; }
+            body { padding: 2rem; box-sizing: border-box; }
+            #po-print-view { display: flex; flex-direction: column; height: 100%; box-shadow: none !important; border: none !important; }
+            .po-main-content { flex-grow: 1; }
+            .po-footer { flex-shrink: 0; margin-top: auto; }
+          </style>
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    // Wait for the iframe to load before printing
+    iframe.onload = function() {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      }
+      // Remove the iframe after a delay
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 500);
+    };
+  };
+
   return (
     <PageLayout title={po.title}>
       <div className="mb-6">
@@ -191,135 +251,8 @@ export default function PODetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* PO Details */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Purchase Order Details</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">Company Details</h3>
-                  <dl className="space-y-2">
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Name</dt>
-                      <dd className="text-sm text-gray-900">{po.companyName}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Address</dt>
-                      <dd className="text-sm text-gray-900 whitespace-pre-wrap">{po.companyAddress}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Contact</dt>
-                      <dd className="text-sm text-gray-900">{po.companyContact}</dd>
-                    </div>
-                  </dl>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">Vendor Details</h3>
-                  <dl className="space-y-2">
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Name</dt>
-                      <dd className="text-sm text-gray-900">{po.vendorName}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Address</dt>
-                      <dd className="text-sm text-gray-900 whitespace-pre-wrap">{po.vendorAddress}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Contact</dt>
-                      <dd className="text-sm text-gray-900">{po.vendorContact}</dd>
-                    </div>
-                  </dl>
-                </div>
-              </div>
-            </div>
-
-            {/* Items List */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Items</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Item
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Description
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Qty
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Unit Price
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tax Rate
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tax Amount
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {po.items.map((item, index) => (
-                      <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {item.itemName}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {item.description || "-"}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {item.quantity}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          ₹{item.unitPrice.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {item.taxRate}%
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          ₹{item.taxAmount.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                          ₹{item.totalPrice.toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-gray-50">
-                    <tr>
-                      <td colSpan={5} className="px-6 py-4 text-sm font-medium text-gray-900 text-right">
-                        Subtotal:
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                        ₹{po.totalAmount.toFixed(2)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td colSpan={5} className="px-6 py-4 text-sm font-medium text-gray-900 text-right">
-                        Total Tax:
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                        ₹{po.taxAmount.toFixed(2)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td colSpan={5} className="px-6 py-4 text-sm font-medium text-gray-900 text-right">
-                        Grand Total:
-                      </td>
-                      <td className="px-6 py-4 text-sm font-bold text-gray-900">
-                        ₹{po.grandTotal.toFixed(2)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
+          <div className="lg:col-span-2">
+            <POPrintView po={po} />
           </div>
 
           {/* Sidebar */}
@@ -484,7 +417,7 @@ export default function PODetailPage() {
             {/* Print Button */}
             <div className="bg-white shadow rounded-lg p-6">
               <button
-                onClick={() => window.print()}
+                onClick={handlePrint}
                 className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
                 Print PO

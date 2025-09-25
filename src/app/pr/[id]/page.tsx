@@ -13,6 +13,7 @@ import { UserRef } from "@/types/iom";
 import { PurchaseOrder } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import { useHasPermission } from "@/hooks/useHasPermission";
+import PRPrintView from "@/components/PRPrintView";
 
 type FullPaymentRequest = PaymentRequest & {
   po?: Partial<PurchaseOrder> | null;
@@ -135,6 +136,59 @@ export default function PRDetailPage() {
     }
   };
 
+  const handlePrint = () => {
+    const printContent = document.getElementById('pr-print-view');
+    if (!printContent) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    const styles = Array.from(document.styleSheets)
+      .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : (s.ownerNode as HTMLStyleElement)?.outerHTML)
+      .join('');
+
+    const content = printContent.outerHTML;
+
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <title>Print Payment Request</title>
+          ${styles}
+          <style>
+            @page { size: auto; margin: 0; }
+            body, html { margin: 0; padding: 0; height: 100%; }
+            body { padding: 2rem; box-sizing: border-box; }
+            #pr-print-view { display: flex; flex-direction: column; height: 100%; box-shadow: none !important; border: none !important; }
+            .pr-main-content { flex-grow: 1; }
+            .pr-footer { flex-shrink: 0; margin-top: auto; }
+          </style>
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    iframe.onload = function() {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      }
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 500);
+    };
+  };
+
   return (
     <PageLayout title={pr.title}>
       <div className="mb-6"><Link href="/pr" className="text-blue-600 hover:text-blue-800">&larr; Back to PR List</Link></div>
@@ -149,48 +203,8 @@ export default function PRDetailPage() {
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Payment Request Details</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Payment Information</h3>
-                <dl className="space-y-2">
-                  <div><dt className="text-sm font-medium text-gray-500">Payment To</dt><dd className="text-sm text-gray-900">{pr.paymentTo}</dd></div>
-                  <div><dt className="text-sm font-medium text-gray-500">Payment Date</dt><dd className="text-sm text-gray-900">{new Date(pr.paymentDate).toLocaleDateString()}</dd></div>
-                  <div><dt className="text-sm font-medium text-gray-500">Payment Method</dt><dd className="text-sm text-gray-900">{getPaymentMethodLabel(pr.paymentMethod)}</dd></div>
-                  {pr.bankAccount && <div><dt className="text-sm font-medium text-gray-500">Bank Account</dt><dd className="text-sm text-gray-900">{pr.bankAccount}</dd></div>}
-                  {pr.referenceNumber && <div><dt className="text-sm font-medium text-gray-500">Reference Number</dt><dd className="text-sm text-gray-900">{pr.referenceNumber}</dd></div>}
-                </dl>
-              </div>
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Purpose</h3>
-                <p className="text-sm text-gray-900 whitespace-pre-wrap">{pr.purpose}</p>
-              </div>
-            </div>
-          </div>
-          {pr.po && (
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Linked Purchase Order</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">PO Details</h3>
-                  <dl className="space-y-2">
-                    <div><dt className="text-sm font-medium text-gray-500">PO Number</dt><dd className="text-sm text-gray-900">{pr.po.poNumber}</dd></div>
-                    <div><dt className="text-sm font-medium text-gray-500">Title</dt><dd className="text-sm text-gray-900">{pr.po.title}</dd></div>
-                    <div><dt className="text-sm font-medium text-gray-500">Vendor</dt><dd className="text-sm text-gray-900">{pr.po.vendorName}</dd></div>
-                    <div><dt className="text-sm font-medium text-gray-500">Status</dt><dd className="text-sm text-gray-900">{pr.po.status}</dd></div>
-                  </dl>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">Financial Summary</h3>
-                  <dl className="space-y-2">
-                    <div className="flex justify-between"><dt className="text-sm font-medium text-gray-500">Total Amount</dt><dd className="text-sm text-gray-900">{formatCurrency(pr.po.grandTotal!)}</dd></div>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          )}
+        <div className="lg:col-span-2">
+          <PRPrintView pr={pr} />
         </div>
         <div className="space-y-6">
           <div className="bg-white shadow rounded-lg p-6">
@@ -263,7 +277,7 @@ export default function PRDetailPage() {
             </dl>
           </div>
           <div className="bg-white shadow rounded-lg p-6">
-            <button onClick={() => window.print()} className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">Print PR</button>
+            <button onClick={handlePrint} className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">Print PR</button>
           </div>
         </div>
       </div>
