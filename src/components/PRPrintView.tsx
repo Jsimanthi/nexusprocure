@@ -2,6 +2,7 @@ import { PaymentRequest, PaymentMethod } from "@/types/pr";
 import { UserRef } from "@/types/iom";
 import { PurchaseOrder } from "@prisma/client";
 import { formatCurrency } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 // Copied from PR Detail Page
 type FullPaymentRequest = PaymentRequest & {
@@ -16,6 +17,12 @@ interface PRPrintViewProps {
   pr: FullPaymentRequest;
 }
 
+// Define a type for the setting object we expect from the API
+interface Setting {
+  key: string;
+  value: string;
+}
+
 const getPaymentMethodLabel = (method: PaymentMethod) => {
   switch (method) {
     case PaymentMethod.CHEQUE: return "Cheque";
@@ -27,13 +34,47 @@ const getPaymentMethodLabel = (method: PaymentMethod) => {
 };
 
 export default function PRPrintView({ pr }: PRPrintViewProps) {
+  const [headerText, setHeaderText] = useState("");
+  const [loadingHeader, setLoadingHeader] = useState(true);
+
+  useEffect(() => {
+    const fetchHeaderSetting = async () => {
+      try {
+        const response = await fetch('/api/settings/iomHeaderText');
+        if (response.ok) {
+          const setting: Setting = await response.json();
+          setHeaderText(setting.value);
+        } else {
+          setHeaderText("Sri Bhagyalakshmi Enterprises\nDefault Header");
+        }
+      } catch (error) {
+        console.error("Failed to fetch header setting:", error);
+        setHeaderText("Sri Bhagyalakshmi Enterprises\nError Loading Header");
+      } finally {
+        setLoadingHeader(false);
+      }
+    };
+
+    fetchHeaderSetting();
+  }, []);
+
   return (
     <div className="bg-white shadow-lg p-8 md:p-12" id="pr-print-view">
       {/* Header */}
       <header className="text-center mb-8">
         <img src="/logo.png" alt="Company Logo" className="mx-auto h-12 w-auto mb-4" />
-        <h1 className="text-2xl font-bold text-gray-800">Sri Bhagyalakshmi Enterprises</h1>
-        {/* Company address can be fetched from a settings API if needed */}
+        <h1 className="text-2xl font-bold text-gray-800">
+          {loadingHeader ? 'Loading...' : headerText.split('\n')[0]}
+        </h1>
+        {loadingHeader ? (
+          <p>Loading header...</p>
+        ) : (
+          <div className="text-xs text-gray-600 mt-2">
+            {headerText.split('\n').slice(1).map((line, index) => (
+              <p key={index}>{line.replace(/\|/g, ' | ')}</p>
+            ))}
+          </div>
+        )}
       </header>
 
       {/* Title */}
@@ -87,14 +128,10 @@ export default function PRPrintView({ pr }: PRPrintViewProps) {
 
       {/* Footer Signatures */}
       <footer className="mt-24 pt-8 pr-footer">
-        <div className="grid grid-cols-4 gap-4 text-center text-xs">
+        <div className="grid grid-cols-3 gap-4 text-center text-xs">
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Prepared By</p>
             <p className="mt-8">{pr.preparedBy?.name || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="font-bold border-t border-gray-400 pt-2">Requested By</p>
-            <p className="mt-8">{pr.requestedBy?.name || 'N/A'}</p>
           </div>
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Reviewed By</p>
