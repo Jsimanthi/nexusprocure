@@ -3,7 +3,7 @@ import { UserRef } from "@/types/iom";
 import { PurchaseOrder } from "@prisma/client";
 import { formatCurrency } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { QRCodeCanvas as QRCode } from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 
 // Copied from PR Detail Page
 type FullPaymentRequest = PaymentRequest & {
@@ -37,7 +37,6 @@ const getPaymentMethodLabel = (method: PaymentMethod) => {
 export default function PRPrintView({ pr }: PRPrintViewProps) {
   const [headerText, setHeaderText] = useState("");
   const [loadingHeader, setLoadingHeader] = useState(true);
-  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     const fetchHeaderSetting = async () => {
@@ -59,13 +58,6 @@ export default function PRPrintView({ pr }: PRPrintViewProps) {
 
     fetchHeaderSetting();
   }, []);
-
-  useEffect(() => {
-    if (!loadingHeader && !isPrinting) {
-      setIsPrinting(true);
-      setTimeout(() => window.print(), 500); // Small delay to ensure QR code renders
-    }
-  }, [loadingHeader, isPrinting]);
 
   return (
     <div className="bg-white shadow-lg p-8 md:p-12" id="pr-print-view">
@@ -152,7 +144,7 @@ export default function PRPrintView({ pr }: PRPrintViewProps) {
           </div>
           <div className="flex flex-col items-center justify-center">
             {pr.pdfToken && (
-              <QRCode
+              <QRCodeSVG
                 value={`${process.env.NEXT_PUBLIC_APP_URL}/api/pdf/pr/${pr.pdfToken}`}
                 size={80}
                 level={"H"}

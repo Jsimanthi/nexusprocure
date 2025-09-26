@@ -2,7 +2,7 @@
 
 import { IOM } from "@/types/iom";
 import { useEffect, useState } from "react";
-import { QRCodeCanvas as QRCode } from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 
 // Define a type for the setting object we expect from the API
 interface Setting {
@@ -17,7 +17,6 @@ interface IOMPrintViewProps {
 export default function IOMPrintView({ iom }: IOMPrintViewProps) {
   const [headerText, setHeaderText] = useState("");
   const [loadingHeader, setLoadingHeader] = useState(true);
-  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     const fetchHeaderSetting = async () => {
@@ -40,13 +39,6 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
 
     fetchHeaderSetting();
   }, []);
-
-  useEffect(() => {
-    if (!loadingHeader && !isPrinting) {
-      setIsPrinting(true);
-      setTimeout(() => window.print(), 500); // Small delay to ensure QR code renders
-    }
-  }, [loadingHeader, isPrinting]);
 
   const hasItems = iom.items && iom.items.length > 0;
 
@@ -151,7 +143,7 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
           </div>
           <div className="flex flex-col items-center justify-center">
             {iom.pdfToken && (
-              <QRCode
+              <QRCodeSVG
                 value={`${process.env.NEXT_PUBLIC_APP_URL}/api/pdf/iom/${iom.pdfToken}`}
                 size={80}
                 level={"H"}

@@ -1,7 +1,7 @@
 import { PurchaseOrder } from "@/types/po";
 import { formatCurrency } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { QRCodeCanvas as QRCode } from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface POPrintViewProps {
   po: PurchaseOrder;
@@ -16,7 +16,6 @@ interface Setting {
 export default function POPrintView({ po }: POPrintViewProps) {
   const [headerText, setHeaderText] = useState("");
   const [loadingHeader, setLoadingHeader] = useState(true);
-  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     const fetchHeaderSetting = async () => {
@@ -38,13 +37,6 @@ export default function POPrintView({ po }: POPrintViewProps) {
 
     fetchHeaderSetting();
   }, []);
-
-  useEffect(() => {
-    if (!loadingHeader && !isPrinting) {
-      setIsPrinting(true);
-      setTimeout(() => window.print(), 500); // Small delay to ensure QR code renders
-    }
-  }, [loadingHeader, isPrinting]);
 
   return (
     <div className="bg-white shadow-lg p-8 md:p-12" id="po-print-view">
@@ -144,7 +136,7 @@ export default function POPrintView({ po }: POPrintViewProps) {
           </div>
           <div className="flex flex-col items-center justify-center">
             {po.pdfToken && (
-              <QRCode
+              <QRCodeSVG
                 value={`${process.env.NEXT_PUBLIC_APP_URL}/api/pdf/po/${po.pdfToken}`}
                 size={80}
                 level={"H"}
