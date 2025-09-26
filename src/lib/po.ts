@@ -2,6 +2,7 @@
 import { prisma } from "./prisma";
 import { POStatus } from "@/types/po";
 import { z } from "zod";
+import crypto from "crypto";
 import { createNotification } from "./notification";
 import { sendEmail } from "./email";
 import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
@@ -212,6 +213,7 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
     const poData = {
       ...restOfData,
       poNumber,
+      pdfToken: crypto.randomBytes(16).toString('hex'),
       totalAmount,
       taxAmount,
       grandTotal,

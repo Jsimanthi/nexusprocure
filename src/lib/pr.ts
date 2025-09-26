@@ -2,6 +2,7 @@
 import { prisma } from "./prisma";
 import { PRStatus } from "@/types/pr";
 import { z } from "zod";
+import crypto from "crypto";
 import { createNotification } from "./notification";
 import { sendEmail } from "./email";
 import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
@@ -160,6 +161,7 @@ export async function createPaymentRequest(data: CreatePrData, session: Session)
     // Explicitly construct the data for prisma create
     const prData = {
       ...restOfData,
+      pdfToken: crypto.randomBytes(16).toString('hex'),
       reviewedById: reviewerId, // map reviewerId to reviewedById
       approvedById: approverId, // map approverId to approvedById
       prNumber: prNumber,

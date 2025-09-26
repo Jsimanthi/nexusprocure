@@ -3,6 +3,7 @@ import { UserRef } from "@/types/iom";
 import { PurchaseOrder } from "@prisma/client";
 import { formatCurrency } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { QRCodeCanvas as QRCode } from 'qrcode.react';
 
 // Copied from PR Detail Page
 type FullPaymentRequest = PaymentRequest & {
@@ -128,7 +129,7 @@ export default function PRPrintView({ pr }: PRPrintViewProps) {
 
       {/* Footer Signatures */}
       <footer className="mt-24 pt-8 pr-footer">
-        <div className="grid grid-cols-3 gap-4 text-center text-xs">
+        <div className="grid grid-cols-4 gap-4 text-center text-xs items-end">
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Prepared By</p>
             <p className="mt-8">{pr.preparedBy?.name || 'N/A'}</p>
@@ -140,6 +141,17 @@ export default function PRPrintView({ pr }: PRPrintViewProps) {
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Authorized By</p>
             <p className="mt-8">{pr.approvedBy?.name || 'N/A'}</p>
+          </div>
+          <div className="flex flex-col items-center justify-center">
+            {pr.pdfToken && (
+              <QRCode
+                value={`${process.env.NEXT_PUBLIC_APP_URL}/api/pdf/pr/${pr.pdfToken}`}
+                size={80}
+                level={"H"}
+                includeMargin={true}
+              />
+            )}
+            <p className="mt-2">Scan for PDF</p>
           </div>
         </div>
       </footer>

@@ -119,6 +119,7 @@ model VerificationToken {
 model IOM {
   id             String       @id @default(cuid())
   iomNumber      String       @unique
+  pdfToken       String?      @unique
   title          String
   from           String
   to             String
@@ -205,6 +206,7 @@ enum IOMStatus {
 model PurchaseOrder {
   id             String       @id @default(cuid())
   poNumber       String       @unique
+  pdfToken       String?      @unique
   iomId          String?
   vendorId       String?
   title          String
@@ -310,6 +312,7 @@ enum POStatus {
 model PaymentRequest {
   id              String        @id @default(cuid())
   prNumber        String        @unique
+  pdfToken        String?       @unique
   poId            String?
   title           String
   status          PRStatus      @default(DRAFT)

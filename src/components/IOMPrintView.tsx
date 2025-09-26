@@ -2,15 +2,16 @@
 
 import { IOM } from "@/types/iom";
 import { useEffect, useState } from "react";
-
-interface IOMPrintViewProps {
-  iom: IOM;
-}
+import { QRCodeCanvas as QRCode } from 'qrcode.react';
 
 // Define a type for the setting object we expect from the API
 interface Setting {
   key: string;
   value: string;
+}
+
+interface IOMPrintViewProps {
+  iom: IOM;
 }
 
 export default function IOMPrintView({ iom }: IOMPrintViewProps) {
@@ -46,7 +47,9 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
       {/* Header */}
       <header className="text-center mb-8">
         <img src="/logo.png" alt="Company Logo" className="mx-auto h-12 w-auto mb-4" />
-        <h1 className="text-2xl font-bold text-gray-800">Sri Bhagyalakshmi Enterprises</h1>
+        <h1 className="text-2xl font-bold text-gray-800">
+          {loadingHeader ? 'Loading...' : headerText.split('\n')[0]}
+        </h1>
         {loadingHeader ? (
           <p>Loading header...</p>
         ) : (
@@ -125,7 +128,7 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
 
       {/* Footer Signatures */}
       <footer className="mt-24 pt-8 iom-footer">
-        <div className="grid grid-cols-3 gap-4 text-center text-xs">
+        <div className="grid grid-cols-4 gap-4 text-center text-xs items-end">
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Prepared By</p>
             <p className="mt-8">{iom.preparedBy?.name || 'N/A'}</p>
@@ -137,6 +140,17 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Authorized By</p>
             <p className="mt-8">{iom.approvedBy?.name || 'N/A'}</p>
+          </div>
+          <div className="flex flex-col items-center justify-center">
+            {iom.pdfToken && (
+              <QRCode
+                value={`${process.env.NEXT_PUBLIC_APP_URL}/api/pdf/iom/${iom.pdfToken}`}
+                size={80}
+                level={"H"}
+                includeMargin={true}
+              />
+            )}
+            <p className="mt-2">Scan for PDF</p>
           </div>
         </div>
       </footer>

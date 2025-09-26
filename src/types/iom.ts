@@ -19,6 +19,7 @@ export interface UserRef {
 export interface IOM {
   id?: string;
   iomNumber: string;
+  pdfToken?: string | null;
   title: string;
   from: string;
   to: string;

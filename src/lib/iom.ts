@@ -2,6 +2,7 @@
 import { prisma } from "./prisma";
 import { IOMStatus } from "@/types/iom";
 import { z } from "zod";
+import crypto from "crypto";
 import { createNotification } from "./notification";
 import { sendEmail } from "./email";
 import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
@@ -151,6 +152,7 @@ export async function createIOM(data: CreateIomData, session: Session) {
     const iomData = {
       ...actualRest,
       iomNumber,
+      pdfToken: crypto.randomBytes(16).toString('hex'),
       totalAmount,
       reviewedById: reviewerId,
       approvedById: approverId,

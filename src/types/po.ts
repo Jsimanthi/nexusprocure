@@ -47,6 +47,7 @@ import { ActionStatus } from "./iom";
 export interface PurchaseOrder {
   id?: string;
   poNumber: string;
+  pdfToken?: string | null;
   iomId?: string;
   vendorId?: string;
   title: string;
