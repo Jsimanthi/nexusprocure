@@ -1,6 +1,7 @@
 import { PurchaseOrder } from "@/types/po";
 import { formatCurrency } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { QRCodeCanvas as QRCode } from 'qrcode.react';
 
 interface POPrintViewProps {
   po: PurchaseOrder;
@@ -120,7 +121,7 @@ export default function POPrintView({ po }: POPrintViewProps) {
 
       {/* Footer Signatures */}
       <footer className="mt-24 pt-8 po-footer">
-        <div className="grid grid-cols-3 gap-4 text-center text-xs">
+        <div className="grid grid-cols-4 gap-4 text-center text-xs items-end">
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Prepared By</p>
             <p className="mt-8">{po.preparedBy?.name || 'N/A'}</p>
@@ -132,6 +133,17 @@ export default function POPrintView({ po }: POPrintViewProps) {
           <div>
             <p className="font-bold border-t border-gray-400 pt-2">Authorized By</p>
             <p className="mt-8">{po.approvedBy?.name || 'N/A'}</p>
+          </div>
+          <div className="flex flex-col items-center justify-center">
+            {po.pdfToken && (
+              <QRCode
+                value={`${process.env.NEXT_PUBLIC_APP_URL}/api/pdf/po/${po.pdfToken}`}
+                size={80}
+                level={"H"}
+                includeMargin={true}
+              />
+            )}
+            <p className="mt-2">Scan for PDF</p>
           </div>
         </div>
       </footer>

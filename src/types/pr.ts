@@ -1,5 +1,9 @@
 // src/types/pr.ts
-import { PaymentRequest, PRStatus, PaymentMethod } from "@prisma/client";
+import { PaymentRequest as PrismaPaymentRequest, PRStatus, PaymentMethod } from "@prisma/client";
+
+export type PaymentRequest = PrismaPaymentRequest & {
+  pdfToken?: string | null;
+};
 
 // This type is used to create a new Payment Request
 // It includes all required fields but omits automatically generated ones like `id` and `createdAt`
@@ -37,4 +41,3 @@ export interface PORef {
 // Re-exporting the types and enums from Prisma for use in other files.
 // This allows them to be used as both types and values.
 export { PRStatus, PaymentMethod };
-export type { PaymentRequest };
