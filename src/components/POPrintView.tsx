@@ -16,6 +16,7 @@ interface Setting {
 export default function POPrintView({ po }: POPrintViewProps) {
   const [headerText, setHeaderText] = useState("");
   const [loadingHeader, setLoadingHeader] = useState(true);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     const fetchHeaderSetting = async () => {
@@ -37,6 +38,13 @@ export default function POPrintView({ po }: POPrintViewProps) {
 
     fetchHeaderSetting();
   }, []);
+
+  useEffect(() => {
+    if (!loadingHeader && !isPrinting) {
+      setIsPrinting(true);
+      setTimeout(() => window.print(), 500); // Small delay to ensure QR code renders
+    }
+  }, [loadingHeader, isPrinting]);
 
   return (
     <div className="bg-white shadow-lg p-8 md:p-12" id="po-print-view">
