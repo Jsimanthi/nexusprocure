@@ -16,7 +16,7 @@ export default function IOMPrintPage() {
   const fetchIOM = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/iom/${params.id}`);
+      const response = await fetch(`/api/iom/public/${params.id}`);
       if (response.ok) {
         const data = await response.json();
         setIom(data);

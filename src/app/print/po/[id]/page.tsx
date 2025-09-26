@@ -15,7 +15,7 @@ export default function POPrintPage() {
   const fetchPO = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/po/${params.id}`);
+      const response = await fetch(`/api/po/public/${params.id}`);
       if (response.ok) {
         const data = await response.json();
         setPo(data);
