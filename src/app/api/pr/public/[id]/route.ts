@@ -1,6 +1,6 @@
 // src/app/api/pr/public/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getPRById } from "@/lib/pr";
+import { getPublicPRById } from "@/lib/pr";
 
 export async function GET(
   request: NextRequest,
@@ -9,7 +9,7 @@ export async function GET(
   const { id } = await context.params;
 
   try {
-    const pr = await getPRById(id);
+    const pr = await getPublicPRById(id);
 
     if (!pr) {
       return NextResponse.json({ error: "PR not found" }, { status: 404 });

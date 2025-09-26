@@ -1,6 +1,6 @@
 // src/app/api/po/public/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getPOById } from "@/lib/po";
+import { getPublicPOById } from "@/lib/po";
 
 export async function GET(
   request: NextRequest,
@@ -9,7 +9,7 @@ export async function GET(
   const { id } = await context.params;
 
   try {
-    const po = await getPOById(id);
+    const po = await getPublicPOById(id);
 
     if (!po) {
       return NextResponse.json({ error: "PO not found" }, { status: 404 });

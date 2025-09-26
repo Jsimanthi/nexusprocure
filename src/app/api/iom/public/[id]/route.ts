@@ -1,6 +1,6 @@
 // src/app/api/iom/public/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getIOMById } from "@/lib/iom";
+import { getPublicIOMById } from "@/lib/iom";
 
 export async function GET(
   request: NextRequest,
@@ -9,7 +9,7 @@ export async function GET(
   const { id } = await context.params;
 
   try {
-    const iom = await getIOMById(id);
+    const iom = await getPublicIOMById(id);
 
     if (!iom) {
       return NextResponse.json({ error: "IOM not found" }, { status: 404 });
