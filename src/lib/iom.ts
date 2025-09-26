@@ -134,6 +134,52 @@ export async function getIOMById(id: string) {
   });
 }
 
+export async function getPublicIOMById(id: string) {
+  const selectClause = {
+    id: true,
+    iomNumber: true,
+    title: true,
+    subject: true,
+    content: true,
+    from: true,
+    to: true,
+    totalAmount: true,
+    status: true,
+    pdfToken: true,
+    createdAt: true,
+    updatedAt: true,
+    items: true,
+    preparedBy: { select: { name: true, email: true } },
+    requestedBy: { select: { name: true, email: true } },
+    reviewedBy: { select: { name: true, email: true } },
+    approvedBy: { select: { name: true, email: true } },
+  };
+
+  let iom = await prisma.iOM.findUnique({
+    where: { id },
+    select: selectClause,
+  });
+
+  if (iom && !iom.pdfToken) {
+    const newPdfToken = crypto.randomBytes(16).toString("hex");
+    try {
+      iom = await prisma.iOM.update({
+        where: { id },
+        data: { pdfToken: newPdfToken },
+        select: selectClause,
+      });
+    } catch (error) {
+      console.warn(`Failed to update IOM with new PDF token, likely due to a race condition. Refetching...`, error);
+      iom = await prisma.iOM.findUnique({
+        where: { id },
+        select: selectClause,
+      });
+    }
+  }
+
+  return iom;
+}
+
 type CreateIomData = z.infer<typeof createIomSchema> & {
   preparedById: string;
   status?: string;

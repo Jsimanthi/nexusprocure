@@ -116,6 +116,60 @@ export async function getPRById(id: string) {
   });
 }
 
+export async function getPublicPRById(id: string) {
+  const selectClause = {
+    id: true,
+    prNumber: true,
+    title: true,
+    paymentTo: true,
+    purpose: true,
+    totalAmount: true,
+    taxAmount: true,
+    grandTotal: true,
+    status: true,
+    pdfToken: true,
+    createdAt: true,
+    updatedAt: true,
+    paymentDate: true,
+    paymentMethod: true,
+    bankAccount: true,
+    referenceNumber: true,
+    po: {
+      select: {
+        poNumber: true,
+      },
+    },
+    preparedBy: { select: { name: true, email: true } },
+    requestedBy: { select: { name: true, email: true } },
+    reviewedBy: { select: { name: true, email: true } },
+    approvedBy: { select: { name: true, email: true } },
+  };
+
+  let pr = await prisma.paymentRequest.findUnique({
+    where: { id },
+    select: selectClause,
+  });
+
+  if (pr && !pr.pdfToken) {
+    const newPdfToken = crypto.randomBytes(16).toString("hex");
+    try {
+      pr = await prisma.paymentRequest.update({
+        where: { id },
+        data: { pdfToken: newPdfToken },
+        select: selectClause,
+      });
+    } catch (error) {
+      console.warn(`Failed to update PR with new PDF token, likely due to a race condition. Refetching...`, error);
+      pr = await prisma.paymentRequest.findUnique({
+        where: { id },
+        select: selectClause,
+      });
+    }
+  }
+
+  return pr;
+}
+
 export async function getPOsForPR() {
   return await prisma.purchaseOrder.findMany({
     where: {

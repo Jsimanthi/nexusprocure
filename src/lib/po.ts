@@ -122,6 +122,62 @@ export async function getPOById(id: string) {
   });
 }
 
+export async function getPublicPOById(id: string) {
+  const selectClause = {
+    id: true,
+    poNumber: true,
+    title: true,
+    vendorName: true,
+    vendorAddress: true,
+    vendorContact: true,
+    totalAmount: true,
+    taxAmount: true,
+    grandTotal: true,
+    status: true,
+    pdfToken: true,
+    createdAt: true,
+    updatedAt: true,
+    taxRate: true,
+    items: true,
+    preparedBy: { select: { name: true, email: true } },
+    requestedBy: { select: { name: true, email: true } },
+    reviewedBy: { select: { name: true, email: true } },
+    approvedBy: { select: { name: true, email: true } },
+    vendor: true,
+    iom: {
+      select: {
+        iomNumber: true,
+      },
+    },
+  };
+
+  let po = await prisma.purchaseOrder.findUnique({
+    where: { id },
+    select: selectClause,
+  });
+
+  if (po && !po.pdfToken) {
+    const newPdfToken = crypto.randomBytes(16).toString("hex");
+    try {
+      po = await prisma.purchaseOrder.update({
+        where: { id },
+        data: { pdfToken: newPdfToken },
+        select: selectClause,
+      });
+    } catch (error) {
+      // It's possible another request generated the token in the meantime.
+      // Fetch the latest record to ensure we have the token.
+      console.warn(`Failed to update PO with new PDF token, likely due to a race condition. Refetching...`, error);
+      po = await prisma.purchaseOrder.findUnique({
+        where: { id },
+        select: selectClause,
+      });
+    }
+  }
+
+  return po;
+}
+
 export async function getVendors({
   page = 1,
   pageSize = 10,
