@@ -17,6 +17,7 @@ interface IOMPrintViewProps {
 export default function IOMPrintView({ iom }: IOMPrintViewProps) {
   const [headerText, setHeaderText] = useState("");
   const [loadingHeader, setLoadingHeader] = useState(true);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     const fetchHeaderSetting = async () => {
@@ -39,6 +40,13 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
 
     fetchHeaderSetting();
   }, []);
+
+  useEffect(() => {
+    if (!loadingHeader && !isPrinting) {
+      setIsPrinting(true);
+      setTimeout(() => window.print(), 500); // Small delay to ensure QR code renders
+    }
+  }, [loadingHeader, isPrinting]);
 
   const hasItems = iom.items && iom.items.length > 0;
 

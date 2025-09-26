@@ -37,6 +37,7 @@ const getPaymentMethodLabel = (method: PaymentMethod) => {
 export default function PRPrintView({ pr }: PRPrintViewProps) {
   const [headerText, setHeaderText] = useState("");
   const [loadingHeader, setLoadingHeader] = useState(true);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     const fetchHeaderSetting = async () => {
@@ -58,6 +59,13 @@ export default function PRPrintView({ pr }: PRPrintViewProps) {
 
     fetchHeaderSetting();
   }, []);
+
+  useEffect(() => {
+    if (!loadingHeader && !isPrinting) {
+      setIsPrinting(true);
+      setTimeout(() => window.print(), 500); // Small delay to ensure QR code renders
+    }
+  }, [loadingHeader, isPrinting]);
 
   return (
     <div className="bg-white shadow-lg p-8 md:p-12" id="pr-print-view">
