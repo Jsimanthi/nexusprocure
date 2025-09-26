@@ -25,7 +25,7 @@ export default function PRPrintPage() {
   const fetchPR = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/pr/${params.id}`);
+      const response = await fetch(`/api/pr/public/${params.id}`);
       if (response.ok) {
         const data = await response.json();
         setPr(data);
