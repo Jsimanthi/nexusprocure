@@ -31,7 +31,7 @@ export default function DashboardHeader() {
   const visibleNavLinks = navLinks.filter(link => link.show);
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-white shadow-sm sticky top-0 z-50 w-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">

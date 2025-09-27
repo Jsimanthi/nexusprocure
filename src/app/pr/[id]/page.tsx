@@ -16,7 +16,9 @@ import { useHasPermission } from "@/hooks/useHasPermission";
 import PRPrintView from "@/components/PRPrintView";
 
 type FullPaymentRequest = PaymentRequest & {
-  po?: Partial<PurchaseOrder> | null;
+  po?: (Partial<PurchaseOrder> & {
+    iom?: { iomNumber: string } | null;
+  }) | null;
   preparedBy?: UserRef | null;
   requestedBy?: UserRef | null;
   reviewedBy?: UserRef | null;
@@ -191,14 +193,19 @@ export default function PRDetailPage() {
 
   return (
     <PageLayout title={pr.title}>
-      <div className="mb-6"><Link href="/pr" className="text-blue-600 hover:text-blue-800">&larr; Back to PR List</Link></div>
       <div className="flex justify-between items-start mt-2 mb-6">
         <div>
           <p className="text-lg text-gray-600">{pr.prNumber}</p>
           {pr.po && <p className="text-sm text-gray-500">Linked to PO: {pr.po.poNumber}</p>}
+          {pr.po?.iom && <p className="text-sm text-gray-500">Linked to IOM: {pr.po.iom.iomNumber}</p>}
         </div>
         <div className="text-right">
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPRStatusColor(pr.status)}`}>{pr.status.replace("_", " ")}</span>
+          <Link href="/pr" className="text-sm font-medium text-blue-600 hover:text-blue-800 inline-block mb-2">
+            &larr; Back to PR List
+          </Link>
+          <div>
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPRStatusColor(pr.status)}`}>{pr.status.replace("_", " ")}</span>
+          </div>
           <p className="text-sm text-gray-500 mt-1">Created: {new Date(pr.createdAt!).toLocaleDateString()}</p>
         </div>
       </div>

@@ -62,6 +62,7 @@ export default function POPrintView({ po }: POPrintViewProps) {
         <h2 className="text-lg font-bold underline uppercase tracking-wider">
           Purchase Order
         </h2>
+        <p className="text-md font-semibold mt-2">{po.title}</p>
       </div>
 
       {/* Meta Info */}
