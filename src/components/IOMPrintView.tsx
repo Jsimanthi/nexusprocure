@@ -63,10 +63,10 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
 
       {/* Title */}
       <div className="text-center my-8">
-        <h2 className="text-lg font-bold underline uppercase tracking-wider">
+        <h2 className="text-md font-semibold">
           Inter Office Memo
         </h2>
-        <p className="text-md font-semibold mt-2">{iom.title}</p>
+        <p className="text-lg font-bold underline uppercase tracking-wider mt-2">{iom.title}</p>
       </div>
 
       {/* Meta Info */}

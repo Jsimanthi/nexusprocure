@@ -13,6 +13,7 @@ import { getPOStatusColor } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useHasPermission } from "@/hooks/useHasPermission";
 import POPrintView from "@/components/POPrintView";
+import { ArrowLeft } from "lucide-react";
 
 export default function PODetailPage() {
   const params = useParams();
@@ -225,7 +226,7 @@ export default function PODetailPage() {
 
   return (
     <PageLayout title={po.title}>
-      <div className="flex justify-between items-start mt-2 mb-6">
+      <div className="flex justify-between items-start mt-2 mb-4">
         <div>
           <p className="text-lg text-gray-600">{po.poNumber}</p>
           {po.iom && (
@@ -235,8 +236,9 @@ export default function PODetailPage() {
           )}
         </div>
         <div className="text-right">
-          <Link href="/po" className="text-sm font-medium text-blue-600 hover:text-blue-800 inline-block mb-2">
-            &larr; Back to PO List
+          <Link href="/po" className="inline-flex items-center gap-2 rounded-md bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300 mb-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to PO List
           </Link>
           <div>
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPOStatusColor(po.status)}`}>
@@ -249,14 +251,14 @@ export default function PODetailPage() {
             </div>
           </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Main Content */}
           <div className="lg:col-span-2">
             <POPrintView po={po} />
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* PO Actions */}
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">PO Actions</h3>
