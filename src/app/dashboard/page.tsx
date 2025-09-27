@@ -95,24 +95,6 @@ export default function DashboardPage() {
             />
           </div>
         )}
-
-        {/* --- DEBUGGING VIEW --- */}
-        <div className="p-4 bg-gray-100 border border-gray-300 rounded-lg">
-            <h2 className="text-lg font-bold">Debugging Information</h2>
-            <p><strong>Status:</strong> {status}</p>
-            <p><strong>IsLoading:</strong> {isLoading.toString()}</p>
-            <p><strong>IsError:</strong> {isError.toString()}</p>
-            <p><strong>User Role:</strong> {userRole || 'Not found'}</p>
-            <h3 className="font-bold mt-2">Stats Data:</h3>
-            <pre className="text-sm bg-white p-2 border rounded overflow-x-auto">
-                {JSON.stringify(stats, null, 2) || "No stats data"}
-            </pre>
-            <h3 className="font-bold mt-2">Error Object:</h3>
-            <pre className="text-sm bg-white p-2 border rounded overflow-x-auto">
-                {JSON.stringify(error, null, 2) || "No error"}
-            </pre>
-        </div>
-
         {stats && DashboardComponent && <DashboardComponent stats={stats} />}
         {stats && !DashboardComponent && (
            <div className="text-center text-gray-500">
