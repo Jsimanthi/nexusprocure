@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
 import { prisma } from "@/lib/prisma";
-import { IOM, PurchaseOrder, PaymentRequest, Role, User } from "@prisma/client";
+import { IOM, PurchaseOrder, PaymentRequest, Role } from "@prisma/client";
+import { Kpi } from "@/types/dashboard";
 
 // Define a type for recent activity items for better type safety
 type RecentActivityItem = (IOM | PurchaseOrder | PaymentRequest) & {
@@ -42,7 +43,7 @@ export async function GET() {
       approvedBy: true,
     };
 
-    let kpis: any = {};
+    let kpis: Kpi = {};
 
     switch (userRole) {
       case "Administrator":
