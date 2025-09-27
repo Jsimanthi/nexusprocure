@@ -25,12 +25,19 @@ const formatRecentActivity = (
 export async function GET() {
   try {
     const session = await auth();
-    if (!session?.user?.id || !session.user.role) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (!session.user.role?.name) {
+      return NextResponse.json(
+        { error: "User has no role assigned." },
+        { status: 403 }
+      );
+    }
+
     const userId = session.user.id;
-    const userRole = (session.user.role as Role).name;
+    const userRole = session.user.role.name;
 
     let ioms: IOM[] = [];
     let pos: PurchaseOrder[] = [];
