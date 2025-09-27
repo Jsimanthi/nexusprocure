@@ -14,7 +14,7 @@ export const StatsCardWidget = ({ stats }: StatsCardWidgetProps) => {
         className="block bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md"
       >
         <h2 className="text-xl font-semibold mb-2">Total IOMs</h2>
-        <p className="text-3xl font-bold text-blue-600">{stats.iomCount}</p>
+        <p className="text-3xl font-bold text-blue-600">{stats?.iomCount ?? 0}</p>
         <p className="text-gray-600">All Internal Office Memos</p>
       </Link>
       <Link
@@ -22,7 +22,7 @@ export const StatsCardWidget = ({ stats }: StatsCardWidgetProps) => {
         className="block bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md"
       >
         <h2 className="text-xl font-semibold mb-2">Total POs</h2>
-        <p className="text-3xl font-bold text-green-600">{stats.poCount}</p>
+        <p className="text-3xl font-bold text-green-600">{stats?.poCount ?? 0}</p>
         <p className="text-gray-600">All Purchase Orders</p>
       </Link>
       <Link
@@ -30,7 +30,7 @@ export const StatsCardWidget = ({ stats }: StatsCardWidgetProps) => {
         className="block bg-white p-6 rounded-lg shadow transition-shadow hover:shadow-md"
       >
         <h2 className="text-xl font-semibold mb-2">Total PRs</h2>
-        <p className="text-3xl font-bold text-purple-600">{stats.prCount}</p>
+        <p className="text-3xl font-bold text-purple-600">{stats?.prCount ?? 0}</p>
         <p className="text-gray-600">All Payment Requests</p>
       </Link>
       <Link
@@ -39,7 +39,7 @@ export const StatsCardWidget = ({ stats }: StatsCardWidgetProps) => {
       >
         <h2 className="text-xl font-semibold mb-2">Pending Approvals</h2>
         <p className="text-3xl font-bold text-yellow-600">
-          {stats.pendingApprovals}
+          {stats?.pendingApprovals ?? 0}
         </p>
         <p className="text-gray-600">Across all documents</p>
       </Link>
