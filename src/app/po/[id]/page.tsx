@@ -225,11 +225,6 @@ export default function PODetailPage() {
 
   return (
     <PageLayout title={po.title}>
-      <div className="mb-6">
-        <Link href="/po" className="text-blue-600 hover:text-blue-800">
-          &larr; Back to PO List
-        </Link>
-      </div>
       <div className="flex justify-between items-start mt-2 mb-6">
         <div>
           <p className="text-lg text-gray-600">{po.poNumber}</p>
@@ -240,9 +235,14 @@ export default function PODetailPage() {
           )}
         </div>
         <div className="text-right">
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPOStatusColor(po.status)}`}>
-            {po.status.replace("_", " ")}
-          </span>
+          <Link href="/po" className="text-sm font-medium text-blue-600 hover:text-blue-800 inline-block mb-2">
+            &larr; Back to PO List
+          </Link>
+          <div>
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPOStatusColor(po.status)}`}>
+              {po.status.replace("_", " ")}
+            </span>
+          </div>
           <p className="text-sm text-gray-500 mt-1">
                 Created: {new Date(po.createdAt!).toLocaleDateString()}
               </p>

@@ -66,18 +66,23 @@ export default function IOMPrintView({ iom }: IOMPrintViewProps) {
         <h2 className="text-lg font-bold underline uppercase tracking-wider">
           Inter Office Memo
         </h2>
+        <p className="text-md font-semibold mt-2">{iom.title}</p>
       </div>
 
       {/* Meta Info */}
-      <div className="flex justify-between items-start mb-6 text-sm">
+      <div className="flex justify-between items-start mb-4 text-sm">
         <div>
           <p><span className="font-bold">From:</span> {iom.from}</p>
           <p><span className="font-bold">To:</span> {iom.to}</p>
-          <p><span className="font-bold">SUB:</span> {iom.subject}</p>
         </div>
-        <div>
+        <div className="text-right">
+          {iom.iomNumber && <p><span className="font-bold">IOM No.:</span> {iom.iomNumber}</p>}
           {iom.createdAt && <p><span className="font-bold">Date:</span> {new Date(iom.createdAt).toLocaleDateString()}</p>}
         </div>
+      </div>
+
+      <div className="text-center mb-6 text-sm">
+        <p><span className="font-bold">SUB:</span> {iom.subject}</p>
       </div>
 
       {/* Body */}
