@@ -86,17 +86,6 @@ export default function PRDetailPage() {
     }
   };
 
-  const getPaymentMethodLabel = (method: PaymentMethod) => {
-    switch (method) {
-      case PaymentMethod.CHEQUE: return "Cheque";
-      case PaymentMethod.BANK_TRANSFER: return "Bank Transfer";
-      case PaymentMethod.CASH: return "Cash";
-      case PaymentMethod.ONLINE_PAYMENT: return "Online Payment";
-      default: return method;
-    }
-  };
-
-
   if (loading) {
     return <PageLayout title="Loading Payment Request..."><LoadingSpinner /></PageLayout>;
   }
