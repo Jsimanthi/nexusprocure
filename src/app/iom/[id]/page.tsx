@@ -187,21 +187,19 @@ export default function IOMDetailPage() {
 
   return (
     <PageLayout title={iom.title}>
-      <div className="flex justify-between items-start mt-2 mb-4">
-        <div>
-          <p className="text-lg text-gray-600">{iom.iomNumber}</p>
-        </div>
-        <div className="text-right">
-          <Link href="/iom" className="inline-flex items-center gap-2 rounded-md bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300 mb-2">
+      <div className="mb-4">
+        <div className="flex justify-between items-center">
+          <p className="text-lg font-semibold text-gray-800">{iom.iomNumber}</p>
+          <Link href="/iom" className="inline-flex items-center gap-2 rounded-md bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300">
             <ArrowLeft className="h-4 w-4" />
             Back to IOM List
           </Link>
-          <div>
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getIOMStatusColor(iom.status)}`}>
-              {iom.status.replace("_", " ")}
-            </span>
-          </div>
-          <p className="text-sm text-gray-500 mt-1">
+        </div>
+        <div className="flex justify-end items-center gap-4 mt-1">
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getIOMStatusColor(iom.status)}`}>
+            {iom.status.replace("_", " ")}
+          </span>
+          <p className="text-sm text-gray-500">
             Created: {new Date(iom.createdAt!).toLocaleDateString()}
           </p>
         </div>

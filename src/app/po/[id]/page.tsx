@@ -226,30 +226,32 @@ export default function PODetailPage() {
 
   return (
     <PageLayout title={po.title}>
-      <div className="flex justify-between items-start mt-2 mb-4">
-        <div>
-          <p className="text-lg text-gray-600">{po.poNumber}</p>
-          {po.iom && (
-            <p className="text-sm text-gray-500">
-              Created from IOM: {po.iom.iomNumber}
-            </p>
-          )}
-        </div>
-        <div className="text-right">
-          <Link href="/po" className="inline-flex items-center gap-2 rounded-md bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300 mb-2">
+      <div className="mb-4">
+        <div className="flex justify-between items-center">
+          <p className="text-lg font-semibold text-gray-800">{po.poNumber}</p>
+          <Link href="/po" className="inline-flex items-center gap-2 rounded-md bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300">
             <ArrowLeft className="h-4 w-4" />
             Back to PO List
           </Link>
+        </div>
+        <div className="flex justify-between items-center mt-1">
           <div>
+            {po.iom && (
+              <p className="text-sm text-gray-500">
+                Created from IOM: {po.iom.iomNumber}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-4">
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPOStatusColor(po.status)}`}>
               {po.status.replace("_", " ")}
             </span>
+            <p className="text-sm text-gray-500">
+              Created: {new Date(po.createdAt!).toLocaleDateString()}
+            </p>
           </div>
-          <p className="text-sm text-gray-500 mt-1">
-                Created: {new Date(po.createdAt!).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
+        </div>
+      </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Main Content */}

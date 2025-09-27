@@ -183,21 +183,33 @@ export default function PRDetailPage() {
 
   return (
     <PageLayout title={pr.title}>
-      <div className="flex justify-between items-start mt-2 mb-4">
-        <div>
-          <p className="text-lg text-gray-600">{pr.prNumber}</p>
-          {pr.po && <p className="text-sm text-gray-500">Linked to PO: {pr.po.poNumber}</p>}
-          {pr.po?.iom && <p className="text-sm text-gray-500">Linked to IOM: {pr.po.iom.iomNumber}</p>}
-        </div>
-        <div className="text-right">
-          <Link href="/pr" className="inline-flex items-center gap-2 rounded-md bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300 mb-2">
+      <div className="mb-4">
+        <div className="flex justify-between items-center">
+          <p className="text-lg font-semibold text-gray-800">{pr.prNumber}</p>
+          <Link href="/pr" className="inline-flex items-center gap-2 rounded-md bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300">
             <ArrowLeft className="h-4 w-4" />
             Back to PR List
           </Link>
+        </div>
+        <div className="flex justify-between items-center mt-1">
           <div>
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPRStatusColor(pr.status)}`}>{pr.status.replace("_", " ")}</span>
+            {pr.po && (
+              <p className="text-sm text-gray-500">
+                Linked to PO: {pr.po.poNumber}
+              </p>
+            )}
+            {pr.po?.iom && (
+              <p className="text-sm text-gray-500">
+                Linked to IOM: {pr.po.iom.iomNumber}
+              </p>
+            )}
           </div>
-          <p className="text-sm text-gray-500 mt-1">Created: {new Date(pr.createdAt!).toLocaleDateString()}</p>
+          <div className="flex items-center gap-4">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPRStatusColor(pr.status)}`}>{pr.status.replace("_", " ")}</span>
+            <p className="text-sm text-gray-500">
+              Created: {new Date(pr.createdAt!).toLocaleDateString()}
+            </p>
+          </div>
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
