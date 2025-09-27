@@ -115,7 +115,7 @@ export default function PODetailPage() {
 
   if (loading) {
     return (
-      <PageLayout title="Loading Purchase Order...">
+      <PageLayout>
         <LoadingSpinner />
       </PageLayout>
     );
@@ -124,7 +124,7 @@ export default function PODetailPage() {
   // Display a forbidden message if the user does not have permission
   if (!canViewPO) {
     return (
-      <PageLayout title="Access Denied">
+      <PageLayout>
         <ErrorDisplay
           title="Forbidden"
           message="You do not have permission to view this purchase order."
@@ -140,7 +140,7 @@ export default function PODetailPage() {
 
   if (!po) {
     return (
-      <PageLayout title="Purchase Order Not Found">
+      <PageLayout>
         <ErrorDisplay
           title="PO Not Found"
           message={`Could not find a Purchase Order with the ID: ${params.id}`}
@@ -225,19 +225,21 @@ export default function PODetailPage() {
   };
 
   return (
-    <PageLayout title={po.title}>
-      <div className="mb-4">
+    <PageLayout>
+      {/* Page Header */}
+      <div className="mb-6">
         <div className="flex justify-between items-center">
-          <p className="text-lg font-semibold text-gray-800">{po.poNumber}</p>
-          <Link href="/po" className="inline-flex items-center gap-2 rounded-md bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300">
+          <h1 className="text-2xl font-bold text-gray-900">{po.title}</h1>
+          <Link href="/po" className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
             <ArrowLeft className="h-4 w-4" />
             Back to PO List
           </Link>
         </div>
-        <div className="flex justify-between items-center mt-1">
+        <div className="flex justify-between items-center mt-2">
           <div>
+            <p className="text-lg font-semibold text-gray-800">{po.poNumber}</p>
             {po.iom && (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 mt-1">
                 Created from IOM: {po.iom.iomNumber}
               </p>
             )}

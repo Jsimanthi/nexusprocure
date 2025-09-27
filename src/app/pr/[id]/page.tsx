@@ -88,13 +88,13 @@ export default function PRDetailPage() {
   };
 
   if (loading) {
-    return <PageLayout title="Loading Payment Request..."><LoadingSpinner /></PageLayout>;
+    return <PageLayout><LoadingSpinner /></PageLayout>;
   }
 
   // Display forbidden message if user lacks permission
   if (!canViewPR) {
     return (
-      <PageLayout title="Access Denied">
+      <PageLayout>
         <ErrorDisplay
           title="Forbidden"
           message="You do not have permission to view this payment request."
@@ -110,7 +110,7 @@ export default function PRDetailPage() {
 
   if (!pr) {
     return (
-      <PageLayout title="Payment Request Not Found">
+      <PageLayout>
         <ErrorDisplay title="PR Not Found" message={`Could not find a Payment Request with the ID: ${params.id}`} />
         <div className="mt-6 text-center"><Link href="/pr" className="text-blue-600 hover:text-blue-800">&larr; Back to PR List</Link></div>
       </PageLayout>
@@ -182,24 +182,26 @@ export default function PRDetailPage() {
   };
 
   return (
-    <PageLayout title={pr.title}>
-      <div className="mb-4">
+    <PageLayout>
+      {/* Page Header */}
+      <div className="mb-6">
         <div className="flex justify-between items-center">
-          <p className="text-lg font-semibold text-gray-800">{pr.prNumber}</p>
-          <Link href="/pr" className="inline-flex items-center gap-2 rounded-md bg-gray-200 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300">
+          <h1 className="text-2xl font-bold text-gray-900">{pr.title}</h1>
+          <Link href="/pr" className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
             <ArrowLeft className="h-4 w-4" />
             Back to PR List
           </Link>
         </div>
-        <div className="flex justify-between items-center mt-1">
+        <div className="flex justify-between items-center mt-2">
           <div>
+            <p className="text-lg font-semibold text-gray-800">{pr.prNumber}</p>
             {pr.po && (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 mt-1">
                 Linked to PO: {pr.po.poNumber}
               </p>
             )}
             {pr.po?.iom && (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 mt-1">
                 Linked to IOM: {pr.po.iom.iomNumber}
               </p>
             )}
