@@ -10,7 +10,11 @@ import { usePathname } from "next/navigation";
 import { useHasPermission } from "@/hooks/useHasPermission";
 import Image from "next/image";
 
-export default function DashboardHeader() {
+interface DashboardHeaderProps {
+  title?: string;
+}
+
+export default function DashboardHeader({ title }: DashboardHeaderProps) {
   const { data: session } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -38,6 +42,7 @@ export default function DashboardHeader() {
             <div className="flex items-center">
               <Image src="https://i.postimg.cc/Kctw8crn/sblt-logo.png" alt="NexusProcure Logo" width={64} height={32} className="mr-3" />
               <h1 className="text-2xl font-bold text-gray-900">NexusProcure</h1>
+              {title && <span className="text-xl text-gray-500 ml-4 hidden sm:inline">| {title}</span>}
             </div>
             
             {/* Desktop Navigation */}
