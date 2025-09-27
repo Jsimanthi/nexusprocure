@@ -85,7 +85,7 @@ export default function PRPrintView({ pr }: PRPrintViewProps) {
         <h2 className="text-lg font-bold underline uppercase tracking-wider">
           Payment Request
         </h2>
-        <p className="text-md font-semibold mt-2">{pr.title}</p>
+        {/* <p className="text-md font-semibold mt-2">{pr.title}</p> */}
       </div>
 
       {/* Meta Info */}

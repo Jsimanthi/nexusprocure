@@ -62,7 +62,7 @@ export default function POPrintView({ po }: POPrintViewProps) {
         <h2 className="text-lg font-bold underline uppercase tracking-wider">
           Purchase Order
         </h2>
-        <p className="text-md font-semibold mt-2">{po.title}</p>
+        {/* <p className="text-md font-semibold mt-2">{po.title}</p> */}
       </div>
 
       {/* Meta Info */}
@@ -75,8 +75,9 @@ export default function POPrintView({ po }: POPrintViewProps) {
         </div>
         <div className="text-right">
           <p><span className="font-bold">PO #:</span> {po.poNumber}</p>
-          <p><span className="font-bold">Date:</span> {new Date(po.createdAt!).toLocaleDateString()}</p>
           {po.iom && <p><span className="font-bold">IOM Ref:</span> {po.iom.iomNumber}</p>}
+          <p><span className="font-bold">Date:</span> {new Date(po.createdAt!).toLocaleDateString()}</p>
+          
         </div>
       </div>
 
