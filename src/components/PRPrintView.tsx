@@ -7,7 +7,9 @@ import { QRCodeSVG } from 'qrcode.react';
 
 // Copied from PR Detail Page
 type FullPaymentRequest = PaymentRequest & {
-  po?: Partial<PurchaseOrder> | null;
+  po?: (Partial<PurchaseOrder> & {
+    iom?: { iomNumber: string } | null;
+  }) | null;
   preparedBy?: UserRef | null;
   requestedBy?: UserRef | null;
   reviewedBy?: UserRef | null;
@@ -91,6 +93,7 @@ export default function PRPrintView({ pr }: PRPrintViewProps) {
         <div>
           <p><span className="font-bold">PR #:</span> {pr.prNumber}</p>
           {pr.po && <p><span className="font-bold">Linked PO:</span> {pr.po.poNumber}</p>}
+          {pr.po?.iom && <p><span className="font-bold">Linked IOM:</span> {pr.po.iom.iomNumber}</p>}
           <p><span className="font-bold">Payment To:</span> {pr.paymentTo}</p>
         </div>
         <div>
