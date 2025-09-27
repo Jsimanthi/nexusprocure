@@ -6,6 +6,6 @@ interface RecentActivityWidgetProps {
   items: RecentActivityItem[];
 }
 
-export const RecentActivityWidget = ({ items }: RecentActivityWidgetProps) => {
+export const RecentActivityWidget = ({ items = [] }: RecentActivityWidgetProps) => {
   return <RecentActivity items={items} />;
 };
