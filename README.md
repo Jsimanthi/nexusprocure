@@ -12,6 +12,7 @@ Significant progress has been made on the new Dashboard & Analytics module.
 *   **Key Performance Indicators (KPIs)** like Average Approval Time, Procurement Cycle Time, and Emergency Purchase Rate have been implemented.
 *   A **"Mark as Complete" workflow** has been added, allowing Finance Officers to finalize the entire procurement chain.
 *   A **"Print All" feature** is now available on Payment Requests to easily print the full document history.
+*   **Phase 2 (Advanced Analytics) has begun,** with the implementation of interactive "Spend Over Time" and "Spend by Category" charts with drill-down capabilities.
 
 For a detailed breakdown of completed work and the project roadmap, please see the **[Project Proposal](./docs/PROPOSAL.md)**.
 
