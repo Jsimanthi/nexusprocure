@@ -43,48 +43,33 @@ const permissions = [
 ];
 
 const roles = {
-  ADMIN: permissions, // Admin now gets all permissions including READ_PO and READ_PR
-  MANAGER: [
-    'READ_IOM',
-    'UPDATE_IOM',
-    'APPROVE_IOM',
-    'REJECT_IOM',
-    'READ_PO',
-    'APPROVE_PO',
-    'REJECT_PO',
-    'READ_PR',
-    'APPROVE_PR',
-    'REJECT_PR',
-    'MANAGE_VENDORS',
-    'VIEW_ANALYTICS',
-    'READ_ALL_IOMS',
-    'READ_ALL_POS',
-    'READ_ALL_PRS',
+  Administrator: permissions,
+  Manager: [
+    'READ_ALL_IOMS', 'READ_ALL_POS', 'READ_ALL_PRS', 'APPROVE_IOM', 'APPROVE_PO', 'APPROVE_PR',
+    'REJECT_IOM', 'REJECT_PO', 'REJECT_PR', 'REVIEW_IOM', 'REVIEW_PO', 'REVIEW_PR', 'VIEW_ANALYTICS'
   ],
-  REVIEWER: [
-    'READ_IOM',
-    'REVIEW_IOM',
-    'UPDATE_IOM',
-    'READ_PO',
-    'REVIEW_PO',
-    'READ_PR',
-    'REVIEW_PR',
+  Approver: [
+    'READ_ALL_IOMS', 'READ_ALL_POS', 'READ_ALL_PRS', 'APPROVE_IOM', 'APPROVE_PO', 'APPROVE_PR',
+    'REJECT_IOM', 'REJECT_PO', 'REJECT_PR', 'REVIEW_IOM', 'REVIEW_PO', 'REVIEW_PR'
   ],
-  USER: [
-    'CREATE_IOM',
-    'READ_IOM',
-    'UPDATE_IOM',
-    'DELETE_IOM',
-    'CREATE_PO',
-    'READ_PO',
-    'UPDATE_PO',
-    'DELETE_PO',
-    'CREATE_PR',
-    'READ_PR',
-    'UPDATE_PR',
-    'DELETE_PR',
+  'Procurement Officer': [
+    'CREATE_IOM', 'READ_IOM', 'UPDATE_IOM', 'DELETE_IOM',
+    'CREATE_PO', 'READ_PO', 'UPDATE_PO', 'DELETE_PO',
+    'CREATE_PR', 'READ_PR', 'UPDATE_PR', 'DELETE_PR',
+    'MANAGE_VENDORS'
+  ],
+  'Finance Officer': [
+    'READ_ALL_PRS', 'UPDATE_PR', 'APPROVE_PR'
   ],
 };
+
+const usersToCreate = [
+  { name: 'Admin User', email: 'admin@nexusprocure.com', role: 'Administrator' },
+  { name: 'Manager User', email: 'manager@nexusprocure.com', role: 'Manager' },
+  { name: 'Approver User', email: 'approver@nexusprocure.com', role: 'Approver' },
+  { name: 'Procurement User', email: 'procurement@nexusprocure.com', role: 'Procurement Officer' },
+  { name: 'Finance User', email: 'finance@nexusprocure.com', role: 'Finance Officer' },
+];
 
 async function main() {
   console.log('Start seeding...');
@@ -108,28 +93,18 @@ async function main() {
     });
     console.log(`Upserted role: ${createdRole.name}`);
 
-    // Get the permission objects
     const permissionsToConnect = await prisma.permission.findMany({
-      where: {
-        name: {
-          in: rolePermissions,
-        },
-      },
+      where: { name: { in: rolePermissions } },
     });
 
-    // Link permissions to the role
     await prisma.role.update({
       where: { id: createdRole.id },
       data: {
         permissions: {
-          deleteMany: {}, // Clear existing permissions before setting new ones
+          deleteMany: {}, // Clear existing permissions
           create: permissionsToConnect.map((p) => ({
             assignedBy: 'system',
-            permission: {
-              connect: {
-                id: p.id,
-              },
-            },
+            permission: { connect: { id: p.id } },
           })),
         },
       },
@@ -137,69 +112,25 @@ async function main() {
     console.log(`Linked ${permissionsToConnect.length} permissions to ${createdRole.name}`);
   }
 
-  // Create a default admin user
-  const adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } });
-  if (adminRole) {
-    const hashedPassword = await bcrypt.hash('password123', 10);
-    await prisma.user.upsert({
-      where: { email: 'demo@nexusprocure.com' },
-      update: {},
-      create: {
-        name: 'Admin User',
-        email: 'demo@nexusprocure.com',
-        password: hashedPassword,
-        roleId: adminRole.id,
-      },
-    });
-    console.log('Default admin user created.');
-  }
-
-  // Create additional users
-  const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
-  const reviewerRole = await prisma.role.findUnique({ where: { name: 'REVIEWER' } });
-  const managerRole = await prisma.role.findUnique({ where: { name: 'MANAGER' } });
-  const hashedPassword123 = await bcrypt.hash('password123', 10);
-
-  if (userRole) {
-    await prisma.user.upsert({
-      where: { email: 'j@s.com' },
-      update: {},
-      create: {
-        name: 'JS User',
-        email: 'j@s.com',
-        password: hashedPassword123,
-        roleId: userRole.id,
-      },
-    });
-    console.log('Created user: j@s.com');
-  }
-
-  if (reviewerRole) {
-    await prisma.user.upsert({
-      where: { email: 's@j.com' },
-      update: {},
-      create: {
-        name: 'SJ Reviewer',
-        email: 's@j.com',
-        password: hashedPassword123,
-        roleId: reviewerRole.id,
-      },
-    });
-    console.log('Created user: s@j.com');
-  }
-
-  if (managerRole) {
-    await prisma.user.upsert({
-      where: { email: 'svel@d.com' },
-      update: {},
-      create: {
-        name: 'Svel Manager',
-        email: 'svel@d.com',
-        password: hashedPassword123,
-        roleId: managerRole.id,
-      },
-    });
-    console.log('Created user: svel@d.com');
+  // Create users
+  const hashedPassword = await bcrypt.hash('password123', 10);
+  for (const userData of usersToCreate) {
+    const role = await prisma.role.findUnique({ where: { name: userData.role } });
+    if (role) {
+      await prisma.user.upsert({
+        where: { email: userData.email },
+        update: { roleId: role.id },
+        create: {
+          name: userData.name,
+          email: userData.email,
+          password: hashedPassword,
+          roleId: role.id,
+        },
+      });
+      console.log(`Upserted user: ${userData.email} with role ${userData.role}`);
+    } else {
+      console.error(`Role ${userData.role} not found for user ${userData.email}`);
+    }
   }
 
   // Seed default settings
