@@ -9,10 +9,12 @@ import { useSession } from "next-auth/react";
 import { z } from "zod";
 import { createIomSchema } from "@/lib/schemas";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { PROCUREMENT_CATEGORIES } from "@/lib/constants";
 
 interface IOMItem {
   itemName: string;
   description: string;
+  category: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -68,7 +70,7 @@ export default function CreateIOMPage() {
   const addItem = () => {
     setItems([
       ...items,
-      { itemName: "", description: "", quantity: 1, unitPrice: 0, totalPrice: 0 },
+      { itemName: "", description: "", category: "", quantity: 1, unitPrice: 0, totalPrice: 0 },
     ]);
   };
 
@@ -113,6 +115,7 @@ export default function CreateIOMPage() {
         items: items.map((item) => ({
           itemName: item.itemName,
           description: item.description,
+          category: item.category,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
         })),
@@ -311,7 +314,7 @@ export default function CreateIOMPage() {
                     ×
                   </button>
 
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Item Name</label>
                       <input
@@ -329,6 +332,21 @@ export default function CreateIOMPage() {
                         onChange={(e) => updateItem(index, "description", e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Category</label>
+                      <select
+                        value={item.category}
+                        onChange={(e) => updateItem(index, "category", e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="">Select a category</option>
+                        {PROCUREMENT_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Quantity</label>
