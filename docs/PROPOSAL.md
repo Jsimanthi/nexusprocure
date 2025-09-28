@@ -27,13 +27,21 @@ This phase focuses on transforming the dashboard from a static information displ
 
 ### 2.3. Key Performance Indicators (KPIs)
 
-*   **Status:** 🏗️ **In Progress**
+*   **Status:** ✅ **Complete**
 *   **Concept:** Go beyond simple counts and display meaningful procurement KPIs.
-*   **Update:** The initial KPI, "Average Approval Time," has been implemented for the Administrator dashboard. The system is now set up to easily add more KPIs in the future.
-*   **Next Steps:**
-    *   Implement "Procurement Cycle Time."
-    *   Implement "Emergency Purchase Rate."
-    *   Implement "Budget vs. Actual Spend."
+*   **Update:** The Administrator dashboard now displays several key metrics, including:
+    *   Average Approval Time (for IOM, PO, PR).
+    *   Average Procurement Cycle Time (IOM creation to PO fulfillment).
+    *   Emergency Purchase Rate.
+    *   Total Spend (This Month).
+
+### 2.4. Workflow Finalization Features
+
+*   **Status:** ✅ **Complete**
+*   **Concept:** Implement features to provide a clear end to the procurement lifecycle and improve document handling.
+*   **Update:**
+    *   **Mark as Complete Workflow:** A "Mark as Processed" button is now available on approved Payment Requests for Finance and Procurement Officers. This action updates the PR to `PROCESSED` and cascades a `COMPLETED` status to the linked PO and IOM.
+    *   **Print All Linked Documents:** A "Print All" button is now available on the Payment Request page, which generates a consolidated, printer-friendly view of the PR and its entire chain of linked documents (PO and IOM).
 
 ---
 
