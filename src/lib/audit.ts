@@ -1,5 +1,10 @@
 import { prisma } from "./prisma";
+import { Prisma, PrismaClient } from "@prisma/client";
 
+type PrismaTransactionClient = Omit<
+  PrismaClient,
+  "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
+>;
 
 interface AuditLogData {
   model: string;
@@ -11,10 +16,12 @@ interface AuditLogData {
 
 export async function logAudit(
   action: "CREATE" | "UPDATE" | "DELETE" | "STATUS_CHANGE",
-  data: AuditLogData
+  data: AuditLogData,
+  tx?: PrismaTransactionClient
 ) {
+  const db = tx || prisma;
   try {
-    await prisma.auditLog.create({
+    await db.auditLog.create({
       data: {
         action,
         model: data.model,
@@ -26,7 +33,9 @@ export async function logAudit(
     });
   } catch (error) {
     console.error("Failed to create audit log:", error);
-    // Audit logging should not block the main operation
+    // In a real-world scenario, you might want to handle this more gracefully
+    // For now, we let the transaction fail if the audit log fails.
+    throw error;
   }
 }
 

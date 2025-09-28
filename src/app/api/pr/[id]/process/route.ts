@@ -50,7 +50,7 @@ export async function POST(
         userId: auditUser.userId,
         userName: auditUser.userName,
         changes: { from: { status: pr.status }, to: { status: PRStatus.PROCESSED } },
-      });
+      }, tx);
 
       let updatedPo, updatedIom;
 
@@ -68,7 +68,7 @@ export async function POST(
                 userId: auditUser.userId,
                 userName: auditUser.userName,
                 changes: { from: { status: po.status }, to: { status: POStatus.COMPLETED } },
-            });
+            }, tx);
         }
       }
 
@@ -86,7 +86,7 @@ export async function POST(
                 userId: auditUser.userId,
                 userName: auditUser.userName,
                 changes: { from: { status: iom.status }, to: { status: IOMStatus.COMPLETED } },
-            });
+            }, tx);
         }
       }
 

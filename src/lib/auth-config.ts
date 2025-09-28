@@ -49,13 +49,10 @@ const authConfig: NextAuthConfig = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // If user object exists, this is a new sign-in
-      if (user?.id) {
+      if (user) {
         token.id = user.id;
       }
 
-      // This is the key change: Fetch the user's data on every JWT check,
-      // not just on sign-in. This ensures the session is always fresh.
       const dbUser = await prisma.user.findUnique({
         where: { id: token.id as string },
         include: {
@@ -68,7 +65,7 @@ const authConfig: NextAuthConfig = {
       if (dbUser) {
         token.name = dbUser.name;
         token.email = dbUser.email;
-        // Store only the role NAME in the token, not the whole complex object
+        token.roleId = dbUser.role?.id;
         token.roleName = dbUser.role?.name;
         token.permissions = dbUser.role?.permissions.map(
           (p) => p.permission.name
@@ -78,13 +75,14 @@ const authConfig: NextAuthConfig = {
       return token;
     },
     async session({ session, token }) {
-      // Populate the session object with the flattened data from the JWT token.
       if (session.user) {
         session.user.id = token.id as string;
         session.user.name = token.name as string;
         session.user.email = token.email as string;
-        // Reconstruct a minimal role object for the session
-        session.user.role = { name: token.roleName as string };
+        session.user.role = {
+          id: token.roleId as string,
+          name: token.roleName as string
+        };
         session.user.permissions = token.permissions as string[];
       }
       return session;
