@@ -213,7 +213,10 @@ model PurchaseOrder {
   vendorId       String?
   title          String
   status         POStatus     @default(DRAFT)
+  expectedDeliveryDate DateTime?
   fulfilledAt    DateTime?
+  qualityScore   Int?
+  deliveryNotes  String?
   totalAmount    Float        @default(0)
   taxAmount      Float        @default(0)
   grandTotal     Float        @default(0)
