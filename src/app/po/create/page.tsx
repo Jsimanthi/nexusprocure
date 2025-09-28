@@ -5,10 +5,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import FileUpload, { UploadedFileResult } from "@/components/FileUpload"; // 1. Import the new type
+import FileUpload, { UploadedFileResult } from "@/components/FileUpload";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useSession } from "next-auth/react";
+import { PROCUREMENT_CATEGORIES } from "@/lib/constants";
 
 interface User {
   id: string;
@@ -18,6 +19,7 @@ interface User {
 interface POItem {
     itemName: string;
     description: string;
+    category: string;
     quantity: number;
     unitPrice: number;
     taxRate: number;
@@ -43,6 +45,7 @@ interface IOM {
     items: Array<{
         itemName: string;
         description: string;
+        category?: string;
         quantity: number;
         unitPrice: number;
         totalPrice: number;
@@ -54,7 +57,6 @@ export default function CreatePOPage() {
     const { data: session } = useSession();
     const [loading, setLoading] = useState(false);
     const [draftLoading, setDraftLoading] = useState(false);
-    // 2. Use the new type for the attachments state
     const [attachments, setAttachments] = useState<UploadedFileResult[]>([]);
     const [vendors, setVendors] = useState<Vendor[]>([]);
     const [ioms, setIoms] = useState<IOM[]>([]);
@@ -76,7 +78,7 @@ export default function CreatePOPage() {
         approverId: "",
     });
     const [items, setItems] = useState<POItem[]>([
-        { itemName: "", description: "", quantity: 1, unitPrice: 0, taxRate: 18, taxAmount: 0, totalPrice: 0 }
+        { itemName: "", description: "", category: "", quantity: 1, unitPrice: 0, taxRate: 18, taxAmount: 0, totalPrice: 0 }
     ]);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
 
@@ -93,6 +95,7 @@ export default function CreatePOPage() {
         const poItems = iom.items.map(item => ({
             itemName: item.itemName,
             description: item.description || '',
+            category: item.category || '',
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             taxRate: formData.taxRate,
@@ -143,7 +146,7 @@ export default function CreatePOPage() {
         if (iomId) {
             handleIomChange(iomId);
         }
-  }, [ioms, handleIomChange]); // Add ioms dependency to ensure it runs after ioms are fetched
+  }, [ioms, handleIomChange]);
 
     const fetchApprovedIOMs = async () => {
         try {
@@ -158,7 +161,7 @@ export default function CreatePOPage() {
     };
 
     const addItem = () => {
-        setItems([...items, { itemName: "", description: "", quantity: 1, unitPrice: 0, taxRate: 18, taxAmount: 0, totalPrice: 0 }]);
+        setItems([...items, { itemName: "", description: "", category: "", quantity: 1, unitPrice: 0, taxRate: 18, taxAmount: 0, totalPrice: 0 }]);
     };
 
     const removeItem = (index: number) => {
@@ -238,6 +241,7 @@ export default function CreatePOPage() {
                     items: items.map(item => ({
                         itemName: item.itemName,
                         description: item.description,
+                        category: item.category,
                         quantity: item.quantity,
                         unitPrice: item.unitPrice,
                         taxRate: item.taxRate,
@@ -495,8 +499,8 @@ export default function CreatePOPage() {
                   >
                     ×
                   </button>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <div>
+                  <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700">Item Name *</label>
                       <input
                         type="text"
@@ -506,7 +510,7 @@ export default function CreatePOPage() {
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
-                    <div>
+                    <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700">Description</label>
                       <input
                         type="text"
@@ -514,6 +518,21 @@ export default function CreatePOPage() {
                         onChange={(e) => updateItem(index, 'description', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700">Category</label>
+                      <select
+                        value={item.category}
+                        onChange={(e) => updateItem(index, "category", e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="">Select a category</option>
+                        {PROCUREMENT_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Qty</label>

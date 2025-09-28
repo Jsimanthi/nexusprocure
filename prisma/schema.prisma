@@ -180,6 +180,7 @@ model IOMItem {
   id          String  @id @default(cuid())
   itemName    String
   description String?
+  category    String?
   quantity    Int     @default(1)
   unitPrice   Float   @default(0)
   totalPrice  Float   @default(0)
@@ -265,6 +266,7 @@ model POItem {
   id          String  @id @default(cuid())
   itemName    String
   description String?
+  category    String?
   quantity    Int     @default(1)
   unitPrice   Float   @default(0)
   taxRate     Float   @default(0) // Item-specific tax rate

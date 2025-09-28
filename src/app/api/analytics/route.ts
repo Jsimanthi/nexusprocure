@@ -12,28 +12,53 @@ export async function GET() {
     }
     authorize(session, 'VIEW_ANALYTICS');
 
-    // --- Spend Over Time Calculation ---
-    // Using a raw query is most efficient for date grouping and aggregation.
-    const spendOverTime = await prisma.$queryRaw<
+    const spendOverTimePromise = prisma.$queryRaw<
       { month: string; total: number }[]
     >`
       SELECT
-        strftime('%Y-%m', createdAt) as month,
+        strftime('%Y-%m', "createdAt") as month,
         SUM(grandTotal) as total
       FROM PurchaseOrder
-      WHERE status IN ('ORDERED', 'DELIVERED', 'COMPLETED', 'PROCESSED')
+      WHERE status IN ('ORDERED', 'DELIVERED', 'COMPLETED')
       GROUP BY month
       ORDER BY month ASC
     `;
 
-    // Format the data for the recharts library
-    const formattedSpendData = spendOverTime.map(item => ({
-        name: item.month,
-        Total: item.total,
+    const spendByCategoryPromise = prisma.pOItem.groupBy({
+      by: ['category'],
+      _sum: {
+        totalPrice: true,
+      },
+      where: {
+        po: {
+          status: {
+            in: ['ORDERED', 'DELIVERED', 'COMPLETED'],
+          },
+        },
+        category: {
+          not: null,
+        },
+      },
+    });
+
+    const [spendOverTime, spendByCategory] = await Promise.all([
+      spendOverTimePromise,
+      spendByCategoryPromise,
+    ]);
+
+    const formattedSpendData = spendOverTime.map((item) => ({
+      name: item.month,
+      Total: item.total,
+    }));
+
+    const formattedCategoryData = spendByCategory.map((item) => ({
+      name: item.category!,
+      value: item._sum.totalPrice || 0,
     }));
 
     return NextResponse.json({
-        spendOverTime: formattedSpendData,
+      spendOverTime: formattedSpendData,
+      spendByCategory: formattedCategoryData,
     });
   } catch (error) {
     console.error("Error fetching analytics data:", error);
