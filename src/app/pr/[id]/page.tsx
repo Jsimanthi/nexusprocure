@@ -36,7 +36,7 @@ export default function PRDetailPage() {
   // Added permission check to view PR
   const canViewPR = useHasPermission('READ_PR');
   const canCancel = useHasPermission('CANCEL_PR');
-  const canMarkAsProcessed = useHasPermission('PROCESS_PR');
+  const canMarkAsProcessed = useHasPermission('PROCESS_PAYMENT_REQUEST');
 
   const fetchPR = useCallback(async () => {
     try {
