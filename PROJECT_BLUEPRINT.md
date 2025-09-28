@@ -69,7 +69,7 @@ The data model is defined in `prisma/schema.prisma`.
 
 *   **Authentication**: Uses JWTs. A user logs in via `/api/auth/signin` with an email and password. Upon successful authentication, a JWT is created containing their ID, role, and a flattened list of their permissions.
 *   **Authorization**:
-    *   **Backend**: A central `authorize(session, 'PERMISSION_NAME')` function in `src/lib/auth-utils.ts` is used in API routes and business logic to protect actions. It checks the permissions list in the user's JWT. The `ADMIN` role has a hardcoded bypass for all checks.
+    *   **Backend**: A central `authorize(session, 'PERMISSION_NAME')` function in `src/lib/auth-utils.ts` is used in API routes and business logic to protect actions. It checks the permissions list in the user's JWT. The `Administrator` role has a hardcoded bypass for all checks.
     *   **Frontend**: A custom `useHasPermission('PERMISSION_NAME')` hook checks the same permissions list on the client side. This allows the UI to be dynamically rendered (e.g., hiding buttons or navigation links) based on the user's capabilities.
 
 ## 5. Core Workflows & Business Logic
@@ -104,11 +104,11 @@ The frontend is built with modern React practices.
 
 The system's security is based on the following roles and their associated permissions.
 
-| Role          | Key Responsibilities & Capabilities                                                                    | Visibility                                                                |
-|---------------|--------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
-| **ADMIN**     | Superuser. Has all permissions implicitly. Can manage users, roles, and vendors.                       | Sees all documents and data in the system.                                |
-| **MANAGER**   | Approves/rejects documents.                                                                            | Sees their own documents and any documents assigned to them for approval. |
-| **REVIEWER**  | Reviews documents before they are sent for final approval.                                               | Sees their own documents and any documents assigned to them for review.   |
-| **User**      | A baseline user who can create and manage their own procurement requests.                                | Sees only the documents they have personally created.                     |
+| Role                    | Key Responsibilities & Capabilities                                                                    | Visibility                                                                |
+|-------------------------|--------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
+| **Administrator**       | Superuser. Has all permissions implicitly. Can manage users, roles, and vendors.                       | Sees all documents and data in the system.                                |
+| **Manager** / **Approver** | Approves/rejects documents. Can also be assigned to review.                                            | Sees their own documents and any documents assigned to them for review/approval. |
+| **Procurement Officer** | A baseline user who can create and manage their own procurement requests (IOMs, POs, PRs).               | Sees only the documents they have personally created.                     |
+| **Finance Officer**     | A specialized user responsible for processing approved payment requests.                                 | Primarily sees approved PRs ready for payment.                            |
 
 **Key Permissions:** `MANAGE_USERS`, `MANAGE_ROLES`, `MANAGE_VENDORS`, `VIEW_ANALYTICS`, `CREATE_IOM`, `APPROVE_IOM`, `REVIEW_IOM`, etc.

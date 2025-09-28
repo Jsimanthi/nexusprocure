@@ -13,8 +13,8 @@ Fetches a list of all roles in the system.
 *   **Success Response** (`200 OK`): Returns an array of all role objects.
     ```json
     [
-      { "id": "clx...", "name": "ADMIN" },
-      { "id": "clx...", "name": "MANAGER" }
+      { "id": "clx...", "name": "Administrator" },
+      { "id": "clx...", "name": "Manager" }
     ]
     ```
 
@@ -30,7 +30,7 @@ Fetches a single role by its ID, including all permissions assigned to it.
     ```json
     {
       "id": "clx...",
-      "name": "REVIEWER",
+      "name": "Approver",
       "permissions": [
         {
           "roleId": "clx...",
@@ -58,7 +58,7 @@ Updates a role's name and overwrites its entire set of permissions.
 *   **Request Body**:
     ```json
     {
-      "name": "Senior Reviewer",
+      "name": "Senior Approver",
       "permissionIds": ["clx...", "clx..."]
     }
     ```

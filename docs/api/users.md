@@ -11,8 +11,8 @@ Fetches a list of users, with special filtering capabilities.
 *   **Handler**: `src/app/api/users/route.ts`
 *   **Business Logic**: Direct Prisma query within the handler.
 *   **Authorization**: Complex, dual-purpose authorization:
-    *   **Scenario A (General User Management)**: If no query parameters are passed, or if `?role=` is anything other than "MANAGER", it requires the `MANAGE_USERS` permission.
-    *   **Scenario B (Fetching Managers for approvals)**: If `?role=MANAGER` is passed, it allows access to any authenticated user who has `REVIEW_IOM`, `REVIEW_PO`, or `CREATE_PR` permissions. This is a specific carve-out to allow users to select their manager from a list when submitting documents.
+    *   **Scenario A (General User Management)**: If no query parameters are passed, or if `?role=` is anything other than "Manager", it requires the `MANAGE_USERS` permission.
+    *   **Scenario B (Fetching Managers for approvals)**: If `?role=Manager` is passed, it allows access to any authenticated user who has `REVIEW_IOM`, `REVIEW_PO`, or `CREATE_PR` permissions. This is a specific carve-out to allow users to select their manager from a list when submitting documents.
 *   **Query Parameters**:
     *   `role` (string, optional): Filters the user list by the role's name.
 *   **Success Response** (`200 OK`): Returns an array of sanitized user objects, including `id`, `name`, `email`, and `role` info.

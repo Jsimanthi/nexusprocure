@@ -19,9 +19,8 @@ Retrieves a paginated and filterable list of IOMs.
 *   **Authorization**:
     *   Requires an authenticated session.
     *   Data visibility is filtered based on user role within the `getIOMs` function:
-        *   **ADMIN**: Sees all IOMs.
-        *   **MANAGER**: Sees IOMs they prepared OR are assigned to approve.
-        *   **REVIEWER**: Sees IOMs they prepared OR are assigned to review.
+        *   **Administrator**: Sees all IOMs.
+        *   **Manager / Approver**: Sees IOMs they prepared OR are assigned to review/approve.
         *   **Other roles**: See only the IOMs they prepared.
 *   **Query Parameters Schema** (`getIOMsSchema`):
     *   `page`: `number` (default: 1)

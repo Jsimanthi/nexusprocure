@@ -23,7 +23,7 @@ This focuses on the functions within the `src/lib/` directory (e.g., `iom.ts`, `
     *   **Side Effects (`@/lib/email`, `@/lib/notification`, `@/lib/audit`)**: Any function that causes a side effect (like sending an email or creating a notification) is mocked. The tests then assert that these functions were called with the correct arguments, but the actual implementation is not executed.
 *   **Example (`src/lib/iom.test.ts`)**:
     *   Tests that `createIOM` calls `authorize` with the correct permission (`CREATE_IOM`).
-    *   Tests that `getIOMs` builds the correct Prisma `where` clause based on the user's role (e.g., `ADMIN` vs. `USER`).
+    *   Tests that `getIOMs` builds the correct Prisma `where` clause based on the user's role (e.g., `Administrator` vs. `Procurement Officer`).
     *   Tests that `updateIOMStatus` correctly logs the audit trail for a status change.
 
 ### 2.2. Frontend / Component Testing

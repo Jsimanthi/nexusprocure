@@ -57,7 +57,7 @@ Represents an individual user account in the system.
 | `updatedAt` | `DateTime` | Timestamp of the last update to the user account. |
 
 ### `Role`
-Defines a specific role within the system (e.g., "ADMIN", "MANAGER").
+Defines a specific role within the system (e.g., "Administrator", "Manager").
 
 | Field | Type | Description |
 |---|---|---|
