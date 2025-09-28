@@ -14,6 +14,7 @@ export const getIOMsSchema = z.object({
 export const createPoItemSchema = z.object({
   itemName: z.string().min(1, 'Item name is required.'),
   description: z.string().optional(),
+  category: z.string().optional(),
   quantity: z.number().int().positive('Quantity must be a positive integer.'),
   unitPrice: z.number().nonnegative('Unit price cannot be negative.'),
   taxRate: z.number().nonnegative('Tax rate cannot be negative.').max(100, 'Tax rate cannot exceed 100.'),
@@ -62,6 +63,7 @@ export const updateVendorSchema = createVendorSchema.partial();
 export const createIomItemSchema = z.object({
   itemName: z.string().min(1, 'Item name is required.'),
   description: z.string().optional(),
+  category: z.string().optional(),
   quantity: z.number().int().positive('Quantity must be a positive integer.'),
   unitPrice: z.number().nonnegative('Unit price cannot be negative.'),
 });

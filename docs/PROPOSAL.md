@@ -47,24 +47,31 @@ This phase focuses on transforming the dashboard from a static information displ
 
 ## 3. Phase 2: Advanced Analytics & Interactive Reporting
 
-**Status:** ⏳ **Not Started**
+**Status:** 🏗️ **In Progress**
 
 This phase focuses on building a powerful, self-service analytics module that allows users to explore data deeply and generate insightful reports.
 
-**Next Steps:**
-*   Implement the interactive, drill-down charts for spend analysis.
-*   Develop the dedicated vendor performance analytics section.
-*   Add export and scheduled reporting functionality.
-
 ### 3.1. Interactive & Drill-Down Reports
 
+*   **Status:** 🏗️ **In Progress**
 *   **Concept:** All charts and reports will become interactive.
-*   **Implementation:**
-    *   **Drill-Down:** Clicking on a bar in the "Spending by Month" chart will reveal a detailed breakdown of all POs from that month. Clicking on a slice of the "PO Status" pie chart will show a filtered list of all POs with that status.
-    *   **Advanced Filtering:** Introduce a global filter panel on the analytics page to filter all charts by date range, department, vendor, user, and document status.
+*   **Update:** The new Analytics page now features a "Spend Over Time" bar chart. Users can click on a specific month to drill down into a filtered list of all POs from that period.
 
-### 3.2. Vendor Performance Analytics
+### 3.2. Spend Analysis
 
+*   **Status:** 🏗️ **In Progress**
+*   **Concept:** Provide a comprehensive view of where the company's money is going.
+*   **Update:**
+    *   The database schema has been updated to include a `category` field on all purchase items.
+    *   The IOM and PO creation forms now allow users to select a category for each item.
+    *   A new "Spend by Category" pie chart on the Analytics page visualizes this data, with drill-down functionality.
+*   **Next Steps:**
+    *   Implement "Departmental Spend" tracking.
+    *   Implement "Top Spenders" analysis (by vendor, department, and category).
+
+### 3.3. Vendor Performance Analytics
+
+*   **Status:** ⏳ **Not Started**
 *   **Concept:** A dedicated section to analyze and rate vendor performance.
 *   **Metrics to Track:**
     *   **On-Time Delivery Rate:** How often do vendors meet their delivery deadlines?
@@ -72,17 +79,9 @@ This phase focuses on building a powerful, self-service analytics module that al
     *   **Quality Score:** A rating system for the quality of goods/services received.
 *   **Visualization:** A vendor scorecard or a scatter plot comparing vendors based on cost and reliability.
 
-### 3.3. Spend Analysis
-
-*   **Concept:** Provide a comprehensive view of where the company's money is going.
-*   **Features:**
-    *   **Spend by Category:** Introduce a `category` field to `POItem` and `IOMItem` to categorize purchases (e.g., "IT Hardware," "Office Supplies," "Marketing").
-    *   **Departmental Spend:** Track spending by department to manage budgets effectively.
-    *   **Top Spenders:** Identify the top vendors, departments, and categories by spending.
-*   **Visualization:** Use treemaps or sunburst charts to visualize hierarchical spending data.
-
 ### 3.4. Export & Scheduled Reports
 
+*   **Status:** ⏳ **Not Started**
 *   **Concept:** Allow users to take their data offline and receive regular updates.
 *   **Implementation:**
     *   **Export:** Add "Export as CSV/PDF" buttons to all data tables and reports.
@@ -97,14 +96,12 @@ This phase focuses on building a powerful, self-service analytics module that al
 This is the "world-class" phase, introducing intelligent features that move from reactive analysis to proactive decision-making.
 
 ### 4.1. Predictive Analytics
-
 *   **Concept:** Use historical data to forecast future trends.
 *   **Features:**
     *   **Demand Forecasting:** Predict future demand for frequently purchased items to optimize stock levels.
     *   **Budget Forecasting:** Project future spending based on past trends to aid in budget planning.
 
 ### 4.2. Anomaly Detection
-
 *   **Concept:** Automatically flag unusual or potentially fraudulent activities.
 *   **Implementation:** The system could monitor for:
     *   A PO amount that is significantly higher than the historical average for that vendor or item.
@@ -112,7 +109,6 @@ This is the "world-class" phase, introducing intelligent features that move from
     *   A sudden change in the price of a standard item from a regular vendor.
 
 ### 4.3. AI-Powered Recommendations
-
 *   **Concept:** Provide intelligent suggestions to users within their workflow.
 *   **Examples:**
     *   **Vendor Recommendation:** When creating a PO, suggest the best vendor based on historical performance, price, and delivery time.
