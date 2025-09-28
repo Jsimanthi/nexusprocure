@@ -36,6 +36,7 @@ const permissions = [
   'APPROVE_PR',
   'REJECT_PR',
   'REVIEW_PR',
+  'PROCESS_PAYMENT_REQUEST',
   // Permissions for viewing all documents of a type
   'READ_ALL_IOMS',
   'READ_ALL_POS',
@@ -59,7 +60,7 @@ const roles = {
     'MANAGE_VENDORS'
   ],
   'Finance Officer': [
-    'READ_ALL_PRS', 'UPDATE_PR', 'APPROVE_PR'
+    'READ_ALL_PRS', 'UPDATE_PR', 'APPROVE_PR', 'PROCESS_PAYMENT_REQUEST'
   ],
 };
 

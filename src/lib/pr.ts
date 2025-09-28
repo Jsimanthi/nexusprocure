@@ -107,9 +107,13 @@ export async function getPRById(id: string) {
           vendor: true,
           items: true,
           iom: {
-            select: {
-              iomNumber: true,
-            },
+            include: {
+              items: true,
+              preparedBy: true,
+              requestedBy: true,
+              reviewedBy: true,
+              approvedBy: true,
+            }
           },
         },
       },
