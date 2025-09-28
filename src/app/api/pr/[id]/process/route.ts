@@ -91,6 +91,8 @@ export async function POST(
       }
 
       return { updatedPr, updatedPo, updatedIom };
+    }, {
+        timeout: 20000, // Set a 20-second timeout for this complex transaction
     });
 
     // Trigger real-time update
