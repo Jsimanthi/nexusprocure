@@ -67,11 +67,18 @@ export default function PRDetailPage() {
   const handleAction = async (action: "APPROVE" | "REJECT" | "PROCESS" | "CANCEL") => {
     setUpdating(true);
     try {
-      const response = await fetch(`/api/pr/${params.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
+      let response;
+      if (action === 'PROCESS') {
+        response = await fetch(`/api/pr/${params.id}/process`, {
+          method: "POST",
+        });
+      } else {
+        response = await fetch(`/api/pr/${params.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        });
+      }
 
       if (response.ok) {
         const updatedPR = await response.json();
@@ -289,7 +296,23 @@ export default function PRDetailPage() {
             </dl>
           </div>
           <div className="bg-white shadow rounded-lg p-6">
-            <button onClick={handlePrint} className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">Print PR</button>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Printing</h3>
+            <div className="space-y-2">
+              <button
+                onClick={handlePrint}
+                className="w-full inline-flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+              >
+                Print Just This PR
+              </button>
+              <Link
+                href={`/print/chain/${pr.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+              >
+                Print All Linked Documents
+              </Link>
+            </div>
           </div>
         </div>
       </div>

@@ -309,6 +309,7 @@ enum POStatus {
   ORDERED
   DELIVERED
   CANCELLED
+  COMPLETED
 }
 
 model PaymentRequest {
