@@ -1,10 +1,9 @@
-// src/app/po/page.tsx
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { PurchaseOrder, POStatus } from "@/types/po";
 import SearchAndFilter from "@/components/SearchAndFilter";
-import { useState } from "react";
+import { useState, Suspense } from "react"; // Import Suspense
 import PageLayout from "@/components/PageLayout";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import { formatCurrency, getPOStatusColor } from "@/lib/utils";
@@ -13,37 +12,42 @@ import ErrorDisplay from "@/components/ErrorDisplay";
 import { useHasPermission } from "@/hooks/useHasPermission";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Eye, Trash2, Pencil } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 
-const fetchPOs = async (page = 1, pageSize = 10, searchTerm = "", status = "") => {
+const fetchPOs = async (page = 1, pageSize = 10, searchTerm = "", status = "", month = "") => {
   const params = new URLSearchParams({
     page: page.toString(),
     pageSize: pageSize.toString(),
     search: searchTerm,
     status: status,
   });
+  if (month) {
+    params.set('month', month);
+  }
   const response = await fetch(`/api/po?${params.toString()}`);
   if (!response.ok) throw new Error("Network response was not ok");
   return response.json();
 };
 
-export default function POListPage() {
+function POList() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [monthFilter, setMonthFilter] = useState(searchParams.get("month") || "");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPoId, setSelectedPoId] = useState<string | null>(null);
   const pageSize = 10;
-  const router = useRouter();
   const queryClient = useQueryClient();
   const canDelete = useHasPermission("DELETE_PO");
   const canUpdate = useHasPermission("UPDATE_PO");
   const canCreate = useHasPermission("CREATE_PO");
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["purchaseOrders", page, pageSize, searchTerm, statusFilter],
-    queryFn: () => fetchPOs(page, pageSize, searchTerm, statusFilter),
+    queryKey: ["purchaseOrders", page, pageSize, searchTerm, statusFilter, monthFilter],
+    queryFn: () => fetchPOs(page, pageSize, searchTerm, statusFilter, monthFilter),
   });
 
   const deleteMutation = useMutation({
@@ -131,7 +135,6 @@ export default function POListPage() {
           )}
         </div>
 
-          {/* Search and Filter */}
           <SearchAndFilter
             onSearch={handleSearch}
             onFilter={handleFilter}
@@ -199,7 +202,6 @@ export default function POListPage() {
             </ul>
           </div>
 
-          {/* Pagination Controls */}
           {(pageCount > 1 || total > 0) && (
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>
@@ -231,5 +233,14 @@ export default function POListPage() {
           )}
       </>
     </PageLayout>
+  );
+}
+
+// Wrap the main component in a Suspense boundary
+export default function POListPageWrapper() {
+  return (
+    <Suspense fallback={<PageLayout title="Purchase Orders"><LoadingSpinner /></PageLayout>}>
+      <POList />
+    </Suspense>
   );
 }

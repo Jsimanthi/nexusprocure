@@ -17,12 +17,14 @@ export async function GET(request: NextRequest) {
     const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
+    const month = searchParams.get("month") || "";
 
     const { purchaseOrders, total } = await getPOs(session, {
       page,
       pageSize,
       search,
       status,
+      month,
     });
 
     return NextResponse.json({ pos: purchaseOrders, total });

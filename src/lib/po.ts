@@ -35,7 +35,8 @@ export async function getPOs(
     pageSize = 10,
     search = "",
     status = "",
-  }: { page?: number; pageSize?: number; search?: string; status?: string }
+    month = "",
+  }: { page?: number; pageSize?: number; search?: string; status?: string, month?: string }
 ) {
   const user = session.user;
   const userPermissions = user.permissions || [];
@@ -70,6 +71,20 @@ export async function getPOs(
         { vendorName: { contains: search } }, // Removed mode: 'insensitive'
       ],
     });
+  }
+
+  if (month) {
+    const [year, monthNum] = month.split('-').map(Number);
+    if (!isNaN(year) && !isNaN(monthNum)) {
+      const startDate = new Date(year, monthNum - 1, 1);
+      const endDate = new Date(year, monthNum, 1);
+      (where.AND as Prisma.PurchaseOrderWhereInput[]).push({
+        createdAt: {
+          gte: startDate,
+          lt: endDate,
+        },
+      });
+    }
   }
 
   const [purchaseOrders, total] = await prisma.$transaction([

@@ -9,7 +9,9 @@ Significant progress has been made on the new Dashboard & Analytics module.
 *   **Phase 1 (The Actionable & Personalized Hub) is complete.**
 *   The dashboard now features **role-based views** for different user types (Admin, Manager, etc.).
 *   The foundation for **customizable widgets** has been laid by refactoring the UI into a modular, widget-based architecture.
-*   The first **Key Performance Indicator (KPI)**, "Average Approval Time," has been implemented.
+*   **Key Performance Indicators (KPIs)** like Average Approval Time, Procurement Cycle Time, and Emergency Purchase Rate have been implemented.
+*   A **"Mark as Complete" workflow** has been added, allowing Finance Officers to finalize the entire procurement chain.
+*   A **"Print All" feature** is now available on Payment Requests to easily print the full document history.
 
 For a detailed breakdown of completed work and the project roadmap, please see the **[Project Proposal](./docs/PROPOSAL.md)**.
 
