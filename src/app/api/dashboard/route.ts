@@ -95,6 +95,7 @@ export async function GET() {
 
       case "Manager":
       case "Approver":
+        console.log(`[Dashboard API] Fetching data for Manager/Approver. UserID: ${userId}`);
         // For these roles, we need ALL documents they are involved in, not just pending ones.
         [ioms, pos, prs] = await Promise.all([
           prisma.iOM.findMany({
@@ -119,6 +120,7 @@ export async function GET() {
             include: baseInclude,
           }),
         ]);
+        console.log(`[Dashboard API] Found ${ioms.length} IOMs, ${pos.length} POs, ${prs.length} PRs for this user.`);
         break;
 
       case "Procurement Officer":
