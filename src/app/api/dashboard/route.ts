@@ -95,10 +95,11 @@ export async function GET() {
 
       case "Manager":
       case "Approver":
+        console.log(`[Dashboard API] Fetching data for Manager/Approver. UserID: ${userId}`);
+        // For these roles, we need ALL documents they are involved in, not just pending ones.
         [ioms, pos, prs] = await Promise.all([
           prisma.iOM.findMany({
             where: {
-              status: { in: ["SUBMITTED", "UNDER_REVIEW"] },
               OR: [{ reviewedById: userId }, { approvedById: userId }],
             },
             orderBy: { createdAt: "desc" },
@@ -106,7 +107,6 @@ export async function GET() {
           }),
           prisma.purchaseOrder.findMany({
             where: {
-              status: { in: ["SUBMITTED", "UNDER_REVIEW"] },
               OR: [{ reviewedById: userId }, { approvedById: userId }],
             },
             orderBy: { createdAt: "desc" },
@@ -114,13 +114,13 @@ export async function GET() {
           }),
           prisma.paymentRequest.findMany({
             where: {
-              status: { in: ["SUBMITTED", "UNDER_REVIEW"] },
               OR: [{ reviewedById: userId }, { approvedById: userId }],
             },
             orderBy: { createdAt: "desc" },
             include: baseInclude,
           }),
         ]);
+        console.log(`[Dashboard API] Found ${ioms.length} IOMs, ${pos.length} POs, ${prs.length} PRs for this user.`);
         break;
 
       case "Procurement Officer":
@@ -159,32 +159,23 @@ export async function GET() {
         break;
     }
 
-    // Calculate pending approvals based on the fetched data for the specific user
-    pendingApprovals =
-      ioms.filter(
-        (iom) =>
-          (iom.status === "SUBMITTED" || iom.status === "UNDER_REVIEW") &&
-          (iom.reviewedById === userId || iom.approvedById === userId)
-      ).length +
-      pos.filter(
-        (po) =>
-          (po.status === "SUBMITTED" || po.status === "UNDER_REVIEW") &&
-          (po.reviewedById === userId || po.approvedById === userId)
-      ).length +
-      prs.filter(
-        (pr) =>
-          (pr.status === "SUBMITTED" || pr.status === "UNDER_REVIEW") &&
-          (pr.reviewedById === userId || pr.approvedById === userId)
-      ).length;
-
-    // For admins, pending approvals should be a system-wide count
+    // Calculate pending approvals based on the role.
     if (userRole === "Administrator") {
-      const [iomPending, poPending, prPending] = await Promise.all([
-        prisma.iOM.count({ where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } } }),
-        prisma.purchaseOrder.count({ where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } } }),
-        prisma.paymentRequest.count({ where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } } }),
-      ]);
-      pendingApprovals = iomPending + poPending + prPending;
+        const [iomPending, poPending, prPending] = await Promise.all([
+            prisma.iOM.count({ where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } } }),
+            prisma.purchaseOrder.count({ where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } } }),
+            prisma.paymentRequest.count({ where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } } }),
+        ]);
+        pendingApprovals = iomPending + poPending + prPending;
+    } else if (userRole === "Manager" || userRole === "Approver") {
+        // For Managers/Approvers, filter the already-fetched documents.
+        pendingApprovals =
+            ioms.filter(iom => iom.status === "SUBMITTED" || iom.status === "UNDER_REVIEW").length +
+            pos.filter(po => po.status === "SUBMITTED" || po.status === "UNDER_REVIEW").length +
+            prs.filter(pr => pr.status === "SUBMITTED" || pr.status === "UNDER_REVIEW").length;
+    } else {
+        // Other roles do not have a "pending approvals" count on their dashboard.
+        pendingApprovals = 0;
     }
 
 
