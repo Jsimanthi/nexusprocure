@@ -49,37 +49,42 @@ const authConfig: NextAuthConfig = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // If a user object is present, it means a new sign-in has occurred.
-      // Fetch the full user data with permissions and update the token.
-      if (user) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          include: {
-            role: {
-              include: { permissions: { include: { permission: true } } },
-            },
-          },
-        });
-
-        if (dbUser) {
-          token.id = dbUser.id;
-          token.name = dbUser.name;
-          token.email = dbUser.email;
-          token.role = dbUser.role;
-          token.permissions = dbUser.role?.permissions.map(
-            (p) => p.permission.name
-          );
-        }
+      // If user object exists, this is a new sign-in
+      if (user?.id) {
+        token.id = user.id;
       }
+
+      // This is the key change: Fetch the user's data on every JWT check,
+      // not just on sign-in. This ensures the session is always fresh.
+      const dbUser = await prisma.user.findUnique({
+        where: { id: token.id as string },
+        include: {
+          role: {
+            include: { permissions: { include: { permission: true } } },
+          },
+        },
+      });
+
+      if (dbUser) {
+        token.name = dbUser.name;
+        token.email = dbUser.email;
+        // Store only the role NAME in the token, not the whole complex object
+        token.roleName = dbUser.role?.name;
+        token.permissions = dbUser.role?.permissions.map(
+          (p) => p.permission.name
+        );
+      }
+
       return token;
     },
     async session({ session, token }) {
-      // Populate the session object with data from the JWT token.
+      // Populate the session object with the flattened data from the JWT token.
       if (session.user) {
         session.user.id = token.id as string;
         session.user.name = token.name as string;
         session.user.email = token.email as string;
-        session.user.role = token.role as Role;
+        // Reconstruct a minimal role object for the session
+        session.user.role = { name: token.roleName as string };
         session.user.permissions = token.permissions as string[];
       }
       return session;

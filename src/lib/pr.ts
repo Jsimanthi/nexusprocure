@@ -307,7 +307,7 @@ export async function updatePRStatus(
     let newStatus: PRStatus;
     switch (action) {
       case "PROCESS":
-        authorize(session, "PROCESS_PR");
+        authorize(session, "PROCESS_PAYMENT_REQUEST");
         newStatus = PRStatus.PROCESSED;
         break;
       case "CANCEL":
