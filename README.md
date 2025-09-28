@@ -2,6 +2,19 @@
 
 This is a comprehensive IT procurement management system built with Next.js, Prisma, and PostgreSQL.
 
+## Project Status (As of September 2025)
+
+Significant progress has been made on the new Dashboard & Analytics module.
+
+*   **Phase 1 (The Actionable & Personalized Hub) is complete.**
+*   The dashboard now features **role-based views** for different user types (Admin, Manager, etc.).
+*   The foundation for **customizable widgets** has been laid by refactoring the UI into a modular, widget-based architecture.
+*   The first **Key Performance Indicator (KPI)**, "Average Approval Time," has been implemented.
+
+For a detailed breakdown of completed work and the project roadmap, please see the **[Project Proposal](./docs/PROPOSAL.md)**.
+
+---
+
 ## Getting Started
 
 Follow these steps to get your local development environment set up and running.

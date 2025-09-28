@@ -50,7 +50,7 @@ Authorization is enforced on both the backend (API routes and business logic) an
 *   **Usage**: This function is the gatekeeper for all sensitive backend operations. It is called at the beginning of API handlers or business logic functions.
 *   **Logic**:
     1.  It first checks if a valid `session` exists. If not, it throws an error.
-    2.  It has a special-case for the **ADMIN** role: `if (user.role?.name === 'ADMIN') { return true; }`. This grants admins universal access, bypassing specific permission checks.
+    2.  It has a special-case for the **Administrator** role: `if (user.role?.name === 'Administrator') { return true; }`. This grants admins universal access, bypassing specific permission checks.
     3.  For all other users, it checks if the `session.user.permissions` array (which came from the JWT) `includes()` the `requiredPermission`.
     4.  If the permission is not found, it throws an error, which is caught by the API route and typically returned as a `403 Forbidden` or `500 Internal Server Error`.
 

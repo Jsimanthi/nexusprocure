@@ -21,7 +21,7 @@ export function authorize(
   const { user } = session;
 
   // Admins have all permissions
-  if (user.role?.name === 'ADMIN') {
+  if (user.role?.name === 'Administrator') {
     return true;
   }
 

@@ -84,7 +84,7 @@ export async function GET(req: Request) {
         permissions.includes('REVIEW_PO') ||
         permissions.includes('CREATE_PR');
 
-      if (roleName === 'MANAGER' && canFetchManagers) {
+      if (roleName === 'Manager' && canFetchManagers) {
         // Allow users with specific permissions to fetch managers
       } else {
         authorize(session, 'MANAGE_USERS');

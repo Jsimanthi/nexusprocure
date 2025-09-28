@@ -30,7 +30,7 @@ describe('GET /api/users/role/:roleName', () => {
   it('should return 401 if user is not authenticated', async () => {
     vi.mocked(auth).mockResolvedValue(null);
     const request = {} as NextRequest;
-    const context = mockContext('MANAGER');
+    const context = mockContext('Manager');
 
     const response = await GET(request, context);
     const body = await response.json();
@@ -46,7 +46,7 @@ describe('GET /api/users/role/:roleName', () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue(mockUsers);
 
     const request = {} as NextRequest;
-    const context = mockContext('MANAGER');
+    const context = mockContext('Manager');
 
     const response = await GET(request, context);
     const body = await response.json();
@@ -54,7 +54,7 @@ describe('GET /api/users/role/:roleName', () => {
     expect(response.status).toBe(200);
     expect(body).toEqual(mockUsers);
     expect(prisma.user.findMany).toHaveBeenCalledWith({
-      where: { role: { name: 'MANAGER' } },
+      where: { role: { name: 'Manager' } },
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     });
