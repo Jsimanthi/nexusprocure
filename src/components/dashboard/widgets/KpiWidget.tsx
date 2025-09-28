@@ -12,6 +12,16 @@ export const KpiWidget = ({ kpis }: KpiWidgetProps) => {
     return `${days.toFixed(1)} days`;
   };
 
+  const formatPercentage = (rate: number | undefined) => {
+    if (rate === undefined) return "N/A";
+    return `${rate.toFixed(1)}%`;
+  };
+
+  const formatCurrency = (amount: number | undefined) => {
+    if (amount === undefined) return "N/A";
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
+  };
+
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Key Performance Indicators</h2>
@@ -30,6 +40,21 @@ export const KpiWidget = ({ kpis }: KpiWidgetProps) => {
           title="Avg. PR Approval Time"
           value={formatDays(kpis?.avgPrApprovalTime)}
           description="Average time from creation to approval for PRs."
+        />
+        <KpiCard
+          title="Avg. Procurement Cycle Time"
+          value={formatDays(kpis?.avgProcurementCycleTime)}
+          description="Average time from IOM creation to PO fulfillment."
+        />
+        <KpiCard
+          title="Emergency Purchase Rate"
+          value={formatPercentage(kpis?.emergencyPurchaseRate)}
+          description="The percentage of all IOMs marked as urgent."
+        />
+        <KpiCard
+          title="Total Spend (This Month)"
+          value={formatCurrency(kpis?.totalSpendThisMonth)}
+          description="Total value of all fulfilled POs this month."
         />
       </div>
     </div>

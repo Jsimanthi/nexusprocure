@@ -60,7 +60,7 @@ export async function GET() {
 
     switch (userRole) {
       case "Administrator":
-        [ioms, pos, prs] = await Promise.all([
+        const [iomsData, posData, prsData, fulfilledPOs, monthlySpendResult] = await Promise.all([
           prisma.iOM.findMany({
             orderBy: { createdAt: "desc" },
             include: baseInclude,
@@ -73,7 +73,23 @@ export async function GET() {
             orderBy: { createdAt: "desc" },
             include: baseInclude,
           }),
+          prisma.purchaseOrder.findMany({
+            where: { fulfilledAt: { not: null }, iomId: { not: null } },
+            include: { iom: { select: { createdAt: true } } },
+          }),
+          prisma.purchaseOrder.aggregate({
+            _sum: { grandTotal: true },
+            where: {
+              status: { in: ["ORDERED", "DELIVERED"] },
+              createdAt: {
+                gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+              },
+            },
+          }),
         ]);
+        ioms = iomsData;
+        pos = posData;
+        prs = prsData;
 
         // KPI Calculations
         const calculateAverageApprovalTime = (docs: { createdAt: Date; updatedAt: Date; status: string }[], status: string) => {
@@ -85,10 +101,30 @@ export async function GET() {
           return totalTime / approvedDocs.length / (1000 * 60 * 60 * 24); // Return in days
         };
 
+        const calculateProcurementCycleTime = (
+          fulfilledPos: (PurchaseOrder & { iom: { createdAt: Date } | null })[]
+        ) => {
+          const validPos = fulfilledPos.filter(po => po.iom && po.fulfilledAt);
+          if (validPos.length === 0) return 0;
+          const totalCycleTime = validPos.reduce((acc, po) => {
+            return acc + (po.fulfilledAt!.getTime() - po.iom!.createdAt.getTime());
+          }, 0);
+          return totalCycleTime / validPos.length / (1000 * 60 * 60 * 24); // Return in days
+        };
+
+        const calculateEmergencyPurchaseRate = (allIoms: IOM[]) => {
+          if (allIoms.length === 0) return 0;
+          const urgentCount = allIoms.filter(iom => iom.isUrgent).length;
+          return (urgentCount / allIoms.length) * 100;
+        };
+
         kpis = {
           avgIomApprovalTime: calculateAverageApprovalTime(ioms, 'APPROVED'),
           avgPoApprovalTime: calculateAverageApprovalTime(pos, 'APPROVED'),
           avgPrApprovalTime: calculateAverageApprovalTime(prs, 'APPROVED'),
+          avgProcurementCycleTime: calculateProcurementCycleTime(fulfilledPOs),
+          emergencyPurchaseRate: calculateEmergencyPurchaseRate(ioms),
+          totalSpendThisMonth: monthlySpendResult._sum.grandTotal || 0,
         };
 
         break;
