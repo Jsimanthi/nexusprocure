@@ -133,6 +133,72 @@ async function main() {
     }
   }
 
+  // Seed sample documents to ensure dashboards are not empty
+  console.log('Seeding sample documents...');
+  const procurementUser = await prisma.user.findUnique({ where: { email: 'procurement@nexusprocure.com' } });
+  const approverUser = await prisma.user.findUnique({ where: { email: 'approver@nexusprocure.com' } });
+  const managerUser = await prisma.user.findUnique({ where: { email: 'manager@nexusprocure.com' } });
+
+  if (procurementUser && approverUser && managerUser) {
+    // Create a sample IOM for the Approver/Manager
+    await prisma.iOM.upsert({
+      where: { iomNumber: 'IOM-2025-SEED-01' },
+      update: {},
+      create: {
+        iomNumber: 'IOM-2025-SEED-01',
+        title: 'Sample IOM for Office Supplies',
+        from: 'Procurement Department',
+        to: 'IT Department',
+        subject: 'Request for new keyboards and mice',
+        status: 'SUBMITTED',
+        preparedById: procurementUser.id,
+        requestedById: procurementUser.id,
+        reviewedById: approverUser.id,
+        approvedById: managerUser.id,
+        items: {
+          create: [
+            { itemName: 'Logitech MX Keys', quantity: 5, unitPrice: 8000, totalPrice: 40000 },
+            { itemName: 'Logitech MX Master 3S', quantity: 5, unitPrice: 7500, totalPrice: 37500 },
+          ],
+        },
+        totalAmount: 77500,
+      },
+    });
+
+    // Create a sample PO for the Approver/Manager
+    await prisma.purchaseOrder.upsert({
+      where: { poNumber: 'PO-2025-SEED-01' },
+      update: {},
+      create: {
+        poNumber: 'PO-2025-SEED-01',
+        title: 'Sample PO for Laptops',
+        status: 'UNDER_REVIEW',
+        preparedById: procurementUser.id,
+        requestedById: procurementUser.id,
+        reviewedById: approverUser.id,
+        approvedById: managerUser.id,
+        vendorName: 'Dell Inc.',
+        vendorAddress: '123 Tech Street, Bangalore',
+        vendorContact: 'sales@dell.co.in',
+        companyName: 'NexusProcure Inc.',
+        companyAddress: '456 Business Avenue, Mumbai',
+        companyContact: 'contact@nexusprocure.com',
+        totalAmount: 300000,
+        taxRate: 18,
+        taxAmount: 54000,
+        grandTotal: 354000,
+        items: {
+          create: [
+            { itemName: 'Dell XPS 15 Laptop', quantity: 2, unitPrice: 150000, taxRate: 18, taxAmount: 54000, totalPrice: 354000 },
+          ]
+        }
+      }
+    });
+    console.log('Seeded 1 IOM and 1 PO.');
+  } else {
+    console.log('Could not find all required users to seed sample documents.');
+  }
+
   // Seed default settings
   console.log('Seeding default settings...');
   const iomHeaderText = `Sri Bhagyalakshmi Enterprises
