@@ -8,42 +8,45 @@ This proposal outlines a strategic plan to elevate the NexusProcure dashboard an
 
 ## 2. Phase 1: The Actionable & Personalized Hub
 
+**Status:** ✅ **Complete**
+
 This phase focuses on transforming the dashboard from a static information display into a personalized and actionable hub for every user.
 
 ### 2.1. Role-Based Dashboards
 
-*   **Concept:** The one-size-fits-all dashboard will be replaced with dynamic layouts tailored to specific user roles.
-*   **Examples:**
-    *   **Procurement Officer:** Sees a list of their draft IOMs/POs, tracks the status of their submitted items, and gets alerts for rejected documents.
-    *   **Manager/Approver:** The primary view is an "Action Items" queue showing all documents (IOMs, POs, PRs) awaiting their review or approval.
-    *   **Finance Officer:** Sees a feed of approved PRs ready for processing and a summary of upcoming payments.
-    *   **Administrator:** Gets a high-level overview of system activity, user logins, and potential errors.
+*   **Status:** ✅ **Complete**
+*   **Concept:** The one-size-fits-all dashboard has been replaced with dynamic layouts tailored to specific user roles.
+*   **Implementation:** The backend API now serves role-specific data, and the frontend dynamically renders a unique dashboard for Administrators, Managers, Approvers, Procurement Officers, and Finance Officers.
 
 ### 2.2. Customizable Widgets
 
+*   **Status:** 🏗️ **Foundation Laid**
 *   **Concept:** Empower users to build their own dashboard by adding, removing, and rearranging widgets.
-*   **Implementation:** Introduce a "widget library" with options like:
-    *   My Pending Items
-    *   Team's Recent Activity
-    *   Spend by Category (This Month)
-    *   Vendor Performance Snapshot
-    *   Quick Links to frequent actions
+*   **Update:** The dashboard UI has been refactored into a modular, widget-based architecture. The groundwork is now in place to add drag-and-drop functionality in a future phase.
 *   **Technology:** This can be implemented using a drag-and-drop library like `react-beautiful-dnd` or `dnd-kit`. User widget preferences would be saved to the `User` model in the database.
 
 ### 2.3. Key Performance Indicators (KPIs)
 
+*   **Status:** 🏗️ **In Progress**
 *   **Concept:** Go beyond simple counts and display meaningful procurement KPIs.
-*   **Examples:**
-    *   **Average Approval Time:** How long does it take for an IOM to get approved?
-    *   **Procurement Cycle Time:** The average time from IOM creation to PO fulfillment.
-    *   **Emergency Purchase Rate:** What percentage of purchases are marked as urgent?
-    *   **Budget vs. Actual Spend:** Track spending against pre-defined budgets.
+*   **Update:** The initial KPI, "Average Approval Time," has been implemented for the Administrator dashboard. The system is now set up to easily add more KPIs in the future.
+*   **Next Steps:**
+    *   Implement "Procurement Cycle Time."
+    *   Implement "Emergency Purchase Rate."
+    *   Implement "Budget vs. Actual Spend."
 
 ---
 
 ## 3. Phase 2: Advanced Analytics & Interactive Reporting
 
+**Status:** ⏳ **Not Started**
+
 This phase focuses on building a powerful, self-service analytics module that allows users to explore data deeply and generate insightful reports.
+
+**Next Steps:**
+*   Implement the interactive, drill-down charts for spend analysis.
+*   Develop the dedicated vendor performance analytics section.
+*   Add export and scheduled reporting functionality.
 
 ### 3.1. Interactive & Drill-Down Reports
 
@@ -80,6 +83,8 @@ This phase focuses on building a powerful, self-service analytics module that al
 ---
 
 ## 4. Phase 3: Predictive & AI-Powered Procurement
+
+**Status:** ⏳ **Not Started**
 
 This is the "world-class" phase, introducing intelligent features that move from reactive analysis to proactive decision-making.
 
