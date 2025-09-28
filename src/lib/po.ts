@@ -368,22 +368,23 @@ export async function updatePOStatus(
 
   // Handle simple status changes first
   if (action === "ORDER" || action === "DELIVER" || action === "CANCEL") {
-    let newStatus: POStatus;
+    const updateData: Prisma.PurchaseOrderUpdateInput = {};
     switch (action) {
       case "ORDER":
         authorize(session, "ORDER_PO");
-        newStatus = POStatus.ORDERED;
+        updateData.status = POStatus.ORDERED;
         break;
       case "DELIVER":
         authorize(session, "DELIVER_PO");
-        newStatus = POStatus.DELIVERED;
+        updateData.status = POStatus.DELIVERED;
+        updateData.fulfilledAt = new Date();
         break;
       case "CANCEL":
         authorize(session, "CANCEL_PO");
-        newStatus = POStatus.CANCELLED;
+        updateData.status = POStatus.CANCELLED;
         break;
     }
-    return await prisma.purchaseOrder.update({ where: { id }, data: { status: newStatus } });
+    return await prisma.purchaseOrder.update({ where: { id }, data: updateData });
   }
 
   const po = await prisma.purchaseOrder.findUnique({

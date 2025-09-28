@@ -125,6 +125,7 @@ model IOM {
   to             String
   subject        String
   content        String?
+  isUrgent       Boolean      @default(false)
   status         IOMStatus    @default(DRAFT)
   totalAmount    Float        @default(0)
   reviewerStatus ActionStatus @default(PENDING)
@@ -211,6 +212,7 @@ model PurchaseOrder {
   vendorId       String?
   title          String
   status         POStatus     @default(DRAFT)
+  fulfilledAt    DateTime?
   totalAmount    Float        @default(0)
   taxAmount      Float        @default(0)
   grandTotal     Float        @default(0)

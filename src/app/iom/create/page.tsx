@@ -36,6 +36,7 @@ export default function CreateIOMPage() {
     content: "",
     reviewerId: "",
     approverId: "",
+    isUrgent: false,
   });
   const [items, setItems] = useState<IOMItem[]>([]);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
@@ -102,12 +103,13 @@ export default function CreateIOMPage() {
     setErrors({});
 
     try {
-      const payload: z.infer<typeof createIomSchema> & { status?: string } = {
+      const payload: z.infer<typeof createIomSchema> & { status?: string; isUrgent?: boolean; } = {
         title: formData.title,
         from: formData.from,
         to: formData.to,
         subject: formData.subject,
         content: formData.content,
+        isUrgent: formData.isUrgent,
         items: items.map((item) => ({
           itemName: item.itemName,
           description: item.description,
@@ -205,6 +207,25 @@ export default function CreateIOMPage() {
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
             {errors.to && <p className="text-red-500 text-xs mt-1">{errors.to[0]}</p>}
+          </div>
+        </div>
+
+        <div className="relative flex items-start">
+          <div className="flex h-6 items-center">
+            <input
+              id="isUrgent"
+              name="isUrgent"
+              type="checkbox"
+              checked={formData.isUrgent}
+              onChange={(e) => setFormData({ ...formData, isUrgent: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
+            />
+          </div>
+          <div className="ml-3 text-sm leading-6">
+            <label htmlFor="isUrgent" className="font-medium text-gray-900">
+              Urgent Request
+            </label>
+            <p className="text-gray-500">Check this if the request requires immediate attention.</p>
           </div>
         </div>
 

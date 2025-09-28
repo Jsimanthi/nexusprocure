@@ -72,6 +72,7 @@ export const createIomSchema = z.object({
   to: z.string().min(1, 'To is required.'),
   subject: z.string().min(1, 'Subject is required.'),
   content: z.string().optional(),
+  isUrgent: z.boolean().optional(),
   items: z.array(createIomItemSchema).optional(),
   requestedById: z.string().cuid(),
   reviewerId: z.string().cuid('Invalid reviewer.'),

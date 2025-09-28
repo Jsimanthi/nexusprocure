@@ -10,6 +10,9 @@ export interface Kpi {
   avgIomApprovalTime?: number;
   avgPoApprovalTime?: number;
   avgPrApprovalTime?: number;
+  avgProcurementCycleTime?: number;
+  emergencyPurchaseRate?: number;
+  totalSpendThisMonth?: number;
 }
 
 export interface DashboardStats {
