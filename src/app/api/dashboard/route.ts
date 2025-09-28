@@ -95,7 +95,6 @@ export async function GET() {
 
       case "Manager":
       case "Approver":
-        console.log(`[Dashboard API] Fetching data for Manager/Approver. UserID: ${userId}`);
         // For these roles, we need ALL documents they are involved in, not just pending ones.
         [ioms, pos, prs] = await Promise.all([
           prisma.iOM.findMany({
@@ -120,7 +119,6 @@ export async function GET() {
             include: baseInclude,
           }),
         ]);
-        console.log(`[Dashboard API] Found ${ioms.length} IOMs, ${pos.length} POs, ${prs.length} PRs for this user.`);
         break;
 
       case "Procurement Officer":
@@ -168,11 +166,12 @@ export async function GET() {
         ]);
         pendingApprovals = iomPending + poPending + prPending;
     } else if (userRole === "Manager" || userRole === "Approver") {
-        // For Managers/Approvers, filter the already-fetched documents.
+        // For Managers/Approvers, filter the already-fetched documents for actionable statuses.
+        const actionableStatuses = ["SUBMITTED", "UNDER_REVIEW", "PENDING_APPROVAL"];
         pendingApprovals =
-            ioms.filter(iom => iom.status === "SUBMITTED" || iom.status === "UNDER_REVIEW").length +
-            pos.filter(po => po.status === "SUBMITTED" || po.status === "UNDER_REVIEW").length +
-            prs.filter(pr => pr.status === "SUBMITTED" || pr.status === "UNDER_REVIEW").length;
+            ioms.filter(iom => actionableStatuses.includes(iom.status)).length +
+            pos.filter(po => actionableStatuses.includes(po.status)).length +
+            prs.filter(pr => actionableStatuses.includes(pr.status)).length;
     } else {
         // Other roles do not have a "pending approvals" count on their dashboard.
         pendingApprovals = 0;
