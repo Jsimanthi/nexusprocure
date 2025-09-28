@@ -13,6 +13,7 @@ import { ManagerDashboard } from "@/components/dashboard/ManagerDashboard";
 import { ProcurementOfficerDashboard } from "@/components/dashboard/ProcurementOfficerDashboard";
 import { FinanceOfficerDashboard } from "@/components/dashboard/FinanceOfficerDashboard";
 import { Role } from "@prisma/client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const fetchDashboardData = async (): Promise<DashboardStats> => {
   const response = await fetch("/api/dashboard");
@@ -85,23 +86,25 @@ export default function DashboardPage() {
 
   return (
     <PageLayout title={`${userRole || ''} Dashboard`}>
-      <>
-        {isError && (
-          <div className="mb-6">
-            <ErrorDisplay
-              title="Error Loading Dashboard"
-              message={error?.message || "An unknown error occurred."}
-              onRetry={() => refetch()}
-            />
-          </div>
-        )}
-        {stats && DashboardComponent && <DashboardComponent stats={stats} />}
-        {stats && !DashboardComponent && (
-           <div className="text-center text-gray-500">
-             <p>No dashboard view available for your role.</p>
-           </div>
-        )}
-      </>
+      <ErrorBoundary>
+        <>
+          {isError && (
+            <div className="mb-6">
+              <ErrorDisplay
+                title="Error Loading Dashboard"
+                message={error?.message || "An unknown error occurred."}
+                onRetry={() => refetch()}
+              />
+            </div>
+          )}
+          {stats && DashboardComponent && <DashboardComponent stats={stats} />}
+          {stats && !DashboardComponent && (
+            <div className="text-center text-gray-500">
+              <p>No dashboard view available for your role.</p>
+            </div>
+          )}
+        </>
+      </ErrorBoundary>
     </PageLayout>
   );
 }

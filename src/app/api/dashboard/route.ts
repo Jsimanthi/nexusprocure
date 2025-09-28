@@ -29,11 +29,17 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!session.user.role?.name) {
-      return NextResponse.json(
-        { error: "User has no role assigned." },
-        { status: 403 }
-      );
+    // Explicitly check for role object and name property.
+    // If a user has no role, return a default empty dashboard state.
+    if (!session.user.role || typeof session.user.role.name !== 'string') {
+      return NextResponse.json({
+        iomCount: 0,
+        poCount: 0,
+        prCount: 0,
+        pendingApprovals: 0,
+        recentActivity: [],
+        kpis: {},
+      });
     }
 
     const userId = session.user.id;
