@@ -77,10 +77,11 @@ export async function GET() {
             where: { fulfilledAt: { not: null }, iomId: { not: null } },
             include: { iom: { select: { createdAt: true } } },
           }),
-          prisma.purchaseOrder.aggregate({
+          // Correctly calculate spend from PROCESSED Payment Requests
+          prisma.paymentRequest.aggregate({
             _sum: { grandTotal: true },
             where: {
-              status: { in: ["ORDERED", "DELIVERED"] },
+              status: 'PROCESSED',
               createdAt: {
                 gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
               },
@@ -121,7 +122,7 @@ export async function GET() {
         kpis = {
           avgIomApprovalTime: calculateAverageApprovalTime(ioms, 'APPROVED'),
           avgPoApprovalTime: calculateAverageApprovalTime(pos, 'APPROVED'),
-          avgPrApprovalTime: calculateAverageApprovalTime(prs, 'APPROVED'),
+          avgPrApprovalTime: calculateAverageApprovalTime(prs, 'PROCESSED'), // Also changed this to PROCESSED
           avgProcurementCycleTime: calculateProcurementCycleTime(fulfilledPOs),
           emergencyPurchaseRate: calculateEmergencyPurchaseRate(ioms),
           totalSpendThisMonth: monthlySpendResult._sum.grandTotal || 0,
