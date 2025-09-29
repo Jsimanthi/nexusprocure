@@ -17,6 +17,7 @@ interface User {
 }
 
 interface POItem {
+    iomItemId?: string;
     itemName: string;
     description: string;
     category: string;
@@ -44,6 +45,7 @@ interface IOM {
     status: string;
     totalAmount: number;
     items: Array<{
+        id: string;
         itemName: string;
         description: string;
         category?: string;
@@ -96,6 +98,7 @@ export default function CreatePOPage() {
         }));
 
         const poItems = iom.items.map(item => ({
+            iomItemId: item.id,
             itemName: item.itemName,
             description: item.description || '',
             category: item.category || '',
@@ -242,6 +245,7 @@ export default function CreatePOPage() {
                     ...formData,
                     iomId: formData.iomId || undefined,
                     items: items.map(item => ({
+                        iomItemId: item.iomItemId,
                         itemName: item.itemName,
                         description: item.description,
                         category: item.category,

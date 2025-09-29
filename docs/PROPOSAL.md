@@ -76,17 +76,18 @@ This phase focuses on building a powerful, self-service analytics module that al
     *   The PO workflow has been enhanced to allow users to mark orders as "Delivered" and provide a `qualityScore` (1-5 stars) and `deliveryNotes`.
     *   A new Vendor Scorecard page is available at `/vendors/[id]`.
     *   The scorecard displays key performance metrics, including "On-Time Delivery Rate" and "Average Quality Score".
-*   **Next Steps:**
-    *   Implement "Price Variance" tracking.
+*   **Update:** "Price Variance" tracking has been implemented. The Vendor Scorecard now displays the average price variance between the initial request (IOM) and the final purchase order (PO).
 *   **Visualization:** A vendor scorecard or a scatter plot comparing vendors based on cost and reliability.
 
 ### 3.4. Export & Scheduled Reports
 
-*   **Status:** ⏳ **Not Started**
+*   **Status:** 🏗️ **In Progress**
 *   **Concept:** Allow users to take their data offline and receive regular updates.
-*   **Implementation:**
-    *   **Export:** Add "Export as CSV/PDF" buttons to all data tables and reports.
-    *   **Scheduled Reports:** Create a system where users can subscribe to a report (e.g., "Weekly Spend Summary") to be delivered to their email automatically. This can be managed with a cron job on the server.
+*   **Update:**
+    *   **Export:** An "Export as CSV" feature has been added to the Purchase Order list page.
+*   **Next Steps:**
+    *   Implement PDF export for documents.
+    *   Implement scheduled reports.
 
 ---
 

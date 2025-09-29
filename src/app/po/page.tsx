@@ -39,6 +39,7 @@ function POList() {
   const [monthFilter, setMonthFilter] = useState(searchParams.get("month") || "");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPoId, setSelectedPoId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const pageSize = 10;
   const queryClient = useQueryClient();
   const canDelete = useHasPermission("DELETE_PO");
@@ -78,6 +79,43 @@ function POList() {
     }
     setIsModalOpen(false);
     setSelectedPoId(null);
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetch('/api/export?type=purchase-orders');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to export data.');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'purchase-orders.csv';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch && filenameMatch.length > 1) {
+          filename = filenameMatch[1];
+        }
+      }
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Export started successfully.');
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message || 'An error occurred during export.');
+      } else {
+        toast.error('An unexpected error occurred during export.');
+      }
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const pos = data?.pos || [];
@@ -124,7 +162,14 @@ function POList() {
           title="Confirm Deletion"
           message="Are you sure you want to delete this Purchase Order? This action cannot be undone."
         />
-        <div className="flex justify-end mb-6">
+        <div className="flex justify-end mb-6 space-x-4">
+          <button
+            onClick={handleExport}
+            disabled={isExporting}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap disabled:opacity-50"
+          >
+            {isExporting ? 'Exporting...' : 'Export as CSV'}
+          </button>
           {canCreate && (
             <Link
               href="/po/create"

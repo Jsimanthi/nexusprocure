@@ -12,6 +12,7 @@ export const getIOMsSchema = z.object({
 });
 
 export const createPoItemSchema = z.object({
+  iomItemId: z.string().cuid().optional(),
   itemName: z.string().min(1, 'Item name is required.'),
   description: z.string().optional(),
   category: z.string().optional(),
