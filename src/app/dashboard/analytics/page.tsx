@@ -21,6 +21,9 @@ interface AnalyticsData {
   spendOverTime: SpendData[];
   spendByCategory: SpendData[];
   spendByDepartment: SpendData[];
+  topVendors: SpendData[];
+  topDepartments: SpendData[];
+  topCategories: SpendData[];
 }
 
 const fetchAnalyticsData = async (): Promise<AnalyticsData> => {
@@ -64,6 +67,15 @@ export default function AnalyticsPage() {
     if (data && data.activePayload && data.activePayload.length > 0) {
       const department = data.activePayload[0].payload.name;
       router.push(`/po?department=${encodeURIComponent(department)}`);
+    }
+  };
+
+  const handleTopSpenderClick = (
+    type: "vendorName" | "department" | "category",
+    name: string
+  ) => {
+    if (name) {
+      router.push(`/po?${type}=${encodeURIComponent(name)}`);
     }
   };
 
@@ -160,6 +172,55 @@ export default function AnalyticsPage() {
           </div>
         )}
       </div>
+
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold mb-6 text-gray-800">Top 5 Spenders</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <TopSpenderList
+            title="By Vendor"
+            data={analyticsData?.topVendors}
+            onClick={(name) => handleTopSpenderClick("vendorName", name)}
+          />
+          <TopSpenderList
+            title="By Department"
+            data={analyticsData?.topDepartments}
+            onClick={(name) => handleTopSpenderClick("department", name)}
+          />
+          <TopSpenderList
+            title="By Category"
+            data={analyticsData?.topCategories}
+            onClick={(name) => handleTopSpenderClick("category", name)}
+          />
+        </div>
+      </div>
     </PageLayout>
   );
 }
+
+const TopSpenderList: React.FC<{
+  title: string;
+  data: SpendData[] | undefined;
+  onClick: (name: string) => void;
+}> = ({ title, data, onClick }) => (
+  <div className="bg-white p-6 rounded-lg shadow">
+    <h3 className="text-xl font-semibold mb-4">{title}</h3>
+    {data && data.length > 0 ? (
+      <ul className="space-y-4">
+        {data.map((item, index) => (
+          <li
+            key={index}
+            onClick={() => onClick(item.name)}
+            className="flex justify-between items-center p-2 rounded-md hover:bg-gray-100 cursor-pointer"
+          >
+            <span className="font-medium text-gray-700">{item.name}</span>
+            <span className="font-semibold text-gray-900">
+              {formatCurrency(item.Total || 0, "INR")}
+            </span>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-gray-500">No data available.</p>
+    )}
+  </div>
+);
