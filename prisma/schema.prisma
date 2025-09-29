@@ -124,6 +124,7 @@ model IOM {
   from           String
   to             String
   subject        String
+  department     String?
   content        String?
   isUrgent       Boolean      @default(false)
   status         IOMStatus    @default(DRAFT)
@@ -212,6 +213,7 @@ model PurchaseOrder {
   iomId          String?
   vendorId       String?
   title          String
+  department     String?
   status         POStatus     @default(DRAFT)
   expectedDeliveryDate DateTime?
   fulfilledAt    DateTime?
@@ -323,6 +325,7 @@ model PaymentRequest {
   pdfToken        String?       @unique
   poId            String?
   title           String
+  department      String?
   status          PRStatus      @default(DRAFT)
   totalAmount     Float         @default(0)
   taxAmount       Float         @default(0)

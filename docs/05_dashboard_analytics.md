@@ -36,3 +36,8 @@ The analytics page provides a more in-depth, interactive view of procurement dat
 
 *   **Visualization:** A pie chart that breaks down total spending by the procurement category assigned to each Purchase Order item.
 *   **Interactivity:** Users can click on a specific slice of the pie (representing a category) to drill down into a filtered list of all Purchase Orders containing items from that category. This helps in understanding where the company's money is being allocated.
+
+### 2.3. Spend by Department
+
+*   **Visualization:** A vertical bar chart showing the total spend for each department.
+*   **Interactivity:** Users can click on a department's bar to see a filtered list of all Purchase Orders originating from that department, providing insight into departmental spending habits.

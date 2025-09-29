@@ -51,6 +51,7 @@ export interface PurchaseOrder {
   iomId?: string;
   vendorId?: string;
   title: string;
+  department?: string;
   status: POStatus;
   totalAmount: number;
   taxAmount: number;
