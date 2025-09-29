@@ -81,11 +81,13 @@ This phase focuses on building a powerful, self-service analytics module that al
 
 ### 3.4. Export & Scheduled Reports
 
-*   **Status:** ⏳ **Not Started**
+*   **Status:** 🏗️ **In Progress**
 *   **Concept:** Allow users to take their data offline and receive regular updates.
-*   **Implementation:**
-    *   **Export:** Add "Export as CSV/PDF" buttons to all data tables and reports.
-    *   **Scheduled Reports:** Create a system where users can subscribe to a report (e.g., "Weekly Spend Summary") to be delivered to their email automatically. This can be managed with a cron job on the server.
+*   **Update:**
+    *   **Export:** An "Export as CSV" feature has been added to the Purchase Order list page.
+*   **Next Steps:**
+    *   Implement PDF export for documents.
+    *   Implement scheduled reports.
 
 ---
 
