@@ -115,6 +115,8 @@ The internal request that initiates a procurement workflow.
 | `content` | `String?` | The main body/content of the memo. |
 | `status` | `IOMStatus` | The current status in the workflow (e.g., `DRAFT`, `APPROVED`). |
 | `totalAmount` | `Float` | The calculated total amount of all items in the IOM. |
+| `reviewerStatus` | `ActionStatus` | The approval status from the reviewer. |
+| `approverStatus` | `ActionStatus` | The approval status from the approver. |
 | `items` | `IOMItem[]` | Relation to the line items of this IOM. |
 | `preparedById` | `String` | FK for the user who created the IOM. |
 | `requestedById` | `String` | FK for the user on whose behalf the IOM was created. |
@@ -131,6 +133,7 @@ A line item within an IOM.
 | `id` | `String` | Unique identifier. |
 | `itemName` | `String` | Name of the item being requested. |
 | `description` | `String?` | Further details about the item. |
+| `category` | `String?` | The procurement category for this item. |
 | `quantity` | `Int` | The quantity of the item. |
 | `unitPrice` | `Float` | The price per unit. |
 | `totalPrice` | `Float` | The calculated total price (`quantity` * `unitPrice`). |
@@ -154,7 +157,20 @@ The formal order placed with an external vendor.
 | `items` | `POItem[]` | Relation to the line items of this PO. |
 
 ### `POItem`
-A line item within a `PurchaseOrder`. Similar to `IOMItem` but includes fields for `taxRate` and `taxAmount`.
+A line item within a `PurchaseOrder`.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `String` | Unique identifier. |
+| `itemName` | `String` | Name of the item being purchased. |
+| `description` | `String?` | Further details about the item. |
+| `category` | `String?` | The procurement category for this item (e.g., "IT Hardware", "Office Supplies"). Used for analytics. |
+| `quantity` | `Int` | The quantity of the item. |
+| `unitPrice` | `Float` | The price per unit before tax. |
+| `taxRate` | `Float` | Item-specific tax rate percentage. |
+| `taxAmount` | `Float` | The calculated tax amount for this line item. |
+| `totalPrice` | `Float` | The calculated total price for this line item (`(unitPrice * quantity) + taxAmount`). |
+| `poId` | `String` | Foreign key linking back to the parent `PurchaseOrder`. |
 
 ### `PaymentRequest`
 A request to make a payment, typically for a fulfilled PO.
@@ -219,10 +235,13 @@ Records significant events for accountability.
 `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `COMPLETED`
 
 ### `POStatus`
-`DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `ORDERED`, `DELIVERED`, `CANCELLED`
+`DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `ORDERED`, `DELIVERED`, `CANCELLED`, `COMPLETED`
 
 ### `PRStatus`
 `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `PROCESSED`, `CANCELLED`
+
+### `ActionStatus`
+`PENDING`, `APPROVED`, `REJECTED`
 
 ### `PaymentMethod`
 `CHEQUE`, `BANK_TRANSFER`, `CASH`, `ONLINE_PAYMENT`

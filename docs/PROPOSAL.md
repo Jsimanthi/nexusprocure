@@ -65,7 +65,7 @@ This phase focuses on building a powerful, self-service analytics module that al
     *   The database schema has been updated to include a `category` field on all purchase items.
     *   The IOM and PO creation forms now allow users to select a category for each item.
     *   A new "Spend by Category" pie chart on the Analytics page visualizes this data, with drill-down functionality.
-*   **Next Steps:**
+*   **Next Steps:** ⏳ **Not Started**
     *   Implement "Departmental Spend" tracking.
     *   Implement "Top Spenders" analysis (by vendor, department, and category).
 
