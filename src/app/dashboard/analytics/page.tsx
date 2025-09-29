@@ -12,6 +12,7 @@ import ErrorDisplay from "@/components/ErrorDisplay";
 import { formatCurrency } from "@/lib/utils";
 
 interface SpendData {
+  id?: string;
   name: string;
   Total?: number;
   value?: number;
@@ -71,11 +72,14 @@ export default function AnalyticsPage() {
   };
 
   const handleTopSpenderClick = (
-    type: "vendorName" | "department" | "category",
-    name: string
+    type: "vendor" | "department" | "category",
+    item: SpendData
   ) => {
-    if (name) {
-      router.push(`/po?${type}=${encodeURIComponent(name)}`);
+    if (type === 'vendor' && item.id) {
+      router.push(`/vendors/${item.id}`);
+    } else if (item.name) {
+      const queryParam = type === 'vendor' ? 'vendorName' : type;
+      router.push(`/po?${queryParam}=${encodeURIComponent(item.name)}`);
     }
   };
 
@@ -179,17 +183,17 @@ export default function AnalyticsPage() {
           <TopSpenderList
             title="By Vendor"
             data={analyticsData?.topVendors}
-            onClick={(name) => handleTopSpenderClick("vendorName", name)}
+            onClick={(item) => handleTopSpenderClick("vendor", item)}
           />
           <TopSpenderList
             title="By Department"
             data={analyticsData?.topDepartments}
-            onClick={(name) => handleTopSpenderClick("department", name)}
+            onClick={(item) => handleTopSpenderClick("department", item)}
           />
           <TopSpenderList
             title="By Category"
             data={analyticsData?.topCategories}
-            onClick={(name) => handleTopSpenderClick("category", name)}
+            onClick={(item) => handleTopSpenderClick("category", item)}
           />
         </div>
       </div>
@@ -200,7 +204,7 @@ export default function AnalyticsPage() {
 const TopSpenderList: React.FC<{
   title: string;
   data: SpendData[] | undefined;
-  onClick: (name: string) => void;
+  onClick: (item: SpendData) => void;
 }> = ({ title, data, onClick }) => (
   <div className="bg-white p-6 rounded-lg shadow">
     <h3 className="text-xl font-semibold mb-4">{title}</h3>
@@ -209,7 +213,7 @@ const TopSpenderList: React.FC<{
         {data.map((item, index) => (
           <li
             key={index}
-            onClick={() => onClick(item.name)}
+            onClick={() => onClick(item)}
             className="flex justify-between items-center p-2 rounded-md hover:bg-gray-100 cursor-pointer"
           >
             <span className="font-medium text-gray-700">{item.name}</span>

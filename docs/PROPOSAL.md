@@ -70,12 +70,14 @@ This phase focuses on building a powerful, self-service analytics module that al
 
 ### 3.3. Vendor Performance Analytics
 
-*   **Status:** ⏳ **Not Started**
+*   **Status:** 🏗️ **In Progress**
 *   **Concept:** A dedicated section to analyze and rate vendor performance.
-*   **Metrics to Track:**
-    *   **On-Time Delivery Rate:** How often do vendors meet their delivery deadlines?
-    *   **Price Variance:** How does the quoted price compare to the final invoiced price?
-    *   **Quality Score:** A rating system for the quality of goods/services received.
+*   **Update:**
+    *   The PO workflow has been enhanced to allow users to mark orders as "Delivered" and provide a `qualityScore` (1-5 stars) and `deliveryNotes`.
+    *   A new Vendor Scorecard page is available at `/vendors/[id]`.
+    *   The scorecard displays key performance metrics, including "On-Time Delivery Rate" and "Average Quality Score".
+*   **Next Steps:**
+    *   Implement "Price Variance" tracking.
 *   **Visualization:** A vendor scorecard or a scatter plot comparing vendors based on cost and reliability.
 
 ### 3.4. Export & Scheduled Reports

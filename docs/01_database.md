@@ -152,6 +152,10 @@ The formal order placed with an external vendor.
 | `title` | `String` | The title of the PO. |
 | `department` | `String?` | The department associated with the PO, carried over from the IOM or entered manually. |
 | `status` | `POStatus` | The current status in the workflow (e.g., `DRAFT`, `ORDERED`). |
+| `expectedDeliveryDate` | `DateTime?` | The date the delivery is expected. |
+| `fulfilledAt` | `DateTime?` | The actual date the order was delivered. |
+| `qualityScore` | `Int?` | A 1-5 star rating for the delivery. |
+| `deliveryNotes` | `String?` | Notes from the user who received the delivery. |
 | `totalAmount`| `Float` | The subtotal before tax. |
 | `taxAmount` | `Float` | The calculated total tax amount. |
 | `grandTotal`| `Float` | The final total (`totalAmount` + `taxAmount`). |

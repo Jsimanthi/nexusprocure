@@ -62,13 +62,16 @@ export async function GET() {
     });
 
     const topVendorsPromise = prisma.purchaseOrder.groupBy({
-      by: ['vendorName'],
+      by: ['vendorId', 'vendorName'],
       _sum: {
         grandTotal: true,
       },
       where: {
         status: {
           in: ['ORDERED', 'DELIVERED', 'COMPLETED'],
+        },
+        vendorId: {
+          not: null,
         },
       },
       orderBy: {
@@ -139,6 +142,7 @@ export async function GET() {
     }));
 
     const formattedTopVendors = topVendors.map((item) => ({
+      id: item.vendorId!,
       name: item.vendorName,
       Total: item._sum.grandTotal || 0,
     }));
