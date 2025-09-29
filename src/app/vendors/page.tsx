@@ -303,7 +303,10 @@ export default function VendorsPage() {
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-medium text-gray-900 truncate">
-                          {vendor.name} <span className="text-sm font-normal text-gray-500">({vendor.currency})</span>
+                          <Link href={`/vendors/${vendor.id}`} className="hover:underline text-blue-600">
+                            {vendor.name}
+                          </Link>
+                          <span className="text-sm font-normal text-gray-500 ml-2">({vendor.currency})</span>
                         </h3>
                         <p className="text-sm text-gray-500 truncate">
                           {vendor.email} | {vendor.phone}

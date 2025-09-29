@@ -12,6 +12,7 @@ import ErrorDisplay from "@/components/ErrorDisplay";
 import { formatCurrency } from "@/lib/utils";
 
 interface SpendData {
+  id?: string;
   name: string;
   Total?: number;
   value?: number;
@@ -21,6 +22,9 @@ interface AnalyticsData {
   spendOverTime: SpendData[];
   spendByCategory: SpendData[];
   spendByDepartment: SpendData[];
+  topVendors: SpendData[];
+  topDepartments: SpendData[];
+  topCategories: SpendData[];
 }
 
 const fetchAnalyticsData = async (): Promise<AnalyticsData> => {
@@ -64,6 +68,18 @@ export default function AnalyticsPage() {
     if (data && data.activePayload && data.activePayload.length > 0) {
       const department = data.activePayload[0].payload.name;
       router.push(`/po?department=${encodeURIComponent(department)}`);
+    }
+  };
+
+  const handleTopSpenderClick = (
+    type: "vendor" | "department" | "category",
+    item: SpendData
+  ) => {
+    if (type === 'vendor' && item.id) {
+      router.push(`/vendors/${item.id}`);
+    } else if (item.name) {
+      const queryParam = type === 'vendor' ? 'vendorName' : type;
+      router.push(`/po?${queryParam}=${encodeURIComponent(item.name)}`);
     }
   };
 
@@ -160,6 +176,55 @@ export default function AnalyticsPage() {
           </div>
         )}
       </div>
+
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold mb-6 text-gray-800">Top 5 Spenders</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <TopSpenderList
+            title="By Vendor"
+            data={analyticsData?.topVendors}
+            onClick={(item) => handleTopSpenderClick("vendor", item)}
+          />
+          <TopSpenderList
+            title="By Department"
+            data={analyticsData?.topDepartments}
+            onClick={(item) => handleTopSpenderClick("department", item)}
+          />
+          <TopSpenderList
+            title="By Category"
+            data={analyticsData?.topCategories}
+            onClick={(item) => handleTopSpenderClick("category", item)}
+          />
+        </div>
+      </div>
     </PageLayout>
   );
 }
+
+const TopSpenderList: React.FC<{
+  title: string;
+  data: SpendData[] | undefined;
+  onClick: (item: SpendData) => void;
+}> = ({ title, data, onClick }) => (
+  <div className="bg-white p-6 rounded-lg shadow">
+    <h3 className="text-xl font-semibold mb-4">{title}</h3>
+    {data && data.length > 0 ? (
+      <ul className="space-y-4">
+        {data.map((item, index) => (
+          <li
+            key={index}
+            onClick={() => onClick(item)}
+            className="flex justify-between items-center p-2 rounded-md hover:bg-gray-100 cursor-pointer"
+          >
+            <span className="font-medium text-gray-700">{item.name}</span>
+            <span className="font-semibold text-gray-900">
+              {formatCurrency(item.Total || 0, "INR")}
+            </span>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-gray-500">No data available.</p>
+    )}
+  </div>
+);

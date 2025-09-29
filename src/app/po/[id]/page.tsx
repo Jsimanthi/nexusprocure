@@ -13,6 +13,7 @@ import { getPOStatusColor } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useHasPermission } from "@/hooks/useHasPermission";
 import POPrintView from "@/components/POPrintView";
+import DeliverPOModal from "@/components/DeliverPOModal";
 import { ArrowLeft } from "lucide-react";
 
 export default function PODetailPage() {
@@ -26,6 +27,7 @@ export default function PODetailPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
     PaymentMethod.CHEQUE
   );
+  const [isDeliverModalOpen, setIsDeliverModalOpen] = useState(false);
 
   // Add permission check to view PO
   const canViewPO = useHasPermission('READ_PO');
@@ -79,6 +81,31 @@ export default function PODetailPage() {
       }
     } catch (error) {
       console.error("Error updating status:", error);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeliverSubmit = async (qualityScore: number, deliveryNotes: string) => {
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/po/${params.id}/deliver`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qualityScore, deliveryNotes }),
+      });
+
+      if (response.ok) {
+        const updatedPO = await response.json();
+        setPo(updatedPO);
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to mark as delivered:', errorData.error);
+        alert(`Failed to mark as delivered: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error marking as delivered:', error);
+      alert('An unexpected error occurred while marking the PO as delivered.');
     } finally {
       setUpdating(false);
     }
@@ -293,7 +320,7 @@ export default function PODetailPage() {
                   </button>
                 )}
                 {po.status === 'ORDERED' && canMarkAsDelivered && (
-                  <button onClick={() => handleAction('DELIVER')} disabled={updating} className="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                  <button onClick={() => setIsDeliverModalOpen(true)} disabled={updating} className="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
                     {updating ? "Processing..." : "Mark as Delivered"}
                   </button>
                 )}
@@ -431,6 +458,11 @@ export default function PODetailPage() {
             </div>
           </div>
         </div>
+      <DeliverPOModal
+        isOpen={isDeliverModalOpen}
+        onClose={() => setIsDeliverModalOpen(false)}
+        onSubmit={handleDeliverSubmit}
+      />
     </PageLayout>
   );
 }

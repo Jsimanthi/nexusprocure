@@ -41,3 +41,13 @@ The analytics page provides a more in-depth, interactive view of procurement dat
 
 *   **Visualization:** A vertical bar chart showing the total spend for each department.
 *   **Interactivity:** Users can click on a department's bar to see a filtered list of all Purchase Orders originating from that department, providing insight into departmental spending habits.
+
+### 2.4. Top 5 Spenders
+
+This section provides a quick overview of the top five spenders across three key dimensions:
+
+*   **By Vendor:** Lists the top 5 vendors by total spend.
+*   **By Department:** Lists the top 5 departments by total spend.
+*   **By Category:** Lists the top 5 procurement categories by total spend.
+
+Each list item is interactive, allowing users to click to view a filtered list of all associated Purchase Orders.
