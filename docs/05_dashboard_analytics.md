@@ -25,27 +25,14 @@ The dashboard uses Pusher for real-time updates. When a new activity occurs, the
 
 ## 2. Analytics & Reports
 
-The analytics page provides a more in-depth view of the procurement data. It includes charts and graphs to visualize the data and help users make informed decisions.
+The analytics page provides a more in-depth, interactive view of procurement data. It features several charts designed to help users visualize spending and make informed decisions. For a complete roadmap of planned features, please see the `PROPOSAL.md` document.
 
-### 2.1. Document Counts
+### 2.1. Spend Over Time
 
-This section displays the total counts of Purchase Orders, IOMs, and Check Requests.
+*   **Visualization:** A bar chart displaying the total spending from approved Purchase Orders, aggregated by month.
+*   **Interactivity:** Users can click on a specific bar (representing a month) to drill down into a filtered list of all Purchase Orders created in that month. This provides a seamless way to investigate spending spikes or trends.
 
-### 2.2. Purchase Order Status Distribution
+### 2.2. Spend by Category
 
-A pie chart that shows the distribution of Purchase Orders by their status (e.g., `DRAFT`, `APPROVED`, `REJECTED`). This helps users to quickly understand the current state of the procurement process.
-
-### 2.3. Approved PO Spending (Last 12 Months)
-
-A bar chart that shows the total spending on approved Purchase Orders over the last 12 months. This helps users to track spending trends and identify potential cost-saving opportunities.
-
-### 2.4. Future Enhancements
-
-The analytics and reporting module can be further enhanced with the following features:
-
-*   **Customizable Dashboards:** Allow users to customize their dashboards with widgets that are most relevant to their roles.
-*   **Advanced Filtering:** Provide more advanced filtering options to allow users to drill down into the data.
-*   **Exporting Reports:** Allow users to export reports in various formats (e.g., PDF, CSV).
-*   **Scheduled Reports:** Allow users to schedule reports to be sent to their email on a regular basis.
-*   **More Chart Types:** Add more chart types to visualize the data in different ways.
-*   **Integration with BI Tools:** Integrate with business intelligence tools like Tableau or Power BI for more advanced analysis.
+*   **Visualization:** A pie chart that breaks down total spending by the procurement category assigned to each Purchase Order item.
+*   **Interactivity:** Users can click on a specific slice of the pie (representing a category) to drill down into a filtered list of all Purchase Orders containing items from that category. This helps in understanding where the company's money is being allocated.
