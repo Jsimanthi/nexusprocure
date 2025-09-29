@@ -96,10 +96,12 @@ This phase focuses on building a powerful, self-service analytics module that al
 This is the "world-class" phase, introducing intelligent features that move from reactive analysis to proactive decision-making.
 
 ### 4.1. Predictive Analytics
+*   **Status:** 🏗️ **In Progress**
 *   **Concept:** Use historical data to forecast future trends.
-*   **Features:**
-    *   **Demand Forecasting:** Predict future demand for frequently purchased items to optimize stock levels.
-    *   **Budget Forecasting:** Project future spending based on past trends to aid in budget planning.
+*   **Update:**
+    *   **Demand Forecasting:** A new section on the analytics page allows users to select a frequently purchased item and view its historical purchase quantity. A forecast for the next month's demand, based on a simple moving average, is also displayed.
+*   **Next Steps:**
+    *   Implement "Budget Forecasting".
 
 ### 4.2. Anomaly Detection
 *   **Concept:** Automatically flag unusual or potentially fraudulent activities.

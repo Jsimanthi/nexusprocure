@@ -51,3 +51,13 @@ This section provides a quick overview of the top five spenders across three key
 *   **By Category:** Lists the top 5 procurement categories by total spend.
 
 Each list item is interactive, allowing users to click to view a filtered list of all associated Purchase Orders.
+
+## 3. Predictive Analytics
+
+### 3.1. Demand Forecasting
+*   **Concept:** This feature uses historical purchase data to predict future demand for specific items.
+*   **Implementation:**
+    *   A new "Demand Forecasting" section has been added to the analytics page.
+    *   Users can select from a list of the most frequently purchased items.
+    *   A line chart visualizes the historical monthly purchase quantity for the selected item.
+    *   A forecast for the next month's demand, calculated using a simple moving average, is displayed alongside the chart.
