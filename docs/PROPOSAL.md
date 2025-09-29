@@ -84,9 +84,9 @@ This phase focuses on building a powerful, self-service analytics module that al
 *   **Status:** 🏗️ **In Progress**
 *   **Concept:** Allow users to take their data offline and receive regular updates.
 *   **Update:**
-    *   **Export:** An "Export as CSV" feature has been added to the Purchase Order list page.
+    *   **Export:** An "Export as CSV" feature has been added to the Purchase Order list page. A "Download PDF" button has been added to the Purchase Order details page.
 *   **Next Steps:**
-    *   Implement PDF export for documents.
+    *   Implement PDF export for other documents (IOM, PR).
     *   Implement scheduled reports.
 
 ---
