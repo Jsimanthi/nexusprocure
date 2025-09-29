@@ -38,6 +38,26 @@ model Session {
   @@index([userId])
 }
 
+enum ReportType {
+  WEEKLY_SPEND_SUMMARY
+}
+
+enum ReportFrequency {
+  WEEKLY
+}
+
+model ReportSubscription {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reportType ReportType
+  frequency ReportFrequency
+  createdAt DateTime        @default(now())
+
+  @@unique([userId, reportType])
+  @@index([userId])
+}
+
 model Setting {
   id        String   @id @default(cuid())
   key       String   @unique
@@ -103,6 +123,8 @@ model User {
   requestedPRs PaymentRequest[] @relation("PRRequestedBy")
   reviewedPRs  PaymentRequest[] @relation("PRReviewedBy")
   approvedPRs  PaymentRequest[] @relation("PRApprovedBy")
+
+  reportSubscriptions ReportSubscription[]
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
