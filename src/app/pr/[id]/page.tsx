@@ -14,7 +14,7 @@ import { PurchaseOrder } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import { useHasPermission } from "@/hooks/useHasPermission";
 import PRPrintView from "@/components/PRPrintView";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 
 type FullPaymentRequest = PaymentRequest & {
   po?: (Partial<PurchaseOrder> & {
@@ -32,6 +32,7 @@ export default function PRDetailPage() {
   const [pr, setPr] = useState<FullPaymentRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   // Added permission check to view PR
   const canViewPR = useHasPermission('READ_PR');
@@ -135,57 +136,29 @@ export default function PRDetailPage() {
     }
   };
 
-  const handlePrint = () => {
-    const printContent = document.getElementById('pr-print-view');
-    if (!printContent) return;
-
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) return;
-
-    const styles = Array.from(document.styleSheets)
-      .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : (s.ownerNode as HTMLStyleElement)?.outerHTML)
-      .join('');
-
-    const content = printContent.outerHTML;
-
-    doc.open();
-    doc.write(`
-      <html>
-        <head>
-          <title>Print Payment Request</title>
-          ${styles}
-          <style>
-            @page { size: auto; margin: 0; }
-            body, html { margin: 0; padding: 0; height: 100%; }
-            body { padding: 2rem; box-sizing: border-box; }
-            #pr-print-view { display: flex; flex-direction: column; height: 100%; box-shadow: none !important; border: none !important; }
-            .pr-main-content { flex-grow: 1; }
-            .pr-footer { flex-shrink: 0; margin-top: auto; }
-          </style>
-        </head>
-        <body>
-          ${content}
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    iframe.onload = function() {
-      if (iframe.contentWindow) {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
+  const handleDownloadPdf = async () => {
+    if (!pr) return;
+    setIsDownloadingPdf(true);
+    try {
+      const response = await fetch(`/api/pdf/pr/${pr.id}/download`);
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
       }
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 500);
-    };
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `PR-${pr.prNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Failed to download PDF.');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   return (
@@ -299,10 +272,12 @@ export default function PRDetailPage() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Printing</h3>
             <div className="space-y-2">
               <button
-                onClick={handlePrint}
-                className="w-full inline-flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf}
+                className="w-full inline-flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
               >
-                Print Just This PR
+                <Download className="h-4 w-4 mr-2" />
+                {isDownloadingPdf ? 'Downloading...' : 'Download PDF'}
               </button>
               <Link
                 href={`/print/chain/${pr.id}`}
