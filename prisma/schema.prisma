@@ -189,6 +189,7 @@ model IOMItem {
   // Relationship
   iom     IOM   @relation(fields: [iomId], references: [id], onDelete: Cascade)
   iomId   String
+  poItems   POItem[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -281,6 +282,8 @@ model POItem {
   // Relationship
   po    PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
   poId  String
+  iomItem   IOMItem?      @relation(fields: [iomItemId], references: [id], onDelete: SetNull)
+  iomItemId String?
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

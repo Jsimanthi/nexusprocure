@@ -177,6 +177,7 @@ A line item within a `PurchaseOrder`.
 | `taxAmount` | `Float` | The calculated tax amount for this line item. |
 | `totalPrice` | `Float` | The calculated total price for this line item (`(unitPrice * quantity) + taxAmount`). |
 | `poId` | `String` | Foreign key linking back to the parent `PurchaseOrder`. |
+| `iomItemId` | `String?` | Foreign key linking to the original `IOMItem` for price variance tracking. |
 
 ### `PaymentRequest`
 A request to make a payment, typically for a fulfilled PO.

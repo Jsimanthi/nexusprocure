@@ -76,8 +76,7 @@ This phase focuses on building a powerful, self-service analytics module that al
     *   The PO workflow has been enhanced to allow users to mark orders as "Delivered" and provide a `qualityScore` (1-5 stars) and `deliveryNotes`.
     *   A new Vendor Scorecard page is available at `/vendors/[id]`.
     *   The scorecard displays key performance metrics, including "On-Time Delivery Rate" and "Average Quality Score".
-*   **Next Steps:**
-    *   Implement "Price Variance" tracking.
+*   **Update:** "Price Variance" tracking has been implemented. The Vendor Scorecard now displays the average price variance between the initial request (IOM) and the final purchase order (PO).
 *   **Visualization:** A vendor scorecard or a scatter plot comparing vendors based on cost and reliability.
 
 ### 3.4. Export & Scheduled Reports

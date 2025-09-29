@@ -10,11 +10,12 @@ import ErrorDisplay from '@/components/ErrorDisplay';
 import { Vendor, PurchaseOrder } from '@/types/po';
 import { useHasPermission } from '@/hooks/useHasPermission';
 import { getPOStatusColor } from '@/lib/utils';
-import { Star, TrendingUp, CheckCircle } from 'lucide-react';
+import { Star, TrendingUp, CheckCircle, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface VendorPerformance {
   onTimeDeliveryRate: number;
   averageQualityScore: number | null;
+  averagePriceVariance: number;
   totalDeliveredOrders: number;
 }
 
@@ -66,26 +67,35 @@ export default function VendorDetailPage() {
     fetchVendorData();
   }, [vendorId, canViewVendor]);
 
-  const performanceMetrics = useMemo(() => [
-    {
-      name: 'On-Time Delivery',
-      value: `${performance?.onTimeDeliveryRate.toFixed(2) ?? 'N/A'}%`,
-      icon: CheckCircle,
-      color: 'text-green-500',
-    },
-    {
-      name: 'Avg. Quality Score',
-      value: performance?.averageQualityScore ? `${performance.averageQualityScore.toFixed(2)} / 5` : 'N/A',
-      icon: Star,
-      color: 'text-yellow-500',
-    },
-    {
-      name: 'Total Delivered Orders',
-      value: performance?.totalDeliveredOrders ?? 'N/A',
-      icon: TrendingUp,
-      color: 'text-blue-500',
-    },
-  ], [performance]);
+  const performanceMetrics = useMemo(() => {
+    const metrics = [
+      {
+        name: 'On-Time Delivery',
+        value: `${performance?.onTimeDeliveryRate.toFixed(2) ?? 'N/A'}%`,
+        icon: CheckCircle,
+        color: 'text-green-500',
+      },
+      {
+        name: 'Avg. Quality Score',
+        value: performance?.averageQualityScore ? `${performance.averageQualityScore.toFixed(2)} / 5` : 'N/A',
+        icon: Star,
+        color: 'text-yellow-500',
+      },
+      {
+        name: 'Avg. Price Variance',
+        value: `${performance?.averagePriceVariance?.toFixed(2) ?? 'N/A'}%`,
+        icon: performance && performance.averagePriceVariance > 0 ? ArrowUp : ArrowDown,
+        color: performance && performance.averagePriceVariance > 0 ? 'text-red-500' : 'text-green-500',
+      },
+      {
+        name: 'Total Delivered Orders',
+        value: performance?.totalDeliveredOrders ?? 'N/A',
+        icon: TrendingUp,
+        color: 'text-blue-500',
+      },
+    ];
+    return metrics;
+  }, [performance]);
 
   if (loading) return <PageLayout><LoadingSpinner /></PageLayout>;
 

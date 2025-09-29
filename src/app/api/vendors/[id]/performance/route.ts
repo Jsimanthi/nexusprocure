@@ -28,6 +28,16 @@ export async function GET(
         fulfilledAt: true,
         expectedDeliveryDate: true,
         qualityScore: true,
+        items: {
+          select: {
+            unitPrice: true,
+            iomItem: {
+              select: {
+                unitPrice: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -35,6 +45,7 @@ export async function GET(
       return NextResponse.json({
         onTimeDeliveryRate: 100, // Default to 100% if no orders
         averageQualityScore: null, // No score if no orders
+        averagePriceVariance: 0,
         totalDeliveredOrders: 0,
       });
     }
@@ -51,9 +62,25 @@ export async function GET(
         ? scoredPOs.reduce((sum, po) => sum + po.qualityScore!, 0) / scoredPOs.length
         : null;
 
+    const priceVariances = deliveredPOs
+      .flatMap((po) => po.items)
+      .map((item) => {
+        if (item.iomItem && item.iomItem.unitPrice > 0) {
+          return ((item.unitPrice - item.iomItem.unitPrice) / item.iomItem.unitPrice) * 100;
+        }
+        return null;
+      })
+      .filter((variance) => variance !== null) as number[];
+
+    const averagePriceVariance =
+      priceVariances.length > 0
+        ? priceVariances.reduce((sum, v) => sum + v, 0) / priceVariances.length
+        : 0;
+
     return NextResponse.json({
       onTimeDeliveryRate: parseFloat(onTimeDeliveryRate.toFixed(2)),
       averageQualityScore: averageQualityScore ? parseFloat(averageQualityScore.toFixed(2)) : null,
+      averagePriceVariance: parseFloat(averagePriceVariance.toFixed(2)),
       totalDeliveredOrders: deliveredPOs.length,
     });
 
