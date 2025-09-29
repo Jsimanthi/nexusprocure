@@ -7,7 +7,7 @@ import { useState } from "react";
 import Image from "next/image";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("demo@nexusprocure.com");
+  const [email, setEmail] = useState("admin@nexusprocure.com");
   const [password, setPassword] = useState("password123");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -26,7 +26,7 @@ export default function LoginPage() {
       if (result?.ok) {
         router.push("/dashboard");
       } else {
-        alert("Login failed. Try email: demo@nexusprocure.com, password: password123");
+        alert("Login failed. Try email: admin@nexusprocure.com, password: password123");
         setIsLoading(false);
       }
     } catch (error) {
@@ -82,7 +82,7 @@ export default function LoginPage() {
               {isLoading ? "Signing in..." : "Sign in"}
             </button>
             <p className="mt-3 text-center text-sm text-gray-500">
-              Use email: <code>demo@nexusprocure.com</code>, password: <code>password123</code>
+              Use email: <code>admin@nexusprocure.com</code>, password: <code>password123</code>
             </p>
           </div>
         </form>
