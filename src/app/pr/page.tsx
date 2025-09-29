@@ -119,8 +119,9 @@ export default function PRListPage() {
           onClose={() => setIsModalOpen(false)}
           onConfirm={confirmDelete}
           title="Confirm Deletion"
-          message="Are you sure you want to delete this Payment Request? This action cannot be undone."
-        />
+        >
+          <p>Are you sure you want to delete this Payment Request? This action cannot be undone.</p>
+        </ConfirmationModal>
         <div className="flex justify-end mb-6">
           {canCreate && (
             <Link
