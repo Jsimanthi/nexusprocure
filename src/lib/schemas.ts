@@ -29,6 +29,7 @@ export const attachmentSchema = z.object({
 
 export const createPoSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
+  department: z.string().optional(),
   iomId: z.string().cuid().optional(),
   vendorId: z.string().cuid().optional(),
   companyName: z.string().min(1, 'Company name is required.'),
@@ -73,6 +74,7 @@ export const createIomSchema = z.object({
   from: z.string().min(1, 'From is required.'),
   to: z.string().min(1, 'To is required.'),
   subject: z.string().min(1, 'Subject is required.'),
+  department: z.string().optional(),
   content: z.string().optional(),
   isUrgent: z.boolean().optional(),
   items: z.array(createIomItemSchema).optional(),
@@ -86,6 +88,7 @@ export const updateIomSchema = createIomSchema.partial();
 export const createPrSchema = z.object({
   title: z.string().min(1, 'Title is required.'),
   poId: z.string().cuid().optional(),
+  department: z.string().optional(),
   paymentTo: z.string().min(1, 'Payment to is required.'),
   paymentDate: z.coerce.date(),
   purpose: z.string().min(1, 'Purpose is required.'),

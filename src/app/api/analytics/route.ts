@@ -41,9 +41,31 @@ export async function GET() {
       },
     });
 
-    const [spendOverTime, spendByCategory] = await Promise.all([
+    const spendByDepartmentPromise = prisma.purchaseOrder.groupBy({
+      by: ['department'],
+      _sum: {
+        grandTotal: true,
+      },
+      where: {
+        status: {
+          in: ['ORDERED', 'DELIVERED', 'COMPLETED'],
+        },
+        department: {
+          not: null,
+          not: '',
+        },
+      },
+      orderBy: {
+        _sum: {
+          grandTotal: 'desc',
+        },
+      },
+    });
+
+    const [spendOverTime, spendByCategory, spendByDepartment] = await Promise.all([
       spendOverTimePromise,
       spendByCategoryPromise,
+      spendByDepartmentPromise,
     ]);
 
     const formattedSpendData = spendOverTime.map((item) => ({
@@ -56,9 +78,15 @@ export async function GET() {
       value: item._sum.totalPrice || 0,
     }));
 
+    const formattedDepartmentData = spendByDepartment.map((item) => ({
+      name: item.department!,
+      Total: item._sum.grandTotal || 0,
+    }));
+
     return NextResponse.json({
       spendOverTime: formattedSpendData,
       spendByCategory: formattedCategoryData,
+      spendByDepartment: formattedDepartmentData,
     });
   } catch (error) {
     console.error("Error fetching analytics data:", error);

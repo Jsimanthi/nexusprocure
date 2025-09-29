@@ -112,6 +112,7 @@ The internal request that initiates a procurement workflow.
 | `iomNumber` | `String` | A unique, human-readable number for the IOM (e.g., "IOM-2023-0001"). |
 | `title` | `String` | The main title of the IOM. |
 | `from` / `to` / `subject` | `String` | Standard memo fields. |
+| `department` | `String?` | The department initiating the request. Used for analytics and carried through the workflow. |
 | `content` | `String?` | The main body/content of the memo. |
 | `status` | `IOMStatus` | The current status in the workflow (e.g., `DRAFT`, `APPROVED`). |
 | `totalAmount` | `Float` | The calculated total amount of all items in the IOM. |
@@ -149,6 +150,7 @@ The formal order placed with an external vendor.
 | `iomId` | `String?` | Foreign key linking to the IOM this PO was converted from. |
 | `vendorId` | `String?` | Foreign key linking to the `Vendor`. |
 | `title` | `String` | The title of the PO. |
+| `department` | `String?` | The department associated with the PO, carried over from the IOM or entered manually. |
 | `status` | `POStatus` | The current status in the workflow (e.g., `DRAFT`, `ORDERED`). |
 | `totalAmount`| `Float` | The subtotal before tax. |
 | `taxAmount` | `Float` | The calculated total tax amount. |
@@ -180,6 +182,7 @@ A request to make a payment, typically for a fulfilled PO.
 | `id` | `String` | Unique identifier. |
 | `prNumber` | `String` | A unique, human-readable number for the PR. |
 | `poId` | `String?` | Foreign key linking to the PO this PR is for. |
+| `department` | `String?` | The department associated with the PR, carried over from the PO. |
 | ... | ... | Contains fields for totals, currency, and payment-specific details like `paymentTo`, `paymentDate`, `paymentMethod`, `bankAccount`, etc. |
 | `status` | `PRStatus` | The current status in the workflow (e.g., `DRAFT`, `PROCESSED`). |
 

@@ -20,6 +20,7 @@ interface SpendData {
 interface AnalyticsData {
   spendOverTime: SpendData[];
   spendByCategory: SpendData[];
+  spendByDepartment: SpendData[];
 }
 
 const fetchAnalyticsData = async (): Promise<AnalyticsData> => {
@@ -55,6 +56,14 @@ export default function AnalyticsPage() {
   const handlePieClick = (data: SpendData) => {
     if (data && data.name) {
       router.push(`/po?category=${encodeURIComponent(data.name)}`);
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleDeptBarClick = (data: any) => {
+    if (data && data.activePayload && data.activePayload.length > 0) {
+      const department = data.activePayload[0].payload.name;
+      router.push(`/po?department=${encodeURIComponent(department)}`);
     }
   };
 
@@ -130,6 +139,26 @@ export default function AnalyticsPage() {
                 </div>
             )}
         </div>
+      </div>
+
+      <div className="mt-8 bg-white p-6 rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-4">Spend by Department</h2>
+        {analyticsData?.spendByDepartment && analyticsData.spendByDepartment.length > 0 ? (
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart data={analyticsData.spendByDepartment} onClick={handleDeptBarClick} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" tickFormatter={(value) => formatCurrency(value as number, "INR").split(".")[0]} />
+              <YAxis type="category" dataKey="name" width={150} />
+              <Tooltip formatter={(value) => formatCurrency(value as number, "INR")} />
+              <Legend />
+              <Bar dataKey="Total" fill="#FF8042" cursor="pointer" />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-center py-16 h-[400px] flex items-center justify-center">
+            <p className="text-gray-500">No departmental spending data available.</p>
+          </div>
+        )}
       </div>
     </PageLayout>
   );
