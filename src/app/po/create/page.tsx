@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FileUpload, { UploadedFileResult } from "@/components/FileUpload";
 import PageLayout from "@/components/PageLayout";
+import ConfirmationModal from "@/components/ConfirmationModal";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useSession } from "next-auth/react";
 import { PROCUREMENT_CATEGORIES } from "@/lib/constants";
@@ -26,6 +27,13 @@ interface POItem {
     taxRate: number;
     taxAmount: number;
     totalPrice: number;
+}
+
+interface Anomaly {
+  itemName: string;
+  currentPrice: number;
+  historicalAverage: number;
+  percentageIncrease: number;
 }
 
 interface Vendor {
@@ -85,6 +93,8 @@ export default function CreatePOPage() {
         { itemName: "", description: "", category: "", quantity: 1, unitPrice: 0, taxRate: 18, taxAmount: 0, totalPrice: 0 }
     ]);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
+  const [isAnomalyModalOpen, setIsAnomalyModalOpen] = useState(false);
 
   const handleIomChange = useCallback((iomId: string) => {
     const iom = ioms.find(i => i.id === iomId);
@@ -222,7 +232,7 @@ export default function CreatePOPage() {
         setItems(updatedItems);
     };
 
-    const handleSave = async (isDraft: boolean) => {
+    const proceedWithSave = async (isDraft: boolean) => {
         if (!session?.user?.id) {
             console.error("User session not found. Cannot create PO.");
             return;
@@ -238,9 +248,7 @@ export default function CreatePOPage() {
         try {
             const response = await fetch("/api/po", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     ...formData,
                     iomId: formData.iomId || undefined,
@@ -265,6 +273,7 @@ export default function CreatePOPage() {
                     status: isDraft ? 'DRAFT' : 'PENDING_APPROVAL',
                 }),
             });
+
             if (response.ok) {
                 router.push("/po");
             } else {
@@ -279,11 +288,46 @@ export default function CreatePOPage() {
         } catch (error) {
             console.error("Error creating PO:", error);
         } finally {
-            if (isDraft) {
-                setDraftLoading(false);
-            } else {
-                setLoading(false);
+            if (isDraft) setDraftLoading(false);
+            else setLoading(false);
+            setIsAnomalyModalOpen(false);
+        }
+    };
+
+    const handleSave = async (isDraft: boolean) => {
+        if (isDraft || !formData.vendorId) {
+            await proceedWithSave(isDraft);
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const anomalyCheckResponse = await fetch('/api/po/check-anomaly', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    vendorId: formData.vendorId,
+                    items: items.map(i => ({ itemName: i.itemName, unitPrice: i.unitPrice })),
+                }),
+            });
+
+            if (!anomalyCheckResponse.ok) {
+                throw new Error('Failed to check for anomalies.');
             }
+
+            const { anomalies } = await anomalyCheckResponse.json();
+
+            if (anomalies.length > 0) {
+                setAnomalies(anomalies);
+                setIsAnomalyModalOpen(true);
+                setLoading(false);
+            } else {
+                await proceedWithSave(false);
+            }
+        } catch (error) {
+            console.error("Error checking for anomalies:", error);
+            alert("Could not check for price anomalies. Please try again.");
+            setLoading(false);
         }
     };
 
@@ -293,6 +337,23 @@ export default function CreatePOPage() {
 
     return (
         <PageLayout title="Create Purchase Order">
+          <ConfirmationModal
+            isOpen={isAnomalyModalOpen}
+            onClose={() => setIsAnomalyModalOpen(false)}
+            onConfirm={() => proceedWithSave(false)}
+            title="Price Anomaly Detected"
+            confirmText="Proceed Anyway"
+          >
+            <p className="mb-4">The following items have prices significantly higher than their historical averages:</p>
+            <ul className="list-disc pl-5 space-y-2 text-sm">
+              {anomalies.map((anomaly, index) => (
+                <li key={index}>
+                  <strong>{anomaly.itemName}</strong>: Current price is <span className="font-bold text-red-600">{anomaly.percentageIncrease}%</span> higher than the average. (Current: {anomaly.currentPrice}, Average: {anomaly.historicalAverage})
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4">Are you sure you want to proceed with this purchase order?</p>
+          </ConfirmationModal>
           <div className="mb-6">
             <Link href="/po" className="text-blue-600 hover:text-blue-800">
               &larr; Back to PO List

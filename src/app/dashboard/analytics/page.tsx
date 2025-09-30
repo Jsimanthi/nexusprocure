@@ -10,6 +10,8 @@ import {
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import { formatCurrency } from "@/lib/utils";
+import SubscriptionManager from '@/components/SubscriptionManager';
+import DemandForecasting from '@/components/dashboard/analytics/DemandForecasting';
 
 interface SpendData {
   id?: string;
@@ -196,6 +198,15 @@ export default function AnalyticsPage() {
             onClick={(item) => handleTopSpenderClick("category", item)}
           />
         </div>
+      </div>
+
+      <div className="mt-8 bg-white p-6 rounded-lg shadow">
+        <h2 className="text-2xl font-bold mb-6 text-gray-800">Scheduled Reports</h2>
+        <SubscriptionManager />
+      </div>
+
+      <div className="mt-8">
+        <DemandForecasting />
       </div>
     </PageLayout>
   );

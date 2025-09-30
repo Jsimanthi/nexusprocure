@@ -112,12 +112,9 @@ The internal request that initiates a procurement workflow.
 | `iomNumber` | `String` | A unique, human-readable number for the IOM (e.g., "IOM-2023-0001"). |
 | `title` | `String` | The main title of the IOM. |
 | `from` / `to` / `subject` | `String` | Standard memo fields. |
-| `department` | `String?` | The department initiating the request. Used for analytics and carried through the workflow. |
 | `content` | `String?` | The main body/content of the memo. |
 | `status` | `IOMStatus` | The current status in the workflow (e.g., `DRAFT`, `APPROVED`). |
 | `totalAmount` | `Float` | The calculated total amount of all items in the IOM. |
-| `reviewerStatus` | `ActionStatus` | The approval status from the reviewer. |
-| `approverStatus` | `ActionStatus` | The approval status from the approver. |
 | `items` | `IOMItem[]` | Relation to the line items of this IOM. |
 | `preparedById` | `String` | FK for the user who created the IOM. |
 | `requestedById` | `String` | FK for the user on whose behalf the IOM was created. |
@@ -134,7 +131,6 @@ A line item within an IOM.
 | `id` | `String` | Unique identifier. |
 | `itemName` | `String` | Name of the item being requested. |
 | `description` | `String?` | Further details about the item. |
-| `category` | `String?` | The procurement category for this item. |
 | `quantity` | `Int` | The quantity of the item. |
 | `unitPrice` | `Float` | The price per unit. |
 | `totalPrice` | `Float` | The calculated total price (`quantity` * `unitPrice`). |
@@ -150,12 +146,7 @@ The formal order placed with an external vendor.
 | `iomId` | `String?` | Foreign key linking to the IOM this PO was converted from. |
 | `vendorId` | `String?` | Foreign key linking to the `Vendor`. |
 | `title` | `String` | The title of the PO. |
-| `department` | `String?` | The department associated with the PO, carried over from the IOM or entered manually. |
 | `status` | `POStatus` | The current status in the workflow (e.g., `DRAFT`, `ORDERED`). |
-| `expectedDeliveryDate` | `DateTime?` | The date the delivery is expected. |
-| `fulfilledAt` | `DateTime?` | The actual date the order was delivered. |
-| `qualityScore` | `Int?` | A 1-5 star rating for the delivery. |
-| `deliveryNotes` | `String?` | Notes from the user who received the delivery. |
 | `totalAmount`| `Float` | The subtotal before tax. |
 | `taxAmount` | `Float` | The calculated total tax amount. |
 | `grandTotal`| `Float` | The final total (`totalAmount` + `taxAmount`). |
@@ -163,21 +154,7 @@ The formal order placed with an external vendor.
 | `items` | `POItem[]` | Relation to the line items of this PO. |
 
 ### `POItem`
-A line item within a `PurchaseOrder`.
-
-| Field | Type | Description |
-|---|---|---|
-| `id` | `String` | Unique identifier. |
-| `itemName` | `String` | Name of the item being purchased. |
-| `description` | `String?` | Further details about the item. |
-| `category` | `String?` | The procurement category for this item (e.g., "IT Hardware", "Office Supplies"). Used for analytics. |
-| `quantity` | `Int` | The quantity of the item. |
-| `unitPrice` | `Float` | The price per unit before tax. |
-| `taxRate` | `Float` | Item-specific tax rate percentage. |
-| `taxAmount` | `Float` | The calculated tax amount for this line item. |
-| `totalPrice` | `Float` | The calculated total price for this line item (`(unitPrice * quantity) + taxAmount`). |
-| `poId` | `String` | Foreign key linking back to the parent `PurchaseOrder`. |
-| `iomItemId` | `String?` | Foreign key linking to the original `IOMItem` for price variance tracking. |
+A line item within a `PurchaseOrder`. Similar to `IOMItem` but includes fields for `taxRate` and `taxAmount`.
 
 ### `PaymentRequest`
 A request to make a payment, typically for a fulfilled PO.
@@ -187,7 +164,6 @@ A request to make a payment, typically for a fulfilled PO.
 | `id` | `String` | Unique identifier. |
 | `prNumber` | `String` | A unique, human-readable number for the PR. |
 | `poId` | `String?` | Foreign key linking to the PO this PR is for. |
-| `department` | `String?` | The department associated with the PR, carried over from the PO. |
 | ... | ... | Contains fields for totals, currency, and payment-specific details like `paymentTo`, `paymentDate`, `paymentMethod`, `bankAccount`, etc. |
 | `status` | `PRStatus` | The current status in the workflow (e.g., `DRAFT`, `PROCESSED`). |
 
@@ -235,6 +211,17 @@ Records significant events for accountability.
 | `userName` | `String` | The name of the user who performed the action. |
 | `changes` | `String` | A JSON string representing the changes made. |
 
+### `ReportSubscription`
+Stores a user's subscription to a recurring report.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `String` | Unique identifier for the subscription. |
+| `userId` | `String` | Foreign key linking to the `User`. |
+| `reportType` | `ReportType` | The type of report the user is subscribed to. |
+| `frequency` | `ReportFrequency` | How often the report is sent. |
+| `createdAt` | `DateTime` | Timestamp of when the subscription was created. |
+
 ---
 
 ## 5. Enums
@@ -243,13 +230,16 @@ Records significant events for accountability.
 `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `COMPLETED`
 
 ### `POStatus`
-`DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `ORDERED`, `DELIVERED`, `CANCELLED`, `COMPLETED`
+`DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `ORDERED`, `DELIVERED`, `CANCELLED`
 
 ### `PRStatus`
 `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `PROCESSED`, `CANCELLED`
 
-### `ActionStatus`
-`PENDING`, `APPROVED`, `REJECTED`
-
 ### `PaymentMethod`
 `CHEQUE`, `BANK_TRANSFER`, `CASH`, `ONLINE_PAYMENT`
+
+### `ReportType`
+`WEEKLY_SPEND_SUMMARY`
+
+### `ReportFrequency`
+`WEEKLY`
