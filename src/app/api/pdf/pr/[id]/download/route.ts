@@ -6,7 +6,7 @@ import puppeteer from 'puppeteer';
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: { id: string } }
 ) {
   try {
     const session = await auth();

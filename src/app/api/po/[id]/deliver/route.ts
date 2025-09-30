@@ -11,9 +11,9 @@ const deliverPoSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: { id: string } }
 ) {
-  const { id: poId } = await context.params;
+  const { id: poId } = context.params;
 
   try {
     const session = await auth();

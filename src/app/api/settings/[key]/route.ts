@@ -32,3 +32,39 @@ export async function GET(
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ key: string }> }
+) {
+  const session = await auth();
+  // TODO: Add proper permission check, for now only admin
+  if (!session || session.user.role !== 'Administrator') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const { key } = await context.params;
+  if (!key) {
+    return NextResponse.json({ error: 'Key is required' }, { status: 400 });
+  }
+
+  try {
+    const body = await request.json();
+    const { value } = body;
+
+    if (typeof value !== 'string') {
+      return NextResponse.json({ error: 'Value must be a string' }, { status: 400 });
+    }
+
+    const updatedSetting = await prisma.setting.upsert({
+      where: { key },
+      update: { value },
+      create: { key, value },
+    });
+
+    return NextResponse.json(updatedSetting);
+  } catch (error) {
+    console.error(`Error updating setting with key ${key}:`, error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
