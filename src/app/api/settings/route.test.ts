@@ -3,6 +3,7 @@ import { GET } from './route';
 import { prisma } from '@/lib/prisma';
 import { Session } from 'next-auth';
 import { Setting } from '@prisma/client';
+import { authorize } from '@/lib/auth-utils';
 
 // Mock dependencies
 vi.mock('@/lib/prisma');
@@ -30,7 +31,6 @@ describe('GET /api/settings', () => {
 
     it('should return 403 Forbidden if user lacks MANAGE_SETTINGS permission', async () => {
         const { auth } = await import('@/lib/auth-config');
-        const { authorize } = await import('@/lib/auth-utils');
         const mockSession: Session = {
             user: { id: 'user-id', name: 'Test User', email: 'test@example.com', permissions: [] },
             expires: '2099-01-01T00:00:00.000Z',
@@ -47,7 +47,6 @@ describe('GET /api/settings', () => {
 
     it('should return a list of settings if user is authenticated and authorized', async () => {
         const { auth } = await import('@/lib/auth-config');
-        const { authorize } = await import('@/lib/auth-utils');
         const mockSession: Session = {
             user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['MANAGE_SETTINGS'] },
             expires: '2099-01-01T00:00:00.000Z',
@@ -73,7 +72,6 @@ describe('GET /api/settings', () => {
 
     it('should return 500 Internal Server Error if there is a database error', async () => {
         const { auth } = await import('@/lib/auth-config');
-        const { authorize } = await import('@/lib/auth-utils');
         const mockSession: Session = {
             user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['MANAGE_SETTINGS'] },
             expires: '2099-01-01T00:00:00.000Z',

@@ -29,7 +29,7 @@ vi.mock('next/server', () => {
       // Attach a custom .json() method that parses the body back,
       // which mimics the behavior of `await response.json()` in tests.
       // This ensures that dates are serialized to strings, just like in a real API response.
-      // @ts-expect-error - Adding custom property to mock
+      // @ts-expect-error - Adding custom property to mock for testing purposes
       response.json = () => Promise.resolve(JSON.parse(jsonBody));
 
       return response as NextResponse;

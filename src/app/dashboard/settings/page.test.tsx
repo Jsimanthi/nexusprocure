@@ -61,7 +61,7 @@ describe('SettingsPage', () => {
 
   it('should display an error message if fetching settings fails', async () => {
     vi.mocked(useHasPermission).mockReturnValue(true);
-    const errorMessage = "Failed to load settings from the server.";
+    const errorMessage = "Server Error: Could not retrieve settings.";
     fetchSpy.mockResolvedValue({
       ok: false,
       status: 500,
@@ -79,7 +79,7 @@ describe('SettingsPage', () => {
     fetchSpy.mockImplementation((url, options) => {
       if (options?.method === 'PUT') {
         const updatedSetting = { id: '1', key: 'company_name', value: 'Nexus Corp.' };
-        // Update the mock data source for the subsequent GET
+        // This update is crucial for the refetch to get the new value
         mockSettings = [updatedSetting];
         return Promise.resolve({
           ok: true, status: 200,
@@ -99,13 +99,13 @@ describe('SettingsPage', () => {
     fireEvent.change(input, { target: { value: 'Nexus Corp.' } });
     fireEvent.click(screen.getByRole('button', { name: /save/i }));
 
-    // Wait for the mutation to complete and the success toast to appear
+    // Wait for the success toast, which appears after the mutation is successful
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith('Setting "company_name" updated successfully!');
     });
 
     // After a successful mutation, react-query will refetch and the UI will update.
-    // We wait for the new value to be displayed.
+    // The findBy query will wait for the new value to be displayed.
     expect(await screen.findByDisplayValue('Nexus Corp.')).toBeInTheDocument();
   });
 
