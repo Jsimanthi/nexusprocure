@@ -19,16 +19,15 @@ vi.mock('next/server', () => {
     }
 
     static json(body: any, init?: ResponseInit) {
-      // Properly simulate the JSON serialization process
+      // Properly simulate the JSON serialization process, which converts Date objects to strings
       const jsonBody = JSON.stringify(body);
       const response = new Response(jsonBody, {
         ...init,
         headers: { ...init?.headers, 'Content-Type': 'application/json' },
       });
 
-      // Attach a custom .json() method that parses the body back,
-      // which mimics the behavior of `await response.json()` in tests.
-      // This ensures that dates are serialized to strings, just like in a real API response.
+      // Attach a custom .json() method that parses the body back.
+      // This mimics the behavior of `await response.json()` in tests.
       // @ts-expect-error - Adding custom property to mock for testing purposes
       response.json = () => Promise.resolve(JSON.parse(jsonBody));
 
