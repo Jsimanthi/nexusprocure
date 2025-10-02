@@ -5,7 +5,7 @@ import { authorize } from '@/lib/auth-utils';
 
 export async function GET(
   request: NextRequest,
-  context: { params: { key: string } }
+  context: { params: Promise<{ key: string }> }
 ) {
   try {
     const session = await auth();
@@ -14,7 +14,7 @@ export async function GET(
     }
     authorize(session, 'MANAGE_SETTINGS');
 
-    const { key } = context.params;
+    const { key } = await context.params;
 
     if (!key) {
       return NextResponse.json({ error: 'Key is required' }, { status: 400 });
@@ -40,7 +40,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  context: { params: { key: string } }
+  context: { params: Promise<{ key: string }> }
 ) {
   try {
     const session = await auth();
@@ -49,7 +49,7 @@ export async function PUT(
     }
     authorize(session, 'MANAGE_SETTINGS');
 
-    const { key } = context.params;
+    const { key } = await context.params;
     if (!key) {
       return NextResponse.json({ error: 'Key is required' }, { status: 400 });
     }
