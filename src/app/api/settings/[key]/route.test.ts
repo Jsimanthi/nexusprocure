@@ -46,7 +46,7 @@ describe('GET /api/settings/[key]', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual(JSON.parse(JSON.stringify(mockSetting)));
+    expect(body).toEqual(mockSetting);
   });
 
   it('should return 404 if setting is not found', async () => {
@@ -103,7 +103,7 @@ describe('PUT /api/settings/[key]', () => {
         const body = await response.json();
 
         expect(response.status).toBe(200);
-        expect(body).toEqual(JSON.parse(JSON.stringify(updatedSetting)));
+        expect(body).toEqual(updatedSetting);
         expect(prisma.setting.upsert).toHaveBeenCalledWith({
             where: { key: 'site_name' },
             update: { value: 'New Name' },
