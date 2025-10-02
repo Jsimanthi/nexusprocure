@@ -42,7 +42,7 @@ describe('GET /api/settings/[key]', () => {
     };
     vi.mocked(prisma.setting.findUnique).mockResolvedValue(mockSetting);
 
-    const response = await GET(new Request('http://a/b') as NextRequest, { params: { key: 'site_name' } });
+    const response = await GET(new Request('http://a/b') as NextRequest, { params: Promise.resolve({ key: 'site_name' }) });
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -55,7 +55,7 @@ describe('GET /api/settings/[key]', () => {
     vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.setting.findUnique).mockResolvedValue(null);
 
-    const response = await GET(new Request('http://a/b') as NextRequest, { params: { key: 'not_found' } });
+    const response = await GET(new Request('http://a/b') as NextRequest, { params: Promise.resolve({ key: 'not_found' }) });
     const body = await response.json();
 
     expect(response.status).toBe(404);
@@ -67,7 +67,7 @@ describe('GET /api/settings/[key]', () => {
     vi.mocked(auth).mockResolvedValue(mockUserSession);
     vi.mocked(authorize).mockImplementation(() => { throw new Error('Not authorized'); });
 
-    const response = await GET(new Request('http://a/b') as NextRequest, { params: { key: 'any_key' } });
+    const response = await GET(new Request('http://a/b') as NextRequest, { params: Promise.resolve({ key: 'any_key' }) });
     const body = await response.json();
 
     expect(response.status).toBe(403);
@@ -99,7 +99,7 @@ describe('PUT /api/settings/[key]', () => {
             body: JSON.stringify({ value: 'New Name' })
         }) as NextRequest;
 
-        const response = await PUT(req, { params: { key: 'site_name' } });
+        const response = await PUT(req, { params: Promise.resolve({ key: 'site_name' }) });
         const body = await response.json();
 
         expect(response.status).toBe(200);
@@ -122,7 +122,7 @@ describe('PUT /api/settings/[key]', () => {
             body: JSON.stringify({ value: 'Forbidden Update' })
         }) as NextRequest;
 
-        const response = await PUT(req, { params: { key: 'site_name' } });
+        const response = await PUT(req, { params: Promise.resolve({ key: 'site_name' }) });
         const body = await response.json();
 
         expect(response.status).toBe(403);
@@ -139,7 +139,7 @@ describe('PUT /api/settings/[key]', () => {
             body: JSON.stringify({ value: 12345 }) // Invalid value type
         }) as NextRequest;
 
-        const response = await PUT(req, { params: { key: 'site_name' } });
+        const response = await PUT(req, { params: Promise.resolve({ key: 'site_name' }) });
         const body = await response.json();
 
         expect(response.status).toBe(400);
