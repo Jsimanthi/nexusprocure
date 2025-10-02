@@ -64,7 +64,7 @@ describe('GET /api/settings', () => {
         const body = await response.json();
 
         expect(response.status).toBe(200);
-        expect(body).toEqual(JSON.parse(JSON.stringify(mockSettings)));
+        expect(body).toEqual(mockSettings); // Corrected assertion
         expect(prisma.setting.findMany).toHaveBeenCalledWith({
             orderBy: { key: 'asc' },
         });
