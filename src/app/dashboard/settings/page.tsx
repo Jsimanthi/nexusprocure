@@ -14,7 +14,8 @@ import { Setting } from '@prisma/client';
 const fetchSettings = async (): Promise<Setting[]> => {
   const response = await fetch('/api/settings');
   if (!response.ok) {
-    throw new Error('Failed to fetch settings');
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to fetch settings');
   }
   return response.json();
 };
@@ -38,35 +39,30 @@ const updateSetting = async (setting: { key: string; value: string }): Promise<S
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
-  const canManageSettings = useHasPermission('MANAGE_SETTINGS'); // Assuming a permission for this
+  const canManageSettings = useHasPermission('MANAGE_SETTINGS');
   const [changedSettings, setChangedSettings] = useState<Record<string, string>>({});
 
-  const { data: settings, isLoading, isError, error } = useQuery<Setting[]>({
+  const { data: settings, isLoading, isError, error } = useQuery<Setting[], Error>({
     queryKey: ['settings'],
     queryFn: fetchSettings,
     enabled: canManageSettings,
   });
 
-  const mutation = useMutation({
+  const mutation = useMutation<Setting, Error, { key: string; value: string }>({
     mutationFn: updateSetting,
     onSuccess: (data) => {
       toast.success(`Setting "${data.key}" updated successfully!`);
       queryClient.invalidateQueries({ queryKey: ['settings'] });
+      // Remove the setting from the changed list after successful save
+      setChangedSettings(prev => {
+        const newChanges = { ...prev };
+        delete newChanges[data.key];
+        return newChanges;
+      });
     },
     onError: (error: Error) => {
       toast.error(error.message);
     },
-    onSettled: () => {
-        // After mutation, clear the specific changed setting
-        const key = mutation.variables?.key;
-        if (key) {
-            setChangedSettings(prev => {
-                const newChanges = { ...prev };
-                delete newChanges[key];
-                return newChanges;
-            });
-        }
-    }
   });
 
   const handleInputChange = (key: string, value: string) => {
@@ -120,7 +116,7 @@ export default function SettingsPage() {
           <dl className="divide-y divide-gray-200">
             {settings?.map((setting) => (
               <div key={setting.id} className="px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 items-center">
-                <dt className="text-sm font-medium text-gray-500">{setting.key.replace(/_/g, ' ')}</dt>
+                <dt className="text-sm font-medium text-gray-500 capitalize">{setting.key.replace(/_/g, ' ')}</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0 flex items-center gap-x-4">
                   <input
                     type="text"

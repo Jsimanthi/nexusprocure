@@ -35,7 +35,6 @@ export default function CreateIOMPage() {
     from: "",
     to: "",
     subject: "",
-    department: "",
     content: "",
     reviewerId: "",
     approverId: "",
@@ -111,7 +110,6 @@ export default function CreateIOMPage() {
         from: formData.from,
         to: formData.to,
         subject: formData.subject,
-        department: formData.department,
         content: formData.content,
         isUrgent: formData.isUrgent,
         items: items.map((item) => ({
@@ -190,16 +188,6 @@ export default function CreateIOMPage() {
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
             {errors.subject && <p className="text-red-500 text-xs mt-1">{errors.subject[0]}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Department</label>
-            <input
-              type="text"
-              value={formData.department}
-              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-            {errors.department && <p className="text-red-500 text-xs mt-1">{errors.department[0]}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">From *</label>

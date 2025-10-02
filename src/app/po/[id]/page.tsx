@@ -13,8 +13,7 @@ import { getPOStatusColor } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useHasPermission } from "@/hooks/useHasPermission";
 import POPrintView from "@/components/POPrintView";
-import DeliverPOModal from "@/components/DeliverPOModal";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 export default function PODetailPage() {
   const params = useParams();
@@ -27,8 +26,6 @@ export default function PODetailPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
     PaymentMethod.CHEQUE
   );
-  const [isDeliverModalOpen, setIsDeliverModalOpen] = useState(false);
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   // Add permission check to view PO
   const canViewPO = useHasPermission('READ_PO');
@@ -87,31 +84,6 @@ export default function PODetailPage() {
     }
   };
 
-  const handleDeliverSubmit = async (qualityScore: number, deliveryNotes: string) => {
-    setUpdating(true);
-    try {
-      const response = await fetch(`/api/po/${params.id}/deliver`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qualityScore, deliveryNotes }),
-      });
-
-      if (response.ok) {
-        const updatedPO = await response.json();
-        setPo(updatedPO);
-      } else {
-        const errorData = await response.json();
-        console.error('Failed to mark as delivered:', errorData.error);
-        alert(`Failed to mark as delivered: ${errorData.error}`);
-      }
-    } catch (error) {
-      console.error('Error marking as delivered:', error);
-      alert('An unexpected error occurred while marking the PO as delivered.');
-    } finally {
-      setUpdating(false);
-    }
-  };
-
   const convertToPR = async () => {
     setConverting(true);
     try {
@@ -134,31 +106,6 @@ export default function PODetailPage() {
         alert("An unexpected error occurred while converting the PO to a PR.");
     } finally {
       setConverting(false);
-    }
-  };
-
-  const handleDownloadPdf = async () => {
-    if (!po) return;
-    setIsDownloadingPdf(true);
-    try {
-      const response = await fetch(`/api/pdf/po/${po.id}/download`);
-      if (!response.ok) {
-        throw new Error('Failed to download PDF');
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `PO-${po.poNumber}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      alert('Failed to download PDF.');
-    } finally {
-      setIsDownloadingPdf(false);
     }
   };
 
@@ -216,6 +163,65 @@ export default function PODetailPage() {
       case 'REJECTED': return 'text-red-600';
       default: return 'text-yellow-600';
     }
+  };
+
+  const handlePrint = () => {
+    const printContent = document.getElementById('po-print-view');
+    if (!printContent) return;
+
+    // Create a new iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    // Get stylesheets from the main document
+    const styles = Array.from(document.styleSheets)
+      .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : (s.ownerNode as HTMLStyleElement)?.outerHTML)
+      .join('');
+
+    // Get the HTML content to print
+    const content = printContent.outerHTML;
+
+    // Write the content and styles to the iframe
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <title>Print Purchase Order</title>
+          ${styles}
+          <style>
+            @page { size: auto; margin: 0; }
+            body, html { margin: 0; padding: 0; height: 100%; }
+            body { padding: 2rem; box-sizing: border-box; }
+            #po-print-view { display: flex; flex-direction: column; height: 100%; box-shadow: none !important; border: none !important; }
+            .po-main-content { flex-grow: 1; }
+            .po-footer { flex-shrink: 0; margin-top: auto; }
+          </style>
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    // Wait for the iframe to load before printing
+    iframe.onload = function() {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      }
+      // Remove the iframe after a delay
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 500);
+    };
   };
 
   return (
@@ -287,7 +293,7 @@ export default function PODetailPage() {
                   </button>
                 )}
                 {po.status === 'ORDERED' && canMarkAsDelivered && (
-                  <button onClick={() => setIsDeliverModalOpen(true)} disabled={updating} className="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                  <button onClick={() => handleAction('DELIVER')} disabled={updating} className="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
                     {updating ? "Processing..." : "Mark as Delivered"}
                   </button>
                 )}
@@ -417,21 +423,14 @@ export default function PODetailPage() {
             {/* Print Button */}
             <div className="bg-white shadow rounded-lg p-6">
               <button
-                onClick={handleDownloadPdf}
-                disabled={isDownloadingPdf}
-                className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center disabled:opacity-50"
+                onClick={handlePrint}
+                className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
-                <Download className="h-4 w-4 mr-2" />
-                {isDownloadingPdf ? 'Downloading...' : 'Download PDF'}
+                Print PO
               </button>
             </div>
           </div>
         </div>
-      <DeliverPOModal
-        isOpen={isDeliverModalOpen}
-        onClose={() => setIsDeliverModalOpen(false)}
-        onSubmit={handleDeliverSubmit}
-      />
     </PageLayout>
   );
 }

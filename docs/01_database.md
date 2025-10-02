@@ -211,17 +211,6 @@ Records significant events for accountability.
 | `userName` | `String` | The name of the user who performed the action. |
 | `changes` | `String` | A JSON string representing the changes made. |
 
-### `ReportSubscription`
-Stores a user's subscription to a recurring report.
-
-| Field | Type | Description |
-|---|---|---|
-| `id` | `String` | Unique identifier for the subscription. |
-| `userId` | `String` | Foreign key linking to the `User`. |
-| `reportType` | `ReportType` | The type of report the user is subscribed to. |
-| `frequency` | `ReportFrequency` | How often the report is sent. |
-| `createdAt` | `DateTime` | Timestamp of when the subscription was created. |
-
 ---
 
 ## 5. Enums
@@ -237,9 +226,3 @@ Stores a user's subscription to a recurring report.
 
 ### `PaymentMethod`
 `CHEQUE`, `BANK_TRANSFER`, `CASH`, `ONLINE_PAYMENT`
-
-### `ReportType`
-`WEEKLY_SPEND_SUMMARY`
-
-### `ReportFrequency`
-`WEEKLY`

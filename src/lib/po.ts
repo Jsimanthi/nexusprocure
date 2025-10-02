@@ -10,7 +10,6 @@ import { createPoSchema, createVendorSchema, updateVendorSchema } from "./schema
 import { logAudit, getAuditUser } from "./audit";
 import { Session } from "next-auth";
 import * as React from "react";
-import { checkPoVolumeAnomaly } from "./anomaly-service";
 import { authorize } from "./auth-utils";
 import { Prisma } from "@prisma/client";
 import { triggerPusherEvent } from "./pusher";
@@ -335,9 +334,6 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
         userName: auditUser.userName,
         changes: createdPo,
       });
-
-      // Check for high-volume anomaly without blocking the response
-      await checkPoVolumeAnomaly(auditUser.userId, createdPo.poNumber);
 
       // Notify the assigned reviewer and approver, but only if it's not a draft
       if (createdPo.status !== POStatus.DRAFT) {
