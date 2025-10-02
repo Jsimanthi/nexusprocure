@@ -65,27 +65,27 @@ This phase focuses on building a powerful, self-service analytics module that al
     *   The database schema has been updated to include a `category` field on all purchase items.
     *   The IOM and PO creation forms now allow users to select a category for each item.
     *   A new "Spend by Category" pie chart on the Analytics page visualizes this data, with drill-down functionality.
-*   **Update:** "Departmental Spend" tracking has been implemented. The `department` field has been added to the IOM, PO, and PR workflows. A new chart on the analytics page displays spend by department with drill-down functionality.
-*   **Update:** "Top Spenders" analysis has been implemented. The analytics page now displays the top 5 spenders by vendor, department, and category.
+*   **Next Steps:**
+    *   Implement "Departmental Spend" tracking.
+    *   Implement "Top Spenders" analysis (by vendor, department, and category).
 
 ### 3.3. Vendor Performance Analytics
 
-*   **Status:** 🏗️ **In Progress**
+*   **Status:** ⏳ **Not Started**
 *   **Concept:** A dedicated section to analyze and rate vendor performance.
-*   **Update:**
-    *   The PO workflow has been enhanced to allow users to mark orders as "Delivered" and provide a `qualityScore` (1-5 stars) and `deliveryNotes`.
-    *   A new Vendor Scorecard page is available at `/vendors/[id]`.
-    *   The scorecard displays key performance metrics, including "On-Time Delivery Rate" and "Average Quality Score".
-*   **Update:** "Price Variance" tracking has been implemented. The Vendor Scorecard now displays the average price variance between the initial request (IOM) and the final purchase order (PO).
+*   **Metrics to Track:**
+    *   **On-Time Delivery Rate:** How often do vendors meet their delivery deadlines?
+    *   **Price Variance:** How does the quoted price compare to the final invoiced price?
+    *   **Quality Score:** A rating system for the quality of goods/services received.
 *   **Visualization:** A vendor scorecard or a scatter plot comparing vendors based on cost and reliability.
 
 ### 3.4. Export & Scheduled Reports
 
-*   **Status:** ✅ **Complete**
+*   **Status:** ⏳ **Not Started**
 *   **Concept:** Allow users to take their data offline and receive regular updates.
-*   **Update:**
-    *   **Export:** An "Export as CSV" feature has been added to the Purchase Order list page. A "Download PDF" button has been added to the details pages for IOMs, POs, and PRs.
-    *   **Scheduled Reports:** Users can now subscribe to a "Weekly Spend Summary" report from the analytics page. A secure cron job endpoint has been created to trigger the email delivery of these reports.
+*   **Implementation:**
+    *   **Export:** Add "Export as CSV/PDF" buttons to all data tables and reports.
+    *   **Scheduled Reports:** Create a system where users can subscribe to a report (e.g., "Weekly Spend Summary") to be delivered to their email automatically. This can be managed with a cron job on the server.
 
 ---
 
@@ -96,12 +96,10 @@ This phase focuses on building a powerful, self-service analytics module that al
 This is the "world-class" phase, introducing intelligent features that move from reactive analysis to proactive decision-making.
 
 ### 4.1. Predictive Analytics
-*   **Status:** 🏗️ **In Progress**
 *   **Concept:** Use historical data to forecast future trends.
-*   **Update:**
-    *   **Demand Forecasting:** A new section on the analytics page allows users to select a frequently purchased item and view its historical purchase quantity. A forecast for the next month's demand, based on a simple moving average, is also displayed.
-*   **Next Steps:**
-    *   Implement "Budget Forecasting".
+*   **Features:**
+    *   **Demand Forecasting:** Predict future demand for frequently purchased items to optimize stock levels.
+    *   **Budget Forecasting:** Project future spending based on past trends to aid in budget planning.
 
 ### 4.2. Anomaly Detection
 *   **Concept:** Automatically flag unusual or potentially fraudulent activities.

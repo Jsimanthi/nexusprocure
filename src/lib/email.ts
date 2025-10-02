@@ -12,18 +12,13 @@ export const sendEmail = async ({
   to,
   subject,
   react,
-  attachments,
 }: {
   to: string;
-  subject:string;
+  subject: string;
   react: React.ReactElement;
-  attachments?: { filename: string; content: Buffer }[];
 }) => {
   if (!resend || !process.env.EMAIL_FROM) {
     console.log(`Email sending is disabled. To: ${to}, Subject: ${subject}`);
-    if (attachments) {
-      console.log(`Attachments would have been sent: ${attachments.map(a => a.filename).join(', ')}`);
-    }
     return;
   }
 
@@ -33,7 +28,6 @@ export const sendEmail = async ({
       to,
       subject,
       react,
-      attachments,
     });
 
     if (response.data) {

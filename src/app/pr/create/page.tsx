@@ -14,7 +14,6 @@ import { toast } from "react-hot-toast";
 interface FormData {
   title: string;
   poId: string;
-  department: string;
   paymentTo: string;
   paymentDate: string;
   purpose: string;
@@ -49,7 +48,6 @@ export default function CreatePRPage() {
   const [formData, setFormData] = useState<FormData>({
     title: "",
     poId: "",
-    department: "",
     paymentTo: "",
     paymentDate: new Date().toISOString().split('T')[0],
     purpose: "",
@@ -107,7 +105,6 @@ export default function CreatePRPage() {
         poId: po.id ?? "",
         title: `Payment for ${po.title}`,
         paymentTo: po.vendorName,
-        department: po.department || "",
         totalAmount: po.totalAmount,
         taxAmount: po.taxAmount,
         grandTotal: po.grandTotal,
@@ -226,16 +223,6 @@ export default function CreatePRPage() {
                 ref={firstInputRef}
               />
               {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title[0]}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Department</label>
-              <input
-                type="text"
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="e.g., IT, Finance, HR"
-              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Payment Method *</label>

@@ -10,11 +10,8 @@ import {
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import { formatCurrency } from "@/lib/utils";
-import SubscriptionManager from '@/components/SubscriptionManager';
-import DemandForecasting from '@/components/dashboard/analytics/DemandForecasting';
 
 interface SpendData {
-  id?: string;
   name: string;
   Total?: number;
   value?: number;
@@ -23,10 +20,6 @@ interface SpendData {
 interface AnalyticsData {
   spendOverTime: SpendData[];
   spendByCategory: SpendData[];
-  spendByDepartment: SpendData[];
-  topVendors: SpendData[];
-  topDepartments: SpendData[];
-  topCategories: SpendData[];
 }
 
 const fetchAnalyticsData = async (): Promise<AnalyticsData> => {
@@ -62,26 +55,6 @@ export default function AnalyticsPage() {
   const handlePieClick = (data: SpendData) => {
     if (data && data.name) {
       router.push(`/po?category=${encodeURIComponent(data.name)}`);
-    }
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleDeptBarClick = (data: any) => {
-    if (data && data.activePayload && data.activePayload.length > 0) {
-      const department = data.activePayload[0].payload.name;
-      router.push(`/po?department=${encodeURIComponent(department)}`);
-    }
-  };
-
-  const handleTopSpenderClick = (
-    type: "vendor" | "department" | "category",
-    item: SpendData
-  ) => {
-    if (type === 'vendor' && item.id) {
-      router.push(`/vendors/${item.id}`);
-    } else if (item.name) {
-      const queryParam = type === 'vendor' ? 'vendorName' : type;
-      router.push(`/po?${queryParam}=${encodeURIComponent(item.name)}`);
     }
   };
 
@@ -158,84 +131,6 @@ export default function AnalyticsPage() {
             )}
         </div>
       </div>
-
-      <div className="mt-8 bg-white p-6 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">Spend by Department</h2>
-        {analyticsData?.spendByDepartment && analyticsData.spendByDepartment.length > 0 ? (
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={analyticsData.spendByDepartment} onClick={handleDeptBarClick} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" tickFormatter={(value) => formatCurrency(value as number, "INR").split(".")[0]} />
-              <YAxis type="category" dataKey="name" width={150} />
-              <Tooltip formatter={(value) => formatCurrency(value as number, "INR")} />
-              <Legend />
-              <Bar dataKey="Total" fill="#FF8042" cursor="pointer" />
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="text-center py-16 h-[400px] flex items-center justify-center">
-            <p className="text-gray-500">No departmental spending data available.</p>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800">Top 5 Spenders</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <TopSpenderList
-            title="By Vendor"
-            data={analyticsData?.topVendors}
-            onClick={(item) => handleTopSpenderClick("vendor", item)}
-          />
-          <TopSpenderList
-            title="By Department"
-            data={analyticsData?.topDepartments}
-            onClick={(item) => handleTopSpenderClick("department", item)}
-          />
-          <TopSpenderList
-            title="By Category"
-            data={analyticsData?.topCategories}
-            onClick={(item) => handleTopSpenderClick("category", item)}
-          />
-        </div>
-      </div>
-
-      <div className="mt-8 bg-white p-6 rounded-lg shadow">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800">Scheduled Reports</h2>
-        <SubscriptionManager />
-      </div>
-
-      <div className="mt-8">
-        <DemandForecasting />
-      </div>
     </PageLayout>
   );
 }
-
-const TopSpenderList: React.FC<{
-  title: string;
-  data: SpendData[] | undefined;
-  onClick: (item: SpendData) => void;
-}> = ({ title, data, onClick }) => (
-  <div className="bg-white p-6 rounded-lg shadow">
-    <h3 className="text-xl font-semibold mb-4">{title}</h3>
-    {data && data.length > 0 ? (
-      <ul className="space-y-4">
-        {data.map((item, index) => (
-          <li
-            key={index}
-            onClick={() => onClick(item)}
-            className="flex justify-between items-center p-2 rounded-md hover:bg-gray-100 cursor-pointer"
-          >
-            <span className="font-medium text-gray-700">{item.name}</span>
-            <span className="font-semibold text-gray-900">
-              {formatCurrency(item.Total || 0, "INR")}
-            </span>
-          </li>
-        ))}
-      </ul>
-    ) : (
-      <p className="text-gray-500">No data available.</p>
-    )}
-  </div>
-);

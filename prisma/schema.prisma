@@ -38,26 +38,6 @@ model Session {
   @@index([userId])
 }
 
-enum ReportType {
-  WEEKLY_SPEND_SUMMARY
-}
-
-enum ReportFrequency {
-  WEEKLY
-}
-
-model ReportSubscription {
-  id        String          @id @default(cuid())
-  userId    String
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reportType ReportType
-  frequency ReportFrequency
-  createdAt DateTime        @default(now())
-
-  @@unique([userId, reportType])
-  @@index([userId])
-}
-
 model Setting {
   id        String   @id @default(cuid())
   key       String   @unique
@@ -123,8 +103,6 @@ model User {
   requestedPRs PaymentRequest[] @relation("PRRequestedBy")
   reviewedPRs  PaymentRequest[] @relation("PRReviewedBy")
   approvedPRs  PaymentRequest[] @relation("PRApprovedBy")
-
-  reportSubscriptions ReportSubscription[]
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -146,7 +124,6 @@ model IOM {
   from           String
   to             String
   subject        String
-  department     String?
   content        String?
   isUrgent       Boolean      @default(false)
   status         IOMStatus    @default(DRAFT)
@@ -211,7 +188,6 @@ model IOMItem {
   // Relationship
   iom     IOM   @relation(fields: [iomId], references: [id], onDelete: Cascade)
   iomId   String
-  poItems   POItem[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -236,7 +212,6 @@ model PurchaseOrder {
   iomId          String?
   vendorId       String?
   title          String
-  department     String?
   status         POStatus     @default(DRAFT)
   expectedDeliveryDate DateTime?
   fulfilledAt    DateTime?
@@ -304,8 +279,6 @@ model POItem {
   // Relationship
   po    PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
   poId  String
-  iomItem   IOMItem?      @relation(fields: [iomItemId], references: [id], onDelete: SetNull)
-  iomItemId String?
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -350,7 +323,6 @@ model PaymentRequest {
   pdfToken        String?       @unique
   poId            String?
   title           String
-  department      String?
   status          PRStatus      @default(DRAFT)
   totalAmount     Float         @default(0)
   taxAmount       Float         @default(0)

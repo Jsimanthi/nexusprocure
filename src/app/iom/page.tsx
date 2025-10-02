@@ -119,9 +119,8 @@ return (
         onClose={() => setIsModalOpen(false)}
         onConfirm={confirmDelete}
         title="Confirm Deletion"
-        >
-          <p>Are you sure you want to delete this IOM? This action cannot be undone.</p>
-        </ConfirmationModal>
+        message="Are you sure you want to delete this IOM? This action cannot be undone."
+      />
       <div className="flex justify-end mb-6">
         {canCreate && (
           <Link

@@ -1,23 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth-config';
+import { authorize } from '@/lib/auth-utils';
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ key: string }> }
+  context: { params: { key: string } }
 ) {
-  const session = await auth();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { key } = await context.params;
-
-  if (!key) {
-    return NextResponse.json({ error: 'Key is required' }, { status: 400 });
-  }
-
   try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    authorize(session, 'MANAGE_SETTINGS');
+
+    const { key } = context.params;
+
+    if (!key) {
+      return NextResponse.json({ error: 'Key is required' }, { status: 400 });
+    }
+
     const setting = await prisma.setting.findUnique({
       where: { key },
     });
@@ -28,27 +30,30 @@ export async function GET(
 
     return NextResponse.json(setting);
   } catch (error) {
-    console.error(`Error fetching setting with key ${key}:`, error);
+    if (error instanceof Error && error.message.includes('Not authorized')) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    console.error(`Error fetching setting:`, error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  context: { params: Promise<{ key: string }> }
+  context: { params: { key: string } }
 ) {
-  const session = await auth();
-  // TODO: Add proper permission check, for now only admin
-  if (!session || session.user.role !== 'Administrator') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const { key } = await context.params;
-  if (!key) {
-    return NextResponse.json({ error: 'Key is required' }, { status: 400 });
-  }
-
   try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    authorize(session, 'MANAGE_SETTINGS');
+
+    const { key } = context.params;
+    if (!key) {
+      return NextResponse.json({ error: 'Key is required' }, { status: 400 });
+    }
+
     const body = await request.json();
     const { value } = body;
 
@@ -64,7 +69,10 @@ export async function PUT(
 
     return NextResponse.json(updatedSetting);
   } catch (error) {
-    console.error(`Error updating setting with key ${key}:`, error);
+    if (error instanceof Error && error.message.includes('Not authorized')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    console.error(`Error updating setting:`, error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

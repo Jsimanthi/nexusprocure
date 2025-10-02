@@ -25,39 +25,27 @@ The dashboard uses Pusher for real-time updates. When a new activity occurs, the
 
 ## 2. Analytics & Reports
 
-The analytics page provides a more in-depth, interactive view of procurement data. It features several charts designed to help users visualize spending and make informed decisions. For a complete roadmap of planned features, please see the `PROPOSAL.md` document.
+The analytics page provides a more in-depth view of the procurement data. It includes charts and graphs to visualize the data and help users make informed decisions.
 
-### 2.1. Spend Over Time
+### 2.1. Document Counts
 
-*   **Visualization:** A bar chart displaying the total spending from approved Purchase Orders, aggregated by month.
-*   **Interactivity:** Users can click on a specific bar (representing a month) to drill down into a filtered list of all Purchase Orders created in that month. This provides a seamless way to investigate spending spikes or trends.
+This section displays the total counts of Purchase Orders, IOMs, and Check Requests.
 
-### 2.2. Spend by Category
+### 2.2. Purchase Order Status Distribution
 
-*   **Visualization:** A pie chart that breaks down total spending by the procurement category assigned to each Purchase Order item.
-*   **Interactivity:** Users can click on a specific slice of the pie (representing a category) to drill down into a filtered list of all Purchase Orders containing items from that category. This helps in understanding where the company's money is being allocated.
+A pie chart that shows the distribution of Purchase Orders by their status (e.g., `DRAFT`, `APPROVED`, `REJECTED`). This helps users to quickly understand the current state of the procurement process.
 
-### 2.3. Spend by Department
+### 2.3. Approved PO Spending (Last 12 Months)
 
-*   **Visualization:** A vertical bar chart showing the total spend for each department.
-*   **Interactivity:** Users can click on a department's bar to see a filtered list of all Purchase Orders originating from that department, providing insight into departmental spending habits.
+A bar chart that shows the total spending on approved Purchase Orders over the last 12 months. This helps users to track spending trends and identify potential cost-saving opportunities.
 
-### 2.4. Top 5 Spenders
+### 2.4. Future Enhancements
 
-This section provides a quick overview of the top five spenders across three key dimensions:
+The analytics and reporting module can be further enhanced with the following features:
 
-*   **By Vendor:** Lists the top 5 vendors by total spend.
-*   **By Department:** Lists the top 5 departments by total spend.
-*   **By Category:** Lists the top 5 procurement categories by total spend.
-
-Each list item is interactive, allowing users to click to view a filtered list of all associated Purchase Orders.
-
-## 3. Predictive Analytics
-
-### 3.1. Demand Forecasting
-*   **Concept:** This feature uses historical purchase data to predict future demand for specific items.
-*   **Implementation:**
-    *   A new "Demand Forecasting" section has been added to the analytics page.
-    *   Users can select from a list of the most frequently purchased items.
-    *   A line chart visualizes the historical monthly purchase quantity for the selected item.
-    *   A forecast for the next month's demand, calculated using a simple moving average, is displayed alongside the chart.
+*   **Customizable Dashboards:** Allow users to customize their dashboards with widgets that are most relevant to their roles.
+*   **Advanced Filtering:** Provide more advanced filtering options to allow users to drill down into the data.
+*   **Exporting Reports:** Allow users to export reports in various formats (e.g., PDF, CSV).
+*   **Scheduled Reports:** Allow users to schedule reports to be sent to their email on a regular basis.
+*   **More Chart Types:** Add more chart types to visualize the data in different ways.
+*   **Integration with BI Tools:** Integrate with business intelligence tools like Tableau or Power BI for more advanced analysis.

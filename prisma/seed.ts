@@ -13,8 +13,6 @@ const permissions = [
   'VIEW_ANALYTICS',
   // Vendor Permissions
   'MANAGE_VENDORS',
-  // Exporting
-  'EXPORT_DATA',
   // IOM Permissions
   'CREATE_IOM',
   'READ_IOM',
@@ -50,7 +48,7 @@ const roles = {
   Administrator: permissions,
   Manager: [
     'READ_ALL_IOMS', 'READ_ALL_POS', 'READ_ALL_PRS', 'APPROVE_IOM', 'APPROVE_PO', 'APPROVE_PR',
-    'REJECT_IOM', 'REJECT_PO', 'REJECT_PR', 'REVIEW_IOM', 'REVIEW_PO', 'REVIEW_PR', 'VIEW_ANALYTICS', 'EXPORT_DATA'
+    'REJECT_IOM', 'REJECT_PO', 'REJECT_PR', 'REVIEW_IOM', 'REVIEW_PO', 'REVIEW_PR', 'VIEW_ANALYTICS'
   ],
   Approver: [
     'READ_ALL_IOMS', 'READ_ALL_POS', 'READ_ALL_PRS', 'APPROVE_IOM', 'APPROVE_PO', 'APPROVE_PR',

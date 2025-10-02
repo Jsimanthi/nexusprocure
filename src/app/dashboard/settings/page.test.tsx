@@ -34,9 +34,12 @@ const renderWithProviders = (ui) => {
 };
 
 describe('SettingsPage', () => {
+  let fetchSpy;
+
   beforeEach(() => {
     vi.clearAllMocks();
     queryClient.clear();
+    fetchSpy = vi.spyOn(global, 'fetch');
   });
 
   afterEach(() => {
@@ -51,34 +54,39 @@ describe('SettingsPage', () => {
 
   it('should display loading spinner while fetching settings', async () => {
     vi.mocked(useHasPermission).mockReturnValue(true);
-    vi.spyOn(global, 'fetch').mockImplementation(() => new Promise(() => {}));
+    fetchSpy.mockImplementation(() => new Promise(() => {})); // Mocks a pending promise
     renderWithProviders(<SettingsPage />);
     expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
   });
 
   it('should display an error message if fetching settings fails', async () => {
     vi.mocked(useHasPermission).mockReturnValue(true);
-    vi.spyOn(global, 'fetch').mockResolvedValue({
+    const errorMessage = "Failed to load settings from the server.";
+    fetchSpy.mockResolvedValue({
       ok: false,
       status: 500,
-      json: () => Promise.resolve({ error: 'Server Error' }),
+      json: () => Promise.resolve({ error: errorMessage }),
     } as Response);
     renderWithProviders(<SettingsPage />);
-    expect(await screen.findByText('Failed to fetch settings')).toBeInTheDocument();
+    // The component's fetcher throws an error with the message from the API
+    expect(await screen.findByText(errorMessage)).toBeInTheDocument();
   });
 
   it('should display settings and allow updating a value', async () => {
     vi.mocked(useHasPermission).mockReturnValue(true);
-    const mockSettings = [{ id: '1', key: 'company_name', value: 'Nexus Inc.' }];
+    let mockSettings = [{ id: '1', key: 'company_name', value: 'Nexus Inc.' }];
 
-    const fetchSpy = vi.spyOn(global, 'fetch');
     fetchSpy.mockImplementation((url, options) => {
-      if (url.toString().includes('/api/settings/company_name')) {
+      if (options?.method === 'PUT') {
+        const updatedSetting = { id: '1', key: 'company_name', value: 'Nexus Corp.' };
+        // Update the mock data source for the subsequent GET
+        mockSettings = [updatedSetting];
         return Promise.resolve({
           ok: true, status: 200,
-          json: () => Promise.resolve({ id: '1', key: 'company_name', value: 'Nexus Corp.' }),
+          json: () => Promise.resolve(updatedSetting),
         } as Response);
       }
+      // For GET requests
       return Promise.resolve({
         ok: true, status: 200,
         json: () => Promise.resolve(mockSettings),
@@ -91,17 +99,20 @@ describe('SettingsPage', () => {
     fireEvent.change(input, { target: { value: 'Nexus Corp.' } });
     fireEvent.click(screen.getByRole('button', { name: /save/i }));
 
+    // Wait for the mutation to complete and the success toast to appear
     await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledWith('/api/settings/company_name', expect.objectContaining({ method: 'PUT' }));
       expect(toast.success).toHaveBeenCalledWith('Setting "company_name" updated successfully!');
     });
+
+    // After a successful mutation, react-query will refetch and the UI will update.
+    // We wait for the new value to be displayed.
+    expect(await screen.findByDisplayValue('Nexus Corp.')).toBeInTheDocument();
   });
 
   it('should show an error toast if updating a setting fails', async () => {
     vi.mocked(useHasPermission).mockReturnValue(true);
     const mockSettings = [{ id: '1', key: 'company_name', value: 'Nexus Inc.' }];
 
-    const fetchSpy = vi.spyOn(global, 'fetch');
     fetchSpy.mockImplementation((url, options) => {
         if (options?.method === 'PUT') {
             return Promise.resolve({

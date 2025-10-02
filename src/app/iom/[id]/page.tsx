@@ -12,7 +12,7 @@ import { getIOMStatusColor } from "@/lib/utils";
 import { useHasPermission } from "@/hooks/useHasPermission";
 import { useSession } from "next-auth/react";
 import IOMPrintView from "@/components/IOMPrintView";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 export default function IOMDetailPage() {
   const params = useParams();
@@ -20,7 +20,6 @@ export default function IOMDetailPage() {
   const [iom, setIom] = useState<IOM | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const canCreatePO = useHasPermission('CREATE_PO');
 
@@ -106,29 +105,84 @@ export default function IOMDetailPage() {
     }
   };
 
-  const handleDownloadPdf = async () => {
-    if (!iom) return;
-    setIsDownloadingPdf(true);
-    try {
-      const response = await fetch(`/api/pdf/iom/${iom.id}/download`);
-      if (!response.ok) {
-        throw new Error('Failed to download PDF');
+  const handlePrint = () => {
+    const printContent = document.getElementById('iom-print-view');
+    if (!printContent) return;
+
+    // Create a new iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    // Get stylesheets from the main document
+    const styles = Array.from(document.styleSheets)
+      .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : (s.ownerNode as HTMLStyleElement)?.outerHTML)
+      .join('');
+
+    // Get the HTML content to print
+    const content = printContent.outerHTML;
+
+    // Write the content and styles to the iframe
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <title>Print IOM</title>
+          ${styles}
+          <style>
+            @page {
+              size: auto;
+              margin: 0;
+            }
+            body, html {
+              margin: 0;
+              padding: 0;
+              height: 100%;
+            }
+            body {
+              padding: 2rem; /* Add some margin to the printed page */
+              box-sizing: border-box;
+            }
+            #iom-print-view {
+              display: flex;
+              flex-direction: column;
+              height: 100%; /* Make the container fill the body height */
+              box-shadow: none !important;
+              border: none !important;
+            }
+            .iom-main-content {
+              flex-grow: 1;
+            }
+            .iom-footer {
+              flex-shrink: 0;
+              margin-top: auto; /* Push footer to the bottom */
+            }
+          </style>
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    // Wait for the iframe to load before printing
+    iframe.onload = function() {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
       }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `IOM-${iom.iomNumber}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      alert('Failed to download PDF.');
-    } finally {
-      setIsDownloadingPdf(false);
-    }
+      // Remove the iframe after a delay
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 500);
+    };
   };
 
   return (
@@ -255,12 +309,10 @@ export default function IOMDetailPage() {
           {/* Print Button */}
           <div className="bg-white shadow rounded-lg p-6">
             <button
-              onClick={handleDownloadPdf}
-              disabled={isDownloadingPdf}
-              className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center disabled:opacity-50"
+              onClick={handlePrint}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
             >
-              <Download className="h-4 w-4 mr-2" />
-              {isDownloadingPdf ? 'Downloading...' : 'Download PDF'}
+              Print IOM
             </button>
           </div>
         </div>
