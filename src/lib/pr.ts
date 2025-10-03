@@ -1,6 +1,5 @@
 // src/lib/pr.ts
 import { prisma } from "./prisma";
-import { PRStatus } from "@/types/pr";
 import { z } from "zod";
 import crypto from "crypto";
 import { createNotification } from "./notification";
@@ -11,7 +10,7 @@ import * as React from "react";
 import { Session } from "next-auth";
 import { authorize } from "./auth-utils";
 import { logAudit, getAuditUser } from "./audit";
-import { Prisma } from "@prisma/client";
+import { Prisma, PRStatus } from "@prisma/client";
 import { triggerPusherEvent } from "./pusher";
 
 export async function generatePRNumber(): Promise<string> {
@@ -202,10 +201,13 @@ type CreatePrData = z.infer<typeof createPrSchema> & {
 export async function createPaymentRequest(data: CreatePrData, session: Session) {
   authorize(session, 'CREATE_PR');
   const { status, reviewerId, approverId, ...restOfData } = data;
+
+  let departmentId: string | null | undefined = null;
+
   if (restOfData.poId) {
     const po = await prisma.purchaseOrder.findUnique({
       where: { id: restOfData.poId },
-      select: { grandTotal: true },
+      select: { grandTotal: true, departmentId: true },
     });
     if (!po) {
       throw new Error("Associated Purchase Order not found.");
@@ -213,6 +215,9 @@ export async function createPaymentRequest(data: CreatePrData, session: Session)
     if (restOfData.grandTotal > po.grandTotal) {
       throw new Error(`Payment Request total (${restOfData.grandTotal}) cannot exceed Purchase Order total (${po.grandTotal}).`);
     }
+    departmentId = po.departmentId;
+  } else {
+    departmentId = session.user.department?.id;
   }
 
   const maxRetries = 3;
@@ -228,6 +233,7 @@ export async function createPaymentRequest(data: CreatePrData, session: Session)
       reviewedById: reviewerId, // map reviewerId to reviewedById
       approvedById: approverId, // map approverId to approvedById
       prNumber: prNumber,
+      departmentId: departmentId || null,
       status: status || PRStatus.PENDING_APPROVAL,
     };
 

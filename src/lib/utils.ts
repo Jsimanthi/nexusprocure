@@ -1,9 +1,9 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
-import { POStatus } from "@/types/po";
-import { IOMStatus } from "@/types/iom";
-import { PRStatus } from "@/types/pr";
+// Import the official, database-generated types directly from Prisma.
+// This establishes a single source of truth for the application's enums.
+import { IOMStatus, POStatus, PRStatus } from "@prisma/client";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

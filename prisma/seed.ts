@@ -9,6 +9,7 @@ const permissions = [
   'MANAGE_USERS',
   'MANAGE_ROLES',
   'MANAGE_SETTINGS',
+  'MANAGE_DEPARTMENTS',
   // Dashboard / Analytics
   'VIEW_ANALYTICS',
   // Vendor Permissions
@@ -66,12 +67,20 @@ const roles = {
   ],
 };
 
+const departmentsToCreate = [
+  { name: 'Human Resources' },
+  { name: 'IT' },
+  { name: 'Finance' },
+  { name: 'Procurement' },
+  { name: 'Operations' },
+];
+
 const usersToCreate = [
-  { name: 'Admin User', email: 'admin@nexusprocure.com', role: 'Administrator' },
-  { name: 'Manager User', email: 'manager@nexusprocure.com', role: 'Manager' },
-  { name: 'Approver User', email: 'approver@nexusprocure.com', role: 'Approver' },
-  { name: 'Procurement User', email: 'procurement@nexusprocure.com', role: 'Procurement Officer' },
-  { name: 'Finance User', email: 'finance@nexusprocure.com', role: 'Finance Officer' },
+  { name: 'Admin User', email: 'admin@nexusprocure.com', role: 'Administrator', department: 'IT' },
+  { name: 'Manager User', email: 'manager@nexusprocure.com', role: 'Manager', department: 'Operations' },
+  { name: 'Approver User', email: 'approver@nexusprocure.com', role: 'Approver', department: 'Finance' },
+  { name: 'Procurement User', email: 'procurement@nexusprocure.com', role: 'Procurement Officer', department: 'Procurement' },
+  { name: 'Finance User', email: 'finance@nexusprocure.com', role: 'Finance Officer', department: 'Finance' },
 ];
 
 async function main() {
@@ -115,24 +124,41 @@ async function main() {
     console.log(`Linked ${permissionsToConnect.length} permissions to ${createdRole.name}`);
   }
 
-  // Create users
+  // Create departments
+  for (const dept of departmentsToCreate) {
+    await prisma.department.upsert({
+      where: { name: dept.name },
+      update: {},
+      create: { name: dept.name },
+    });
+  }
+  console.log('Departments seeded.');
+
+  // Create users and associate with departments
   const hashedPassword = await bcrypt.hash('password123', 10);
   for (const userData of usersToCreate) {
     const role = await prisma.role.findUnique({ where: { name: userData.role } });
-    if (role) {
+    const department = await prisma.department.findUnique({ where: { name: userData.department } });
+
+    if (role && department) {
       await prisma.user.upsert({
         where: { email: userData.email },
-        update: { roleId: role.id },
+        update: {
+          roleId: role.id,
+          departmentId: department.id,
+        },
         create: {
           name: userData.name,
           email: userData.email,
           password: hashedPassword,
           roleId: role.id,
+          departmentId: department.id,
         },
       });
-      console.log(`Upserted user: ${userData.email} with role ${userData.role}`);
+      console.log(`Upserted user: ${userData.email} with role ${userData.role} in department ${userData.department}`);
     } else {
-      console.error(`Role ${userData.role} not found for user ${userData.email}`);
+      if (!role) console.error(`Role ${userData.role} not found for user ${userData.email}`);
+      if (!department) console.error(`Department ${userData.department} not found for user ${userData.email}`);
     }
   }
 
@@ -141,8 +167,10 @@ async function main() {
   const procurementUser = await prisma.user.findUnique({ where: { email: 'procurement@nexusprocure.com' } });
   const approverUser = await prisma.user.findUnique({ where: { email: 'approver@nexusprocure.com' } });
   const managerUser = await prisma.user.findUnique({ where: { email: 'manager@nexusprocure.com' } });
+  const procurementDepartment = await prisma.department.findUnique({ where: { name: 'Procurement' } });
 
-  if (procurementUser && approverUser && managerUser) {
+
+  if (procurementUser && approverUser && managerUser && procurementDepartment) {
     // Create a sample IOM for the Approver/Manager
     await prisma.iOM.upsert({
       where: { iomNumber: 'IOM-2025-SEED-01' },
@@ -158,6 +186,7 @@ async function main() {
         requestedById: procurementUser.id,
         reviewedById: approverUser.id,
         approvedById: managerUser.id,
+        departmentId: procurementDepartment.id, // Link IOM to the Procurement department
         items: {
           create: [
             { itemName: 'Logitech MX Keys', quantity: 5, unitPrice: 8000, totalPrice: 40000, category: 'IT Hardware' },

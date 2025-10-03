@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { IOM } from "@/types/iom";
+import { Prisma } from "@prisma/client";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
@@ -14,10 +14,48 @@ import { useSession } from "next-auth/react";
 import IOMPrintView from "@/components/IOMPrintView";
 import { ArrowLeft } from "lucide-react";
 
+// Define the detailed type for IOM data based on the data fetched from the API.
+// This ensures type consistency between the data source and the component.
+const iomDetailSelector = {
+  id: true,
+  iomNumber: true,
+  pdfToken: true,
+  title: true,
+  from: true,
+  to: true,
+  subject: true,
+  content: true,
+  isUrgent: true,
+  status: true,
+  totalAmount: true,
+  reviewerStatus: true,
+  approverStatus: true,
+  preparedById: true,
+  requestedById: true,
+  reviewedById: true,
+  approvedById: true,
+  departmentId: true,
+  createdAt: true,
+  updatedAt: true,
+  items: true,
+  preparedBy: { select: { name: true, email: true } },
+  requestedBy: { select: { name: true, email: true } },
+  reviewedBy: { select: { name: true, email: true } },
+  approvedBy: { select: { name: true, email: true } },
+  attachments: true,
+  department: true,
+};
+
+const iomValidator = Prisma.validator<Prisma.IOMDefaultArgs>()({
+  select: iomDetailSelector,
+});
+
+type IOMDetail = Prisma.IOMGetPayload<typeof iomValidator>;
+
 export default function IOMDetailPage() {
   const params = useParams();
   const { data: session } = useSession();
-  const [iom, setIom] = useState<IOM | null>(null);
+  const [iom, setIom] = useState<IOMDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 

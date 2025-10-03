@@ -28,6 +28,7 @@ describe('POST /api/users', () => {
     email: 'test@example.com',
     password: 'hashedpassword',
     roleId: 'clxmil0n500003b6le21w24g0',
+    departmentId: 'clxmil0n500003b6le21w24d0',
     emailVerified: null,
     image: null,
     createdAt: new Date(),
@@ -39,6 +40,7 @@ describe('POST /api/users', () => {
     email: 'test@example.com',
     password: 'password123',
     roleId: 'clxmil0n500003b6le21w24g0',
+    departmentId: 'clxmil0n500003b6le21w24d0',
   }
 
   it('should create a new user successfully', async () => {

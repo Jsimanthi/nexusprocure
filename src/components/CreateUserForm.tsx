@@ -14,11 +14,17 @@ interface Role {
   name: string;
 }
 
-interface CreateUserFormProps {
-  roles: Role[];
+interface Department {
+  id: string;
+  name: string;
 }
 
-export default function CreateUserForm({ roles }: CreateUserFormProps) {
+interface CreateUserFormProps {
+  roles: Role[];
+  departments: Department[];
+}
+
+export default function CreateUserForm({ roles, departments }: CreateUserFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +125,24 @@ export default function CreateUserForm({ roles }: CreateUserFormProps) {
           ))}
         </select>
         {errors.roleId && <p className="mt-2 text-sm text-red-600">{errors.roleId.message}</p>}
+      </div>
+      <div>
+        <label htmlFor="departmentId" className="block text-sm font-medium text-gray-700">
+          Department
+        </label>
+        <select
+          id="departmentId"
+          {...register('departmentId')}
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+        >
+          <option value="">Select a department</option>
+          {departments.map((department) => (
+            <option key={department.id} value={department.id}>
+              {department.name}
+            </option>
+          ))}
+        </select>
+        {errors.departmentId && <p className="mt-2 text-sm text-red-600">{errors.departmentId.message}</p>}
       </div>
       <div>
         <button

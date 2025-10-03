@@ -8,6 +8,7 @@ This document provides a detailed breakdown of every model in the `prisma/schema
     *   [Role](#role)
     *   [Permission](#permission)
     *   [PermissionsOnRoles](#permissionsonroles)
+    *   [Department](#department)
 2.  [NextAuth.js Models](#2-nextauthjs-models)
     *   [Account](#account)
     *   [Session](#session)
@@ -23,7 +24,9 @@ This document provides a detailed breakdown of every model in the `prisma/schema
     *   [Attachment](#attachment)
     *   [Notification](#notification)
     *   [AuditLog](#auditlog)
+    *   [Setting](#setting)
 5.  [Enums](#5-enums)
+    *   [ActionStatus](#actionstatus)
     *   [IOMStatus](#iomstatus)
     *   [POStatus](#postatus)
     *   [PRStatus](#prstatus)
@@ -33,7 +36,7 @@ This document provides a detailed breakdown of every model in the `prisma/schema
 
 ## 1. RBAC & User Models
 
-These models form the foundation of the Role-Based Access Control system.
+These models form the foundation of the Role-Based Access Control system and user management.
 
 ### `User`
 Represents an individual user account in the system.
@@ -47,6 +50,8 @@ Represents an individual user account in the system.
 | `image` | `String?` | URL for the user's profile picture. |
 | `roleId` | `String?` | Foreign key linking to the `Role` model. |
 | `role` | `Role?` | Relation to the user's assigned role. |
+| `departmentId` | `String?` | Foreign key linking to the `Department` model. |
+| `department` | `Department?` | Relation to the user's assigned department. |
 | `password` | `String?` | The user's hashed password. |
 | `accounts` | `Account[]` | Relation to linked OAuth accounts (for NextAuth.js). |
 | `sessions` | `Session[]` | Relation to active user sessions (for NextAuth.js). |
@@ -85,6 +90,18 @@ This is a many-to-many join table connecting `Role` and `Permission`.
 | `assignedAt` | `DateTime` | Timestamp of when the permission was assigned to the role. |
 | `assignedBy` | `String` | Identifier of the user who assigned the permission. |
 
+### `Department`
+Represents an organizational department for tracking and analytics.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `String` | Unique identifier for the department. |
+| `name` | `String` | The name of the department (e.g., "IT", "Finance"). Must be unique. |
+| `users` | `User[]` | Reverse relation to all users in this department. |
+| `ioms` | `IOM[]` | Reverse relation to all IOMs originating from this department. |
+| `purchaseOrders`| `PurchaseOrder[]` | Reverse relation to all POs from this department. |
+| `paymentRequests`| `PaymentRequest[]` | Reverse relation to all PRs from this department. |
+
 ---
 
 ## 2. NextAuth.js Models
@@ -115,6 +132,8 @@ The internal request that initiates a procurement workflow.
 | `content` | `String?` | The main body/content of the memo. |
 | `status` | `IOMStatus` | The current status in the workflow (e.g., `DRAFT`, `APPROVED`). |
 | `totalAmount` | `Float` | The calculated total amount of all items in the IOM. |
+| `departmentId`| `String?` | Foreign key linking to the `Department`. |
+| `department`  | `Department?` | Relation to the department this IOM belongs to. |
 | `items` | `IOMItem[]` | Relation to the line items of this IOM. |
 | `preparedById` | `String` | FK for the user who created the IOM. |
 | `requestedById` | `String` | FK for the user on whose behalf the IOM was created. |
@@ -145,6 +164,8 @@ The formal order placed with an external vendor.
 | `poNumber` | `String` | A unique, human-readable number for the PO. |
 | `iomId` | `String?` | Foreign key linking to the IOM this PO was converted from. |
 | `vendorId` | `String?` | Foreign key linking to the `Vendor`. |
+| `departmentId`| `String?` | Foreign key linking to the `Department`. Inherited from IOM or User. |
+| `department`  | `Department?` | Relation to the department this PO belongs to. |
 | `title` | `String` | The title of the PO. |
 | `status` | `POStatus` | The current status in the workflow (e.g., `DRAFT`, `ORDERED`). |
 | `totalAmount`| `Float` | The subtotal before tax. |
@@ -164,6 +185,8 @@ A request to make a payment, typically for a fulfilled PO.
 | `id` | `String` | Unique identifier. |
 | `prNumber` | `String` | A unique, human-readable number for the PR. |
 | `poId` | `String?` | Foreign key linking to the PO this PR is for. |
+| `departmentId`| `String?` | Foreign key linking to the `Department`. Inherited from PO. |
+| `department`  | `Department?` | Relation to the department this PR belongs to. |
 | ... | ... | Contains fields for totals, currency, and payment-specific details like `paymentTo`, `paymentDate`, `paymentMethod`, `bankAccount`, etc. |
 | `status` | `PRStatus` | The current status in the workflow (e.g., `DRAFT`, `PROCESSED`). |
 
@@ -211,15 +234,27 @@ Records significant events for accountability.
 | `userName` | `String` | The name of the user who performed the action. |
 | `changes` | `String` | A JSON string representing the changes made. |
 
+### `Setting`
+A simple key-value store for dynamic application configuration.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `String` | Unique identifier. |
+| `key` | `String` | The unique key for the setting (e.g., "site_name"). |
+| `value` | `String` | The value of the setting. |
+
 ---
 
 ## 5. Enums
+
+### `ActionStatus`
+`PENDING`, `APPROVED`, `REJECTED`
 
 ### `IOMStatus`
 `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `COMPLETED`
 
 ### `POStatus`
-`DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `ORDERED`, `DELIVERED`, `CANCELLED`
+`DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `ORDERED`, `DELIVERED`, `CANCELLED`, `COMPLETED`
 
 ### `PRStatus`
 `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`, `PROCESSED`, `CANCELLED`

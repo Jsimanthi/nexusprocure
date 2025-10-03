@@ -1,6 +1,5 @@
 // src/lib/iom.ts
 import { prisma } from "./prisma";
-import { IOMStatus } from "@/types/iom";
 import { z } from "zod";
 import crypto from "crypto";
 import { createNotification } from "./notification";
@@ -11,8 +10,38 @@ import * as React from "react";
 import { Session } from "next-auth";
 import { authorize } from "./auth-utils";
 import { logAudit, getAuditUser } from "./audit";
-import { Prisma } from "@prisma/client";
+import { Prisma, IOMStatus } from "@prisma/client";
 import { triggerPusherEvent } from "./pusher";
+
+const iomSelectClause = {
+  id: true,
+  iomNumber: true,
+  pdfToken: true,
+  title: true,
+  from: true,
+  to: true,
+  subject: true,
+  content: true,
+  isUrgent: true,
+  status: true,
+  totalAmount: true,
+  reviewerStatus: true,
+  approverStatus: true,
+  preparedById: true,
+  requestedById: true,
+  reviewedById: true,
+  approvedById: true,
+  departmentId: true,
+  createdAt: true,
+  updatedAt: true,
+  items: true,
+  preparedBy: { select: { name: true, email: true } },
+  requestedBy: { select: { name: true, email: true } },
+  reviewedBy: { select: { name: true, email: true } },
+  approvedBy: { select: { name: true, email: true } },
+  attachments: true,
+  department: true,
+};
 
 export async function generateIOMNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -90,21 +119,7 @@ export async function getIOMs(
       where,
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: {
-        items: true,
-        preparedBy: {
-          select: { name: true, email: true },
-        },
-        requestedBy: {
-          select: { name: true, email: true },
-        },
-        reviewedBy: {
-          select: { name: true, email: true },
-        },
-        approvedBy: {
-          select: { name: true, email: true },
-        },
-      },
+      select: iomSelectClause,
       orderBy: { createdAt: "desc" },
     }),
     prisma.iOM.count({ where }),
@@ -116,48 +131,14 @@ export async function getIOMs(
 export async function getIOMById(id: string) {
   return await prisma.iOM.findUnique({
     where: { id },
-    include: {
-      items: true,
-      preparedBy: {
-        select: { name: true, email: true }
-      },
-      requestedBy: {
-        select: { name: true, email: true }
-      },
-      reviewedBy: {
-        select: { name: true, email: true }
-      },
-      approvedBy: {
-        select: { name: true, email: true }
-      },
-    }
+    select: iomSelectClause
   });
 }
 
 export async function getPublicIOMById(id: string) {
-  const selectClause = {
-    id: true,
-    iomNumber: true,
-    title: true,
-    subject: true,
-    content: true,
-    from: true,
-    to: true,
-    totalAmount: true,
-    status: true,
-    pdfToken: true,
-    createdAt: true,
-    updatedAt: true,
-    items: true,
-    preparedBy: { select: { name: true, email: true } },
-    requestedBy: { select: { name: true, email: true } },
-    reviewedBy: { select: { name: true, email: true } },
-    approvedBy: { select: { name: true, email: true } },
-  };
-
   let iom = await prisma.iOM.findUnique({
     where: { id },
-    select: selectClause,
+    select: iomSelectClause,
   });
 
   if (iom && !iom.pdfToken) {
@@ -166,13 +147,13 @@ export async function getPublicIOMById(id: string) {
       iom = await prisma.iOM.update({
         where: { id },
         data: { pdfToken: newPdfToken },
-        select: selectClause,
+        select: iomSelectClause,
       });
     } catch (error) {
       console.warn(`Failed to update IOM with new PDF token, likely due to a race condition. Refetching...`, error);
       iom = await prisma.iOM.findUnique({
         where: { id },
-        select: selectClause,
+        select: iomSelectClause,
       });
     }
   }
@@ -195,6 +176,8 @@ export async function createIOM(data: CreateIomData, session: Session) {
 
   for (let i = 0; i < maxRetries; i++) {
     const iomNumber = await generateIOMNumber();
+    const departmentId = session.user.department?.id;
+
     const iomData = {
       ...actualRest,
       iomNumber,
@@ -203,6 +186,7 @@ export async function createIOM(data: CreateIomData, session: Session) {
       isUrgent: isUrgent || false,
       reviewedById: reviewerId,
       approvedById: approverId,
+      departmentId: departmentId || null,
       status: status === 'DRAFT' ? IOMStatus.DRAFT : IOMStatus.PENDING_APPROVAL,
       items: {
         create: (items || []).map(item => ({
@@ -215,21 +199,7 @@ export async function createIOM(data: CreateIomData, session: Session) {
     try {
       const createdIom = await prisma.iOM.create({
         data: iomData,
-        include: {
-          items: true,
-          preparedBy: {
-            select: { name: true, email: true }
-          },
-          requestedBy: {
-            select: { name: true, email: true }
-          },
-          reviewedBy: {
-            select: { name: true, email: true }
-          },
-          approvedBy: {
-            select: { name: true, email: true }
-          },
-        }
+        select: iomSelectClause
       });
 
       const auditUser = getAuditUser(session);
@@ -345,13 +315,7 @@ export async function updateIOMStatus(
   const finalUpdate = await prisma.iOM.update({
     where: { id },
     data: { status: finalStatus },
-    include: {
-      items: true,
-      preparedBy: { select: { name: true, email: true } },
-      requestedBy: { select: { name: true, email: true } },
-      reviewedBy: { select: { name: true, email: true } },
-      approvedBy: { select: { name: true, email: true } },
-    },
+    select: iomSelectClause
   });
 
   // Notifications and Audit Logging
@@ -430,13 +394,7 @@ export async function deleteIOM(id: string, session: Session) {
 export async function getIOMsByStatus(status: IOMStatus) {
   return await prisma.iOM.findMany({
     where: { status },
-    include: {
-      items: true,
-      preparedBy: { select: { name: true, email: true } },
-      requestedBy: { select: { name: true, email: true } },
-      reviewedBy: { select: { name: true, email: true } },
-      approvedBy: { select: { name: true, email: true } },
-    },
+    select: iomSelectClause,
     orderBy: { createdAt: 'desc' }
   });
 }
