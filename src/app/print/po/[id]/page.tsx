@@ -2,14 +2,33 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { PurchaseOrder } from "@/types/po";
+import { Prisma } from "@prisma/client";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import POPrintView from "@/components/POPrintView";
 
+// Create a detailed type for the PO object, including all its relations,
+// using Prisma's generated types for a single source of truth.
+const poWithRelations = Prisma.validator<Prisma.PurchaseOrderDefaultArgs>()({
+  include: {
+    items: true,
+    preparedBy: { select: { name: true, email: true } },
+    reviewedBy: { select: { name: true, email: true } },
+    approvedBy: { select: { name: true, email: true } },
+    iom: {
+      select: {
+        iomNumber: true,
+      },
+    },
+  },
+});
+
+type POPrintData = Prisma.PurchaseOrderGetPayload<typeof poWithRelations>;
+
+
 export default function POPrintPage() {
   const params = useParams();
-  const [po, setPo] = useState<PurchaseOrder | null>(null);
+  const [po, setPo] = useState<POPrintData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchPO = useCallback(async () => {

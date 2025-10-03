@@ -1,14 +1,16 @@
-// src/lib/cr.test.ts
+// src/lib/pr.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getPRs, createPaymentRequest, updatePRStatus } from './pr';
 import { prisma } from './prisma';
-import { PRStatus, CreatePrData, PaymentRequest, PaymentMethod } from '@/types/pr';
 import { Session } from 'next-auth';
-import { Prisma, POStatus, PurchaseOrder } from '@prisma/client';
+import { Prisma, PRStatus, PaymentRequest, PaymentMethod, POStatus, PurchaseOrder } from '@prisma/client';
+import { createPrSchema } from './schemas';
+import { z } from 'zod';
 
 import { logAudit, getAuditUser } from './audit';
-
 import { authorize } from './auth-utils';
+
+type CreatePrData = z.infer<typeof createPrSchema>;
 
 // Mock external dependencies
 vi.mock('@/lib/prisma');
@@ -31,6 +33,7 @@ const mockUserSession = (permissions: string[] = []): Session => ({
 const mockPaymentRequest: PaymentRequest = {
   id: 'new-pr-id',
   prNumber: 'PR-2024-001',
+  pdfToken: 'mock-token',
   poId: null,
   title: 'Test PR',
   status: PRStatus.DRAFT,
@@ -39,6 +42,8 @@ const mockPaymentRequest: PaymentRequest = {
   grandTotal: 110,
   currency: 'USD',
   exchangeRate: 1,
+  reviewerStatus: 'PENDING',
+  approverStatus: 'PENDING',
   paymentTo: 'Vendor',
   paymentDate: new Date(),
   purpose: 'Testing',
@@ -51,12 +56,14 @@ const mockPaymentRequest: PaymentRequest = {
   approvedById: null,
   createdAt: new Date(),
   updatedAt: new Date(),
+  departmentId: null,
 };
 
 // A complete mock object for the Purchase Order
 const mockPurchaseOrder: PurchaseOrder = {
   id: 'po-123',
   poNumber: 'PO-2024-001',
+  pdfToken: 'mock-token',
   iomId: null,
   title: 'Test PO',
   status: POStatus.DRAFT,
@@ -66,21 +73,26 @@ const mockPurchaseOrder: PurchaseOrder = {
   grandTotal: 1000,
   currency: 'USD',
   exchangeRate: 1,
-  notes: null,
   vendorId: 'vendor-1',
   vendorName: 'Test Vendor',
+  vendorAddress: '456 Vendor St',
   vendorContact: 'contact@example.com',
   preparedById: 'user-1',
   requestedById: 'user-1',
   reviewedById: null,
   approvedById: null,
-  companyId: 'company-1',
+  departmentId: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
   companyName: 'Test Company',
   companyAddress: '123 Main St',
   companyContact: 'company@example.com',
-  vendorAddress: '456 Vendor St',
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  expectedDeliveryDate: null,
+  fulfilledAt: null,
+  qualityScore: null,
+  deliveryNotes: null,
+  reviewerStatus: 'PENDING',
+  approverStatus: 'PENDING',
 };
 
 describe('Payment Request (PR) Functions', () => {
@@ -100,14 +112,15 @@ describe('Payment Request (PR) Functions', () => {
         totalAmount: 100,
         taxAmount: 10,
         grandTotal: 110,
-        preparedById: 'user-1',
-        requestedById: 'user-1'
+        requestedById: 'user-1',
+        reviewerId: 'reviewer-id',
+        approverId: 'approver-id',
       };
       const session = mockUserSession(['CREATE_PR']);
       vi.mocked(authorize).mockReturnValue(true);
       vi.mocked(prisma.paymentRequest.create).mockResolvedValue(mockPaymentRequest);
 
-      await createPaymentRequest(prData, session);
+      await createPaymentRequest({ ...prData, preparedById: 'user-id' }, session);
 
       expect(authorize).toHaveBeenCalledWith(session, 'CREATE_PR');
 
@@ -125,14 +138,15 @@ describe('Payment Request (PR) Functions', () => {
         totalAmount: 100,
         taxAmount: 10,
         grandTotal: 110,
-        preparedById: 'user-1',
-        requestedById: 'user-1'
+        requestedById: 'user-1',
+        reviewerId: 'reviewer-id',
+        approverId: 'approver-id',
       };
       const session = mockUserSession(['CREATE_PR']);
       vi.mocked(authorize).mockReturnValue(true);
       const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed',
-        { code: 'P2002', clientVersion: 'test', meta: {} }
+        { code: 'P2002', clientVersion: 'test' }
       );
 
       vi.mocked(prisma.paymentRequest.count).mockResolvedValue(0);
@@ -140,7 +154,7 @@ describe('Payment Request (PR) Functions', () => {
         .mockRejectedValueOnce(uniqueConstraintError)
         .mockResolvedValue(mockPaymentRequest);
 
-      await createPaymentRequest(prData, session);
+      await createPaymentRequest({ ...prData, preparedById: 'user-id' }, session);
 
       expect(prisma.paymentRequest.create).toHaveBeenCalledTimes(2);
     });
@@ -157,8 +171,9 @@ describe('Payment Request (PR) Functions', () => {
         paymentMethod: PaymentMethod.CASH,
         totalAmount: 1400,
         taxAmount: 100,
-        preparedById: 'user-1',
-        requestedById: 'user-1'
+        requestedById: 'user-1',
+        reviewerId: 'reviewer-id',
+        approverId: 'approver-id',
       };
       const session = mockUserSession(['CREATE_PR']);
       vi.mocked(authorize).mockReturnValue(true);
@@ -168,7 +183,7 @@ describe('Payment Request (PR) Functions', () => {
         grandTotal: 1000,
       });
 
-      await expect(createPaymentRequest(prData, session)).rejects.toThrow(
+      await expect(createPaymentRequest({ ...prData, preparedById: 'user-id' }, session)).rejects.toThrow(
         'Payment Request total (1500) cannot exceed Purchase Order total (1000).'
       );
     });
@@ -185,8 +200,9 @@ describe('Payment Request (PR) Functions', () => {
         paymentMethod: PaymentMethod.CASH,
         totalAmount: 850,
         taxAmount: 50,
-        preparedById: 'user-1',
-        requestedById: 'user-1'
+        requestedById: 'user-1',
+        reviewerId: 'reviewer-id',
+        approverId: 'approver-id',
       };
       const session = mockUserSession(['CREATE_PR']);
       vi.mocked(authorize).mockReturnValue(true);
@@ -197,7 +213,7 @@ describe('Payment Request (PR) Functions', () => {
       });
       vi.mocked(prisma.paymentRequest.create).mockResolvedValue(mockPaymentRequest);
 
-      await expect(createPaymentRequest(prData, session)).resolves.not.toThrow();
+      await expect(createPaymentRequest({ ...prData, preparedById: 'user-id' }, session)).resolves.not.toThrow();
       expect(prisma.paymentRequest.create).toHaveBeenCalled();
     });
   });
@@ -211,7 +227,7 @@ describe('Payment Request (PR) Functions', () => {
     const reviewerSession = mockUserSession(['REVIEW_PR']);
     reviewerSession.user.id = reviewerId;
 
-    const basePr = {
+    const basePr: PaymentRequest = {
       ...mockPaymentRequest,
       id: prId,
       status: PRStatus.PENDING_APPROVAL,

@@ -3,10 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import PageLayout from "@/components/PageLayout";
-import { PaymentRequest, PaymentMethod } from "@/types/pr";
+import { Prisma, PaymentRequest, PaymentMethod } from "@prisma/client";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { toast } from "react-hot-toast";
 import BackButton from "@/components/BackButton";
+
+const prDetailValidator = Prisma.validator<Prisma.PaymentRequestDefaultArgs>()({});
+type PRDetail = Prisma.PaymentRequestGetPayload<typeof prDetailValidator>;
+
 
 interface FormData {
   title: string;
@@ -26,7 +30,7 @@ export default function EditPRPage() {
   const params = useParams();
   const prId = params.id as string;
   const [loading, setLoading] = useState(false);
-  const [pr, setPr] = useState<PaymentRequest | null>(null);
+  const [pr, setPr] = useState<PRDetail | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string[]>>>({});
   const firstInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<FormData>({

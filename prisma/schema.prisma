@@ -103,9 +103,27 @@ model User {
   requestedPRs PaymentRequest[] @relation("PRRequestedBy")
   reviewedPRs  PaymentRequest[] @relation("PRReviewedBy")
   approvedPRs  PaymentRequest[] @relation("PRApprovedBy")
+
+  // Relation to Department
+  departmentId  String?
+  department    Department? @relation(fields: [departmentId], references: [id])
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  @@index([departmentId])
+}
+
+model Department {
+  id    String @id @default(cuid())
+  name  String @unique
+  users User[]
+  ioms  IOM[]
+  purchaseOrders PurchaseOrder[]
+  paymentRequests PaymentRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model VerificationToken {
@@ -147,6 +165,9 @@ model IOM {
   requestedById String
   reviewedById  String?
   approvedById  String?
+  departmentId  String?
+
+  department Department? @relation(fields: [departmentId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -252,6 +273,9 @@ model PurchaseOrder {
   requestedById String
   reviewedById  String?
   approvedById  String?
+  departmentId  String?
+
+  department    Department?      @relation(fields: [departmentId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -353,6 +377,9 @@ model PaymentRequest {
   requestedById String
   reviewedById  String?
   approvedById  String?
+  departmentId  String?
+
+  department    Department?      @relation(fields: [departmentId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

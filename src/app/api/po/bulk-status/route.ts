@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
 import { updatePOStatus } from "@/lib/po";
-import { POStatus } from "@/types/po";
+import { POStatus } from "@prisma/client";
 import { z } from "zod";
 
 const bulkStatusUpdateSchema = z.object({

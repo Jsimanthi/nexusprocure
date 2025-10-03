@@ -1,7 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { PaymentRequest, PRStatus } from "@/types/pr";
+import { PaymentRequest, PRStatus } from "@prisma/client";
 import SearchAndFilter from "@/components/SearchAndFilter";
 import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
