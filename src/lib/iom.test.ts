@@ -1,6 +1,6 @@
 // src/lib/iom.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createIOM, updateIOMStatus, deleteIOM } from './iom';
+import { getIOMs, createIOM, updateIOMStatus, deleteIOM } from './iom';
 import { prisma } from './prisma';
 import { Session } from 'next-auth';
 import { Prisma, IOM, IOMStatus, ActionStatus } from '@prisma/client';
@@ -126,6 +126,73 @@ describe('IOM Functions', () => {
       expect(prisma.iOM.create).toHaveBeenCalled();
       expect(logAudit).toHaveBeenCalledWith("CREATE", expect.any(Object));
     });
+
+    it('should retry creating an IOM if a unique constraint violation occurs', async () => {
+      const iomData: CreateIomData & { preparedById: string } = {
+        title: 'Test Retry IOM',
+        from: 'Dept A',
+        to: 'Dept B',
+        subject: 'Test',
+        preparedById: 'user-1',
+        requestedById: 'user-1',
+        reviewerId: 'user-2',
+        approverId: 'user-3',
+        items: []
+      };
+      const session = mockUserSession(['CREATE_IOM']);
+      vi.mocked(authorize).mockReturnValue(true);
+      const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        { code: 'P2002', clientVersion: 'test' }
+      );
+
+      vi.mocked(prisma.iOM.count).mockResolvedValue(0);
+      vi.mocked(prisma.iOM.create)
+        .mockRejectedValueOnce(uniqueConstraintError)
+        .mockResolvedValue(fullMockIom);
+
+      await createIOM(iomData, session);
+
+      expect(prisma.iOM.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('should correctly create an IOM when the items array is not provided (undefined)', async () => {
+        const iomData = {
+            title: 'Test IOM without items',
+            from: 'Dept C',
+            to: 'Dept D',
+            subject: 'No Items Test',
+            preparedById: 'user-2',
+            requestedById: 'user-2',
+            reviewerId: 'user-3',
+            approverId: 'user-4',
+        };
+        const session = mockUserSession(['CREATE_IOM']);
+        vi.mocked(authorize).mockReturnValue(true);
+
+        const createdIomMock: MockIOM = {
+            ...fullMockIom,
+            id: 'new-iom-id-no-items',
+            items: [],
+        };
+        vi.mocked(prisma.iOM.create).mockResolvedValue(createdIomMock);
+
+        await createIOM(iomData, session);
+
+        expect(authorize).toHaveBeenCalledWith(session, 'CREATE_IOM');
+
+        expect(prisma.iOM.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    items: {
+                        create: [],
+                    },
+                    totalAmount: 0,
+                }),
+            })
+        );
+        expect(logAudit).toHaveBeenCalledWith("CREATE", expect.any(Object));
+    });
   });
 
   describe('updateIOMStatus', () => {
@@ -148,7 +215,7 @@ describe('IOM Functions', () => {
     };
 
     beforeEach(() => {
-      vi.mocked(prisma.iOM.update).mockImplementation(async (args: Prisma.IOMUpdateArgs) => {
+      vi.mocked(prisma.iOM.update).mockImplementation(async (args: { data: any; }) => {
         return {
           ...baseIom,
           ...args.data,
