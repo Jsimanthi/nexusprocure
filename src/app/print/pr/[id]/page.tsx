@@ -2,36 +2,24 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Prisma } from "@prisma/client";
+import { PaymentRequest } from "@/types/pr";
+import { UserRef } from "@/types/iom";
+import { PurchaseOrder } from "@prisma/client";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import PRPrintView from "@/components/PRPrintView";
 
-// Create a detailed type for the PR object, including all its relations,
-// using Prisma's generated types for a single source of truth.
-const prWithRelations = Prisma.validator<Prisma.PaymentRequestDefaultArgs>()({
-  include: {
-    preparedBy: { select: { name: true, email: true } },
-    reviewedBy: { select: { name: true, email: true } },
-    approvedBy: { select: { name: true, email: true } },
-    po: {
-      select: {
-        poNumber: true,
-        iom: {
-          select: {
-            iomNumber: true,
-          },
-        },
-      },
-    },
-  },
-});
-
-type PRPrintData = Prisma.PaymentRequestGetPayload<typeof prWithRelations>;
+type FullPaymentRequest = PaymentRequest & {
+  po?: Partial<PurchaseOrder> | null;
+  preparedBy?: UserRef | null;
+  requestedBy?: UserRef | null;
+  reviewedBy?: UserRef | null;
+  approvedBy?: UserRef | null;
+};
 
 export default function PRPrintPage() {
   const params = useParams();
-  const [pr, setPr] = useState<PRPrintData | null>(null);
+  const [pr, setPr] = useState<FullPaymentRequest | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchPR = useCallback(async () => {

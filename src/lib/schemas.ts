@@ -1,6 +1,5 @@
 import { z } from 'zod';
-// Import the official, database-generated types directly from Prisma.
-import { PaymentMethod } from '@prisma/client';
+import { PaymentMethod } from '@/types/pr';
 
 export const getIOMsSchema = z.object({
   page: z.coerce.number().min(1).default(1),
@@ -108,9 +107,4 @@ export const createUserSchema = z.object({
   email: z.string().email('Invalid email address.'),
   password: z.string().min(8, 'Password must be at least 8 characters long.'),
   roleId: z.string().cuid('Invalid role.'),
-  departmentId: z.string().cuid('Invalid department.'),
-});
-
-export const createDepartmentSchema = z.object({
-  name: z.string().min(1, 'Department name is required.'),
 });

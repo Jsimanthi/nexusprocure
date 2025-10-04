@@ -4,47 +4,32 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Prisma, PaymentMethod } from "@prisma/client";
+import { PaymentRequest, PaymentMethod } from "@/types/pr";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import { getPRStatusColor, formatCurrency } from "@/lib/utils";
+import { UserRef } from "@/types/iom";
+import { PurchaseOrder } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import { useHasPermission } from "@/hooks/useHasPermission";
 import PRPrintView from "@/components/PRPrintView";
 import { ArrowLeft } from "lucide-react";
 
-const prDetailValidator = Prisma.validator<Prisma.PaymentRequestDefaultArgs>()({
-    include: {
-      po: {
-        include: {
-          vendor: true,
-          items: true,
-          iom: {
-            include: {
-              items: true,
-              preparedBy: true,
-              requestedBy: true,
-              reviewedBy: true,
-              approvedBy: true,
-            }
-          },
-        },
-      },
-      preparedBy: { select: { name: true, email: true } },
-      requestedBy: { select: { name: true, email: true } },
-      reviewedBy: { select: { name: true, email: true } },
-      approvedBy: { select: { name: true, email: true } },
-    },
-});
-
-type PRDetail = Prisma.PaymentRequestGetPayload<typeof prDetailValidator>;
-
+type FullPaymentRequest = PaymentRequest & {
+  po?: (Partial<PurchaseOrder> & {
+    iom?: { iomNumber: string } | null;
+  }) | null;
+  preparedBy?: UserRef | null;
+  requestedBy?: UserRef | null;
+  reviewedBy?: UserRef | null;
+  approvedBy?: UserRef | null;
+};
 
 export default function PRDetailPage() {
   const params = useParams();
   const { data: session } = useSession();
-  const [pr, setPr] = useState<PRDetail | null>(null);
+  const [pr, setPr] = useState<FullPaymentRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 

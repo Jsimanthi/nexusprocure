@@ -10,7 +10,6 @@ import {
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import { formatCurrency } from "@/lib/utils";
-import SpendByDepartmentWidget from "@/components/dashboard/widgets/SpendByDepartmentWidget";
 
 interface SpendData {
   name: string;
@@ -130,9 +129,6 @@ export default function AnalyticsPage() {
                     <p className="text-gray-500">No category spending data available.</p>
                 </div>
             )}
-        </div>
-        <div className="lg:col-span-2">
-            <SpendByDepartmentWidget />
         </div>
       </div>
     </PageLayout>

@@ -31,34 +31,27 @@ describe('CreateUserForm', () => {
     { id: 'clxmil0n500003b6le21w24g1', name: 'User' },
   ];
 
-  const departments = [
-    { id: 'clxmil0n500003b6le21w24d0', name: 'IT' },
-    { id: 'clxmil0n500003b6le21w24d1', name: 'HR' },
-  ];
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('should render the form correctly', () => {
-    render(<CreateUserForm roles={roles} departments={departments} />);
+    render(<CreateUserForm roles={roles} />);
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/role/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/department/i)).toBeInTheDocument();
   });
 
   it('should submit the form with valid data', async () => {
     mockFetch(true, {});
 
-    render(<CreateUserForm roles={roles} departments={departments} />);
+    render(<CreateUserForm roles={roles} />);
 
     await fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Test User' } });
     await fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
     await fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } });
     await fireEvent.change(screen.getByLabelText(/role/i), { target: { value: roles[0].id } });
-    await fireEvent.change(screen.getByLabelText(/department/i), { target: { value: departments[0].id } });
 
     await fireEvent.click(screen.getByRole('button', { name: /create user/i }));
 
@@ -71,13 +64,12 @@ describe('CreateUserForm', () => {
   it('should display an error message on failed submission', async () => {
     mockFetch(false, { error: 'Failed to create user' });
 
-    render(<CreateUserForm roles={roles} departments={departments} />);
+    render(<CreateUserForm roles={roles} />);
 
     await fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Test User' } });
     await fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
     await fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } });
     await fireEvent.change(screen.getByLabelText(/role/i), { target: { value: roles[0].id } });
-    await fireEvent.change(screen.getByLabelText(/department/i), { target: { value: departments[0].id } });
 
     await fireEvent.click(screen.getByRole('button', { name: /create user/i }));
 

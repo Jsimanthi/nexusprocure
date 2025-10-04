@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { formatCurrency, getPOStatusColor, getIOMStatusColor, getPRStatusColor } from './utils';
-import { POStatus, IOMStatus, PRStatus } from '@prisma/client';
+import { POStatus } from '@/types/po';
+import { IOMStatus } from '@/types/iom';
+import { PRStatus } from '@/types/pr';
 
 describe('Utility Functions', () => {
   describe('formatCurrency', () => {

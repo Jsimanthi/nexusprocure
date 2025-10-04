@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PATCH } from './route';
 import { auth } from '@/lib/auth-config';
 import { updatePRStatus } from '@/lib/pr';
-import { PRStatus, PaymentRequest } from '@prisma/client';
+import { PRStatus, PaymentRequest as PaymentRequestType } from '@/types/pr';
 import { Session } from 'next-auth';
 import { NextRequest } from 'next/server';
 
@@ -98,7 +98,7 @@ describe('PATCH /api/pr/[id]', () => {
 
   it('should successfully update the PR status and return 200', async () => {
     const updatedPr = { id: 'pr-123', status: PRStatus.APPROVED };
-    vi.mocked(updatePRStatus).mockResolvedValue(updatedPr as PaymentRequest);
+    vi.mocked(updatePRStatus).mockResolvedValue(updatedPr as PaymentRequestType);
 
     const request = new NextRequest('http://localhost', {
       method: 'PATCH',

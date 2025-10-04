@@ -59,7 +59,6 @@ const authConfig: NextAuthConfig = {
           role: {
             include: { permissions: { include: { permission: true } } },
           },
-          department: true,
         },
       });
 
@@ -71,8 +70,6 @@ const authConfig: NextAuthConfig = {
         token.permissions = dbUser.role?.permissions.map(
           (p) => p.permission.name
         );
-        token.departmentId = dbUser.department?.id;
-        token.departmentName = dbUser.department?.name;
       }
 
       return token;
@@ -87,12 +84,6 @@ const authConfig: NextAuthConfig = {
           name: token.roleName as string
         };
         session.user.permissions = token.permissions as string[];
-        if (token.departmentId && token.departmentName) {
-          session.user.department = {
-            id: token.departmentId as string,
-            name: token.departmentName as string,
-          };
-        }
       }
       return session;
     },

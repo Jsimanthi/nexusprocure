@@ -1,6 +1,6 @@
 "use client";
 
-import { Prisma } from "@prisma/client";
+import { IOM } from "@/types/iom";
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -10,21 +10,8 @@ interface Setting {
   value: string;
 }
 
-// Create a detailed type for the IOM object, including all its relations,
-// using Prisma's generated types for a single source of truth.
-const iomWithRelations = Prisma.validator<Prisma.IOMDefaultArgs>()({
-  include: {
-    items: true,
-    preparedBy: { select: { name: true, email: true } },
-    reviewedBy: { select: { name: true, email: true } },
-    approvedBy: { select: { name: true, email: true } },
-  },
-});
-
-type IOMPrintData = Prisma.IOMGetPayload<typeof iomWithRelations>;
-
 interface IOMPrintViewProps {
-  iom: IOMPrintData;
+  iom: IOM;
 }
 
 export default function IOMPrintView({ iom }: IOMPrintViewProps) {

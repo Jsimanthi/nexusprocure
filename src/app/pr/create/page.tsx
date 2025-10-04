@@ -4,7 +4,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
-import { PurchaseOrder, PaymentMethod } from "@prisma/client";
+import { PurchaseOrder } from "@/types/po";
+import { PaymentMethod } from "@/types/pr";
 import PageLayout from "@/components/PageLayout";
 import { useSession } from "next-auth/react";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -85,8 +86,8 @@ export default function CreatePRPage() {
   const fetchUsers = async () => {
     try {
       const [reviewersRes, approversRes] = await Promise.all([
-        fetch("/api/users?permission=REVIEW_PR"),
-        fetch("/api/users?permission=APPROVE_PR"),
+        fetch("/api/users/role/Approver"),
+        fetch("/api/users/role/Manager"),
       ]);
       if (reviewersRes.ok) setReviewers(await reviewersRes.json());
       if (approversRes.ok) setApprovers(await approversRes.json());
