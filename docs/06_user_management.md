@@ -36,14 +36,30 @@ When viewing a role's details, an administrator can edit the permissions assigne
 
 ## 3. Permissions
 
-Permissions are granular and control access to specific actions in the system. The following is a list of the available permissions:
+Permissions are granular and control access to specific actions in the system. The following is a comprehensive list of the available permissions, defined in `prisma/seed.ts`.
 
-*   **IOM:** `CREATE_IOM`, `READ_IOM`, `UPDATE_IOM`, `DELETE_IOM`, `APPROVE_IOM`
-*   **PO:** `CREATE_PO`, `READ_PO`, `UPDATE_PO`, `DELETE_PO`, `APPROVE_PO`
-*   **PR:** `CREATE_PR`, `READ_PR`, `UPDATE_PR`, `DELETE_PR`, `APPROVE_PR`
-*   **User:** `MANAGE_USERS`
-*   **Role:** `MANAGE_ROLES`
-*   **Vendor:** `MANAGE_VENDORS`
-*   **Analytics:** `VIEW_ANALYTICS`
+### General Permissions
+*   `MANAGE_USERS`: Allows creating, viewing, and editing users.
+*   `MANAGE_ROLES`: Allows viewing and editing roles and their permissions.
+*   `MANAGE_SETTINGS`: Allows managing system-wide settings.
+*   `VIEW_ANALYTICS`: Allows viewing the administrator-level dashboard with KPIs.
+*   `MANAGE_VENDORS`: Allows creating, editing, and deleting vendors.
 
-This system allows for a flexible and secure way to manage user access to the application.
+### Document Permissions
+These permissions apply to IOMs, POs, and PRs respectively.
+
+*   `CREATE_*`: Allows creating a new document.
+*   `READ_*`: Allows viewing a document.
+*   `UPDATE_*`: Allows editing a document.
+*   `DELETE_*`: Allows deleting a document.
+*   `APPROVE_*`: Allows performing the final approval action on a document.
+*   `REJECT_*`: Allows rejecting a document during the approval process.
+*   `REVIEW_*`: Allows performing the review action on a document.
+
+### System-Wide Read Permissions
+*   `READ_ALL_IOMS`: Allows viewing all IOMs in the system, not just those the user is involved with.
+*   `READ_ALL_POS`: Allows viewing all POs in the system.
+*   `READ_ALL_PRS`: Allows viewing all PRs in the system.
+
+### PR-Specific Permissions
+*   `PROCESS_PAYMENT_REQUEST`: Allows marking an approved Payment Request as "PROCESSED".
