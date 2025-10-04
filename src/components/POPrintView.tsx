@@ -1,12 +1,10 @@
-"use client";
-
-import { Prisma } from "@prisma/client";
+import { PurchaseOrder } from "@/types/po";
 import { formatCurrency } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from 'qrcode.react';
 
 interface POPrintViewProps {
-  po: POPrintData;
+  po: PurchaseOrder;
 }
 
 // Define a type for the setting object we expect from the API
@@ -14,24 +12,6 @@ interface Setting {
   key: string;
   value: string;
 }
-
-// Create a detailed type for the PO object, including all its relations,
-// using Prisma's generated types for a single source of truth.
-const poWithRelations = Prisma.validator<Prisma.PurchaseOrderDefaultArgs>()({
-  include: {
-    items: true,
-    preparedBy: { select: { name: true, email: true } },
-    reviewedBy: { select: { name: true, email: true } },
-    approvedBy: { select: { name: true, email: true } },
-    iom: {
-      select: {
-        iomNumber: true,
-      },
-    },
-  },
-});
-
-type POPrintData = Prisma.PurchaseOrderGetPayload<typeof poWithRelations>;
 
 export default function POPrintView({ po }: POPrintViewProps) {
   const [headerText, setHeaderText] = useState("");
@@ -115,7 +95,7 @@ export default function POPrintView({ po }: POPrintViewProps) {
           </thead>
           <tbody>
             {po.items.map((item, index) => (
-              <tr key={item.id}>
+              <tr key={index}>
                 <td className="border border-gray-300 p-2">{index + 1}</td>
                 <td className="border border-gray-300 p-2">{item.itemName} - {item.description}</td>
                 <td className="border border-gray-300 p-2 text-center">{item.quantity}</td>

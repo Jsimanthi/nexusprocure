@@ -1,5 +1,6 @@
 // src/lib/po.ts
 import { prisma } from "./prisma";
+import { POStatus } from "@/types/po";
 import { z } from "zod";
 import crypto from "crypto";
 import { createNotification } from "./notification";
@@ -10,7 +11,7 @@ import { logAudit, getAuditUser } from "./audit";
 import { Session } from "next-auth";
 import * as React from "react";
 import { authorize } from "./auth-utils";
-import { Prisma, POStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { triggerPusherEvent } from "./pusher";
 
 export async function generatePONumber(): Promise<string> {
@@ -275,18 +276,6 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
 
   const grandTotal = totalAmount + taxAmount;
 
-  // Department Inheritance Logic
-  let departmentId: string | null | undefined = null;
-  if (data.iomId) {
-    const iom = await prisma.iOM.findUnique({
-      where: { id: data.iomId },
-      select: { departmentId: true },
-    });
-    departmentId = iom?.departmentId;
-  } else {
-    departmentId = session.user.department?.id;
-  }
-
   const maxRetries = 3;
   let lastError: unknown;
 
@@ -301,7 +290,6 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
       grandTotal,
       reviewedById: reviewerId,
       approvedById: approverId,
-      departmentId: departmentId || null,
       status: status || POStatus.PENDING_APPROVAL,
       items: {
         create: itemsWithTotals,

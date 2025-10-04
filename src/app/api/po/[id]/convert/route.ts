@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
 import { getPOById } from "@/lib/po";
 import { createPaymentRequest } from "@/lib/pr";
-import { PaymentMethod } from "@prisma/client";
+import { PaymentMethod } from "@/types/pr";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(

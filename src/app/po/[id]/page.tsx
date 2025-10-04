@@ -4,7 +4,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Prisma, PurchaseOrder, PaymentMethod } from "@prisma/client";
+import { PurchaseOrder } from "@/types/po";
+import { PaymentMethod } from "@/types/pr";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
@@ -14,34 +15,11 @@ import { useHasPermission } from "@/hooks/useHasPermission";
 import POPrintView from "@/components/POPrintView";
 import { ArrowLeft } from "lucide-react";
 
-const poValidator = Prisma.validator<Prisma.PurchaseOrderDefaultArgs>()({
-    include: {
-      items: true,
-      preparedBy: { select: { name: true, email: true } },
-      requestedBy: { select: { name: true, email: true } },
-      reviewedBy: { select: { name: true, email: true } },
-      approvedBy: { select: { name: true, email: true } },
-      vendor: true,
-      iom: {
-        include: {
-          items: true,
-          preparedBy: { select: { name: true, email: true } },
-          requestedBy: { select: { name: true, email: true } },
-          reviewedBy: { select: { name: true, email: true } },
-          approvedBy: { select: { name: true, email: true } },
-        }
-      }
-    }
-});
-
-type PODetail = Prisma.PurchaseOrderGetPayload<typeof poValidator>;
-
-
 export default function PODetailPage() {
   const params = useParams();
   const router = useRouter();
   const { data: session } = useSession();
-  const [po, setPo] = useState<PODetail | null>(null);
+  const [po, setPo] = useState<PurchaseOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [converting, setConverting] = useState(false);

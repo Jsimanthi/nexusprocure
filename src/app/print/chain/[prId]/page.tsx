@@ -4,39 +4,19 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorDisplay from '@/components/ErrorDisplay';
-import { Prisma } from '@prisma/client';
+import { PaymentRequest } from '@/types/pr';
+import { PurchaseOrder } from '@/types/po';
+import { IOM } from '@/types/iom';
 import PRPrintView from '@/components/PRPrintView';
 import POPrintView from '@/components/POPrintView';
 import IOMPrintView from '@/components/IOMPrintView';
 
-// Define a type for the full data chain using Prisma's generated types.
-// This ensures that the data structure is consistent with the database schema
-// and all related data is fetched and typed correctly.
-const fullChainValidator = Prisma.validator<Prisma.PaymentRequestDefaultArgs>()({
-  include: {
-    preparedBy: { select: { name: true, email: true } },
-    reviewedBy: { select: { name: true, email: true } },
-    approvedBy: { select: { name: true, email: true } },
-    po: {
-      include: {
-        preparedBy: { select: { name: true, email: true } },
-        reviewedBy: { select: { name: true, email: true } },
-        approvedBy: { select: { name: true, email: true } },
-        items: true,
-        iom: {
-          include: {
-            preparedBy: { select: { name: true, email: true } },
-            reviewedBy: { select: { name: true, email: true } },
-            approvedBy: { select: { name: true, email: true } },
-            items: true,
-          },
-        },
-      },
-    },
-  },
-});
-
-type FullChainData = Prisma.PaymentRequestGetPayload<typeof fullChainValidator>;
+// Define a type for the full data chain
+type FullChainData = PaymentRequest & {
+  po?: (PurchaseOrder & {
+    iom?: IOM;
+  }) | null;
+};
 
 export default function PrintChainPage() {
   const params = useParams();

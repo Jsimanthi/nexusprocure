@@ -1,7 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { PurchaseOrder, POStatus } from "@prisma/client";
+import { PurchaseOrder, POStatus } from "@/types/po";
 import SearchAndFilter from "@/components/SearchAndFilter";
 import { useState, Suspense } from "react"; // Import Suspense
 import PageLayout from "@/components/PageLayout";
@@ -80,7 +80,7 @@ function POList() {
     setSelectedPoId(null);
   };
 
-  const pos = data?.purchaseOrders || [];
+  const pos = data?.pos || [];
   const total = data?.total || 0;
   const pageCount = Math.ceil(total / pageSize);
 

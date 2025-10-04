@@ -2,8 +2,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getPOs, createPurchaseOrder, updatePOStatus, createVendor, updateVendor, deleteVendor } from './po';
 import { prisma } from './prisma';
+import { PurchaseOrder, POStatus } from '@/types/po';
 import { Session } from 'next-auth';
-import { Prisma, PurchaseOrder, POStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { createVendorSchema } from './schemas';
 import { z } from 'zod';
 
@@ -57,8 +58,6 @@ describe('Purchase Order Functions', () => {
         items: [{ itemName: 'Item 1', quantity: 2, unitPrice: 100, taxRate: 5 }],
         preparedById: 'user-prepared-id',
         requestedById: 'user-requested-id',
-        reviewerId: 'reviewer-id',
-        approverId: 'approver-id',
         attachments: [], // Explicitly empty
       };
       const session = mockUserSession(['CREATE_PO']);
@@ -93,8 +92,6 @@ describe('Purchase Order Functions', () => {
         items: [{ itemName: 'Item 1', quantity: 1, unitPrice: 100, taxRate: 10 }],
         preparedById: 'user-prepared-id',
         requestedById: 'user-requested-id',
-        reviewerId: 'reviewer-id',
-        approverId: 'approver-id',
         attachments: [
           { url: 'http://example.com/file1.pdf', filename: 'file1.pdf', filetype: 'application/pdf', size: 12345 },
         ],
@@ -137,8 +134,6 @@ describe('Purchase Order Functions', () => {
         items: [],
         preparedById: 'user-prepared-id',
         requestedById: 'user-requested-id',
-        reviewerId: 'reviewer-id',
-        approverId: 'approver-id',
         attachments: [],
       };
       const session = mockUserSession(['CREATE_PO']);
