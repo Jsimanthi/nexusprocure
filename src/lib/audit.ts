@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 type PrismaTransactionClient = Omit<
   PrismaClient,
