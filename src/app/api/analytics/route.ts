@@ -41,9 +41,23 @@ export async function GET() {
       },
     });
 
-    const [spendOverTime, spendByCategory] = await Promise.all([
+    const spendByDepartmentPromise = prisma.$queryRaw<
+      { department: string; total: number }[]
+    >`
+      SELECT
+        i."from" as department,
+        SUM(po.grandTotal) as total
+      FROM PurchaseOrder po
+      INNER JOIN IOM i ON po.iomId = i.id
+      WHERE po.status IN ('ORDERED', 'DELIVERED', 'COMPLETED')
+      GROUP BY department
+      ORDER BY total DESC
+    `;
+
+    const [spendOverTime, spendByCategory, spendByDepartment] = await Promise.all([
       spendOverTimePromise,
       spendByCategoryPromise,
+      spendByDepartmentPromise,
     ]);
 
     const formattedSpendData = spendOverTime.map((item) => ({
@@ -56,12 +70,21 @@ export async function GET() {
       value: item._sum.totalPrice || 0,
     }));
 
+    const formattedDepartmentData = spendByDepartment.map((item) => ({
+        name: item.department,
+        Total: item.total,
+    }));
+
     return NextResponse.json({
       spendOverTime: formattedSpendData,
       spendByCategory: formattedCategoryData,
+      spendByDepartment: formattedDepartmentData,
     });
   } catch (error) {
     console.error("Error fetching analytics data:", error);
+    if (error instanceof Error && error.message.includes('Not authorized')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
