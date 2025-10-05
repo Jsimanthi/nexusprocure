@@ -10,7 +10,7 @@
     "lint": "eslint",
     "test": "vitest",
     "postinstall": "prisma generate",
-    "seed": "node --loader ts-node/esm prisma/seed.ts"
+    "seed": "node --loader ts-node/esm scripts/run-seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
@@ -26,7 +26,7 @@
     "list": "^2.0.19",
     "lucide-react": "^0.542.0",
     "next": "15.5.2",
-    "next-auth": "^5.0.0-beta.29",
+    "next-auth": "^4.24.11",
     "papaparse": "^5.5.3",
     "puppeteer": "^24.22.3",
     "pusher": "^5.2.0",

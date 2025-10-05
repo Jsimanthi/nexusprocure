@@ -29,33 +29,21 @@ The project follows a feature-centric structure within the Next.js App Router pa
     - **`api/`**: Houses all backend API endpoints, logically separated by feature (e.g., `api/iom`, `api/po`).
     - **`dashboard/`, `iom/`, `po/`, `pr/`**: Contain the frontend pages for each respective feature.
 - **`src/lib/`**: The core of the application's business logic.
-    - **`iom.ts`, `po.ts`, `pr.ts`**: Contain all backend functions for creating, reading, updating, and deleting records for each module. This includes logic for status transitions, notifications, and audit logging.
-    - **`auth-config.ts`, `auth-utils.ts`**: Define the NextAuth.js configuration and authorization helper functions (e.g., `authorize`).
-    - **`schemas.ts`**: Central location for all Zod validation schemas used in forms and API endpoints.
-    - **`prisma.ts`**: Exports the singleton Prisma client instance.
+    - **`iom.ts`, `po.ts`, `pr.ts`**: Contain all backend functions for creating, reading, updating, and deleting records for each module.
+    - **`auth-config.ts`, `auth-utils.ts`**: Define the NextAuth.js configuration and authorization helper functions.
+    - **`schemas.ts`**: Central location for all Zod validation schemas.
 - **`src/components/`**: Shared, reusable React components.
 - **`prisma/`**: Contains the `schema.prisma` file, database migrations, and seed scripts.
 
-## 4. Core Workflow & Business Logic
+## 4. Key Features
 
-The application's primary workflow is linear and enforced by status changes in the database.
+### 4.1. Procurement Workflow
+The application manages a three-stage procurement process (IOM -> PO -> PR) with multi-level approval workflows.
 
-1.  **IOM Creation**: A user with `CREATE_IOM` permission initiates a request. The IOM moves through statuses like `DRAFT`, `PENDING_APPROVAL`, `APPROVED`, `REJECTED`. The logic in `src/lib/iom.ts` handles these transitions, including multi-level approvals (reviewer and approver).
+### 4.2. Role-Based Access Control (RBAC)
+A granular permissions system controls user access to features and data. Roles and permissions are managed in the `prisma/seed.ts` file.
 
-2.  **PO Conversion**: An `APPROVED` IOM can be converted into a Purchase Order. The core logic resides in `src/lib/po.ts`. The PO has its own lifecycle (`PENDING_APPROVAL`, `APPROVED`, `ORDERED`, `DELIVERED`, `CANCELLED`). This module also includes logic for managing vendors (`createVendor`, `updateVendor`).
-
-3.  **PR Generation**: A `DELIVERED` or `APPROVED` PO can be used to generate a Payment Request. `src/lib/pr.ts` governs this process. The PR follows a final approval workflow (`PENDING_APPROVAL`, `APPROVED`, `PROCESSED`, `REJECTED`).
-
-**Key Supporting Logic:**
-
-- **`src/lib/audit.ts`**: The `logAudit` function is called after every significant database mutation (create, update, delete) to record a history of changes for accountability.
-- **`src/lib/notification.ts` & `src/lib/email.ts`**: Status changes and assignments trigger in-app and email notifications to relevant users.
-
-## 5. Authentication and Authorization
-
-- **Authentication**: Handled by NextAuth.js using an email/password credentials provider. Upon successful login, a JWT is created containing the user's ID, role, and a pre-fetched list of their permissions.
-- **Authorization**:
-    - **Backend**: The `authorize(session, 'PERMISSION_NAME')` function in `src/lib/auth-utils.ts` is the gatekeeper for all sensitive actions. It checks the permission list within the user's JWT.
-    - **Frontend**: The `useHasPermission('PERMISSION_NAME')` hook provides a client-side mechanism to conditionally render UI elements (like buttons and links), preventing users from seeing actions they cannot perform.
-
-This dual approach ensures that the API is secure while providing a clean user experience.
+### 4.3. Settings & System Management
+The settings page, available to administrators, is divided into two sections:
+*   **Application Settings**: Allows management of application-wide configurations, such as print headers.
+*   **System**: Provides a view of system information, including application version, Node.js version, and database status. It also includes an administrative action to re-seed the database.

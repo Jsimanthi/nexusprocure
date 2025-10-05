@@ -41,7 +41,7 @@ Permissions are granular and control access to specific actions in the system. T
 ### General Permissions
 *   `MANAGE_USERS`: Allows creating, viewing, and editing users.
 *   `MANAGE_ROLES`: Allows viewing and editing roles and their permissions.
-*   `MANAGE_SETTINGS`: Allows managing system-wide settings.
+*   `MANAGE_SETTINGS`: Allows managing system-wide settings and accessing the System page.
 *   `VIEW_ANALYTICS`: Allows viewing the administrator-level dashboard with KPIs.
 *   `MANAGE_VENDORS`: Allows creating, editing, and deleting vendors.
 
