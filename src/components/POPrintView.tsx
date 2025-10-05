@@ -2,7 +2,6 @@ import { PurchaseOrder } from "@/types/po";
 import { formatCurrency } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from 'qrcode.react';
-import Image from 'next/image';
 
 interface POPrintViewProps {
   po: PurchaseOrder;
@@ -43,7 +42,7 @@ export default function POPrintView({ po }: POPrintViewProps) {
     <div className="bg-white shadow-lg p-8 md:p-12" id="po-print-view">
       {/* Header */}
       <header className="text-center mb-8">
-        <Image src="/logo.png" alt="Company Logo" width={144} height={48} className="mx-auto h-12 w-auto mb-4" />
+        <img src="/logo.png" alt="Company Logo" className="mx-auto h-12 w-auto mb-4" />
         <h1 className="text-2xl font-bold text-gray-800">
           {loadingHeader ? 'Loading...' : headerText.split('\n')[0]}
         </h1>

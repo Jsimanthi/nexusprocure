@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth-config";
 import { prisma } from "@/lib/prisma";
-import { IOM, PurchaseOrder, PaymentRequest } from "@prisma/client";
+import { IOM, PurchaseOrder, PaymentRequest, Role } from "@prisma/client";
 import { Kpi } from "@/types/dashboard";
 
 // Define a type for recent activity items for better type safety

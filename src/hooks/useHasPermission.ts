@@ -1,4 +1,5 @@
 import { useSession } from 'next-auth/react';
+import type { Session } from 'next-auth';
 
 /**
  * A custom React hook to check if the current user has a specific permission.

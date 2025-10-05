@@ -36,7 +36,7 @@ function POList() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [monthFilter] = useState(searchParams.get("month") || "");
+  const [monthFilter, setMonthFilter] = useState(searchParams.get("month") || "");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPoId, setSelectedPoId] = useState<string | null>(null);
   const pageSize = 10;

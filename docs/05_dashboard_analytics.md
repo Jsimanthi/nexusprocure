@@ -1,68 +1,51 @@
 # NexusProcure: Dashboard & Analytics
 
-This document provides an overview of the role-based dashboards and the specific analytics features in NexusProcure.
+This document provides an overview of the dashboard and analytics features in NexusProcure.
 
-## 1. Role-Based Dashboards
+## 1. Dashboard
 
-The dashboard is the main landing page for users after logging in. The content displayed is tailored to the user's role to provide the most relevant information at a glance. All dashboards feature real-time updates via Pusher.
+The dashboard is the main landing page for users after logging in. It provides a quick overview of the procurement activities and key metrics.
 
-### 1.1. Administrator Dashboard
+### 1.1. Key Metrics
 
-The Administrator sees a high-level, system-wide overview.
-*   **Widgets**:
-    *   **Stats Cards**: Displays total counts of all IOMs, POs, and PRs in the system, plus a count of all documents pending approval.
-    *   **KPI Widgets**: A detailed view of Key Performance Indicators (see section 2 below).
-    *   **Recent Activity**: A list of the latest 10 significant events across the entire system.
+The dashboard displays the following key metrics:
 
-### 1.2. Manager / Approver Dashboard
+*   **Total IOMs:** The total number of Inter-Office Memos in the system.
+*   **Total POs:** The total number of Purchase Orders in the system.
+*   **Total PRs:** The total number of Payment Requests in the system.
+*   **Pending Approvals:** The total number of items (IOMs, POs, PRs) that are pending approval.
 
-This dashboard is focused on action items and oversight.
-*   **Widgets**:
-    *   **Action Items**: Shows counts of documents specifically assigned to the logged-in user for review or approval.
-    *   **Recent Activity**: A list of recent activities related to documents the user is involved with.
+### 1.2. Recent Activity
 
-### 1.3. Procurement Officer Dashboard
+The dashboard also displays a list of recent activities, including the creation and status changes of IOMs, POs, and PRs. This allows users to stay up-to-date with the latest activities in the system.
 
-This dashboard is designed for users who create and manage procurement documents.
-*   **Widgets**:
-    *   **My Documents**: Displays counts of IOMs, POs, and PRs that were prepared by the logged-in user.
-    *   **Recent Activity**: A list of recent activities related to the user's own documents.
+### 1.3. Real-time Updates
 
-### 1.4. Finance Officer Dashboard
+The dashboard uses Pusher for real-time updates. When a new activity occurs, the dashboard is automatically updated to reflect the changes without requiring a page refresh.
 
-This dashboard is tailored for processing payments.
-*   **Widgets**:
-    *   **Approved PRs**: Shows a count of Payment Requests that have been fully approved and are ready for processing.
-    *   **Recent Activity**: A list of recent activities related to Payment Requests.
+## 2. Analytics & Reports
 
----
+The analytics page provides a more in-depth view of the procurement data. It includes charts and graphs to visualize the data and help users make informed decisions.
 
-## 2. Administrator Analytics: Key Performance Indicators (KPIs)
+### 2.1. Document Counts
 
-The Administrator dashboard includes a set of calculated KPIs to provide deep insights into the efficiency and performance of the procurement process. These are fetched from the `GET /api/dashboard` endpoint.
+This section displays the total counts of Purchase Orders, IOMs, and Check Requests.
 
-### 2.1. KPI Descriptions
+### 2.2. Purchase Order Status Distribution
 
-*   **Average IOM Approval Time**:
-    *   **Calculation**: The average time (in days) between an IOM's creation (`createdAt`) and its final approval (`updatedAt` where `status` is `APPROVED`).
-    *   **Purpose**: Measures the efficiency of the initial request approval process.
+A pie chart that shows the distribution of Purchase Orders by their status (e.g., `DRAFT`, `APPROVED`, `REJECTED`). This helps users to quickly understand the current state of the procurement process.
 
-*   **Average PO Approval Time**:
-    *   **Calculation**: The average time (in days) between a PO's creation and its final approval.
-    *   **Purpose**: Measures the efficiency of the formal purchase order approval process.
+### 2.3. Approved PO Spending (Last 12 Months)
 
-*   **Average PR Processing Time**:
-    *   **Calculation**: The average time (in days) between a PR's creation and its final processing (`updatedAt` where `status` is `PROCESSED`).
-    *   **Purpose**: Measures the efficiency of the payment processing workflow.
+A bar chart that shows the total spending on approved Purchase Orders over the last 12 months. This helps users to track spending trends and identify potential cost-saving opportunities.
 
-*   **Average Procurement Cycle Time**:
-    *   **Calculation**: The average time (in days) from the creation of an IOM (`iom.createdAt`) to the fulfillment of its corresponding PO (`po.fulfilledAt`).
-    *   **Purpose**: Provides a holistic view of the entire procurement lifecycle duration, from initial request to delivery.
+### 2.4. Future Enhancements
 
-*   **Emergency Purchase Rate**:
-    *   **Calculation**: The percentage of all IOMs that are marked as urgent (`isUrgent` is `true`).
-    *   **Purpose**: Helps identify reliance on unplanned or emergency purchases, which can indicate areas for better planning.
+The analytics and reporting module can be further enhanced with the following features:
 
-*   **Total Spend This Month**:
-    *   **Calculation**: The sum of `grandTotal` for all Payment Requests that were moved to the `PROCESSED` status within the current calendar month.
-    *   **Purpose**: Provides a real-time view of the organization's spending for the month.
+*   **Customizable Dashboards:** Allow users to customize their dashboards with widgets that are most relevant to their roles.
+*   **Advanced Filtering:** Provide more advanced filtering options to allow users to drill down into the data.
+*   **Exporting Reports:** Allow users to export reports in various formats (e.g., PDF, CSV).
+*   **Scheduled Reports:** Allow users to schedule reports to be sent to their email on a regular basis.
+*   **More Chart Types:** Add more chart types to visualize the data in different ways.
+*   **Integration with BI Tools:** Integrate with business intelligence tools like Tableau or Power BI for more advanced analysis.
