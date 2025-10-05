@@ -42,3 +42,8 @@ The application manages a three-stage procurement process (IOM -> PO -> PR) with
 
 ### 4.2. Role-Based Access Control (RBAC)
 A granular permissions system controls user access to features and data. Roles and permissions are managed in the `prisma/seed.ts` file.
+
+### 4.3. Settings & System Management
+The settings page, available to administrators, is divided into two sections:
+*   **Application Settings**: Allows management of application-wide configurations, such as print headers.
+*   **System**: Provides a view of system information, including application version, Node.js version, and database status. It also includes an administrative action to re-seed the database.
