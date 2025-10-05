@@ -74,7 +74,7 @@ const usersToCreate = [
   { name: 'Finance User', email: 'finance@nexusprocure.com', role: 'Finance Officer' },
 ];
 
-export async function main() {
+async function main() {
   console.log('Start seeding...');
 
   // Create all permissions
@@ -221,3 +221,12 @@ Regd. Office: Plot No.1310, 13th Main Road, | Anna Nagar, | Chennai - 600040. | 
 
   console.log('Seeding finished.');
 }
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

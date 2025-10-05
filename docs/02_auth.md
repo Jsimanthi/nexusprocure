@@ -28,16 +28,12 @@ The `callbacks` in `auth-config.ts` are critical for enriching the JWT and sessi
 
 *   **`jwt({ token, user })` callback**:
     *   This callback is triggered whenever a JWT is created or updated.
-    *   On initial sign-in (when the `user` object from the `authorize` function is present), it performs a crucial action: it fetches the **full user object from the database, including their role and all associated permissions**.
-    *   It then injects this data into the token. The final token payload contains:
-        *   `token.id`: The user's ID.
-        *   `token.role`: The full `Role` object.
-        *   `token.permissions`: A simple array of permission strings (e.g., `['CREATE_PO', 'APPROVE_PR']`).
+    *   On initial sign-in (when the `user` object is present), it fetches the full user object from the database, including their role and all associated permissions.
+    *   It then injects this data into the token. The final token payload contains the user's ID, name, email, role, and a flattened list of their permissions.
 *   **`session({ session, token })` callback**:
     *   This callback runs when the client requests the session (e.g., via `useSession()`).
-    *   It populates the `session.user` object with the data from the JWT `token`.
-    *   This makes `session.user.id`, `session.user.role`, and `session.user.permissions` available throughout the application.
-    *   **Note (Bug Fix)**: The user's `name` and `email` were previously missing from the token and session. These were added to both callbacks to ensure the user's full details are available to the frontend.
+    *   It transfers the rich data from the JWT `token` into the `session.user` object.
+    *   This makes `session.user.id`, `session.user.name`, `session.user.email`, `session.user.role`, and `session.user.permissions` available throughout the client-side of the application.
 
 ## 2. Authorization (AuthZ)
 

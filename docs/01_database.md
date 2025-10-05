@@ -120,6 +120,8 @@ The internal request that initiates a procurement workflow.
 | `requestedById` | `String` | FK for the user on whose behalf the IOM was created. |
 | `reviewedById` | `String?` | FK for the user assigned to review the IOM. |
 | `approvedById` | `String?` | FK for the user assigned to approve the IOM. |
+| `reviewerStatus`| `String?` | The approval status from the reviewer (e.g., "PENDING", "APPROVED"). |
+| `approverStatus`| `String?` | The approval status from the approver (e.g., "PENDING", "APPROVED"). |
 | `purchaseOrders`| `PurchaseOrder[]` | Reverse relation to any POs created from this IOM. |
 | `attachments` | `Attachment[]` | Relation to any files attached to this IOM. |
 
@@ -150,6 +152,8 @@ The formal order placed with an external vendor.
 | `totalAmount`| `Float` | The subtotal before tax. |
 | `taxAmount` | `Float` | The calculated total tax amount. |
 | `grandTotal`| `Float` | The final total (`totalAmount` + `taxAmount`). |
+| `reviewerStatus`| `String?` | The approval status from the reviewer (e.g., "PENDING", "APPROVED"). |
+| `approverStatus`| `String?` | The approval status from the approver (e.g., "PENDING", "APPROVED"). |
 | ... | ... | Contains many fields for company and vendor details, currency, etc. |
 | `items` | `POItem[]` | Relation to the line items of this PO. |
 
@@ -165,6 +169,8 @@ A request to make a payment, typically for a fulfilled PO.
 | `prNumber` | `String` | A unique, human-readable number for the PR. |
 | `poId` | `String?` | Foreign key linking to the PO this PR is for. |
 | ... | ... | Contains fields for totals, currency, and payment-specific details like `paymentTo`, `paymentDate`, `paymentMethod`, `bankAccount`, etc. |
+| `reviewerStatus`| `String?` | The approval status from the reviewer (e.g., "PENDING", "APPROVED"). |
+| `approverStatus`| `String?` | The approval status from the approver (e.g., "PENDING", "APPROVED"). |
 | `status` | `PRStatus` | The current status in the workflow (e.g., `DRAFT`, `PROCESSED`). |
 
 ---
