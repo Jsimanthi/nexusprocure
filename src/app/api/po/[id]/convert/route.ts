@@ -1,6 +1,7 @@
 // src/app/api/po/[id]/convert/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-config";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { getPOById } from "@/lib/po";
 import { createPaymentRequest } from "@/lib/pr";
 import { PaymentMethod } from "@/types/pr";
@@ -13,7 +14,7 @@ export async function POST(
   const { id } = await context.params;
 
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from "@/lib/auth-config";
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import { authorize } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
@@ -10,7 +11,7 @@ import { fromZodError } from 'zod-validation-error';
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

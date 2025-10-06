@@ -1,6 +1,7 @@
 // src/app/api/vendors/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-config";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { getVendorById, updateVendor, deleteVendor } from "@/lib/po";
 import { updateVendorSchema } from "@/lib/schemas";
 import { Prisma } from "@prisma/client";
@@ -12,7 +13,7 @@ export async function GET(
   const { id } = await context.params;
 
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -41,7 +42,7 @@ export async function PUT(
   const { id } = await context.params;
 
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -84,7 +85,7 @@ export async function DELETE(
   const { id } = await context.params;
 
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

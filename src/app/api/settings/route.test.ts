@@ -4,11 +4,15 @@ import { prisma } from '@/lib/prisma';
 import { Session } from 'next-auth';
 import { Setting } from '@prisma/client';
 import { authorize } from '@/lib/auth-utils';
+import { getServerSession } from 'next-auth/next';
 
 // Mock dependencies
 vi.mock('@/lib/prisma');
-vi.mock('@/lib/auth-config', () => ({
-  auth: vi.fn(),
+vi.mock('next-auth/next', () => ({
+  getServerSession: vi.fn(),
+}));
+vi.mock('@/lib/auth', () => ({
+  authOptions: {},
 }));
 vi.mock('@/lib/auth-utils');
 
@@ -19,8 +23,7 @@ describe('GET /api/settings', () => {
     });
 
     it('should return 401 Unauthorized if user is not authenticated', async () => {
-        const { auth } = await import('@/lib/auth-config');
-        vi.mocked(auth).mockResolvedValue(null);
+        vi.mocked(getServerSession).mockResolvedValue(null);
 
         const response = await GET();
         const body = await response.json();
@@ -30,12 +33,11 @@ describe('GET /api/settings', () => {
     });
 
     it('should return 403 Forbidden if user lacks MANAGE_SETTINGS permission', async () => {
-        const { auth } = await import('@/lib/auth-config');
         const mockSession: Session = {
             user: { id: 'user-id', name: 'Test User', email: 'test@example.com', permissions: [] },
             expires: '2099-01-01T00:00:00.000Z',
         };
-        vi.mocked(auth).mockResolvedValue(mockSession);
+        vi.mocked(getServerSession).mockResolvedValue(mockSession);
         vi.mocked(authorize).mockImplementation(() => { throw new Error('Not authorized'); });
 
         const response = await GET();
@@ -46,12 +48,11 @@ describe('GET /api/settings', () => {
     });
 
     it('should return a list of settings if user is authenticated and authorized', async () => {
-        const { auth } = await import('@/lib/auth-config');
         const mockSession: Session = {
             user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['MANAGE_SETTINGS'] },
             expires: '2099-01-01T00:00:00.000Z',
         };
-        vi.mocked(auth).mockResolvedValue(mockSession);
+        vi.mocked(getServerSession).mockResolvedValue(mockSession);
         vi.mocked(authorize).mockReturnValue(true);
 
         const mockSettings: Setting[] = [
@@ -71,12 +72,11 @@ describe('GET /api/settings', () => {
     });
 
     it('should return 500 Internal Server Error if there is a database error', async () => {
-        const { auth } = await import('@/lib/auth-config');
         const mockSession: Session = {
             user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['MANAGE_SETTINGS'] },
             expires: '2099-01-01T00:00:00.000Z',
         };
-        vi.mocked(auth).mockResolvedValue(mockSession);
+        vi.mocked(getServerSession).mockResolvedValue(mockSession);
         vi.mocked(authorize).mockReturnValue(true);
         vi.mocked(prisma.setting.findMany).mockRejectedValue(new Error('Database connection failed'));
 

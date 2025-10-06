@@ -1,9 +1,10 @@
 import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
-import { auth } from "@/lib/auth-config";
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const session = await auth();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

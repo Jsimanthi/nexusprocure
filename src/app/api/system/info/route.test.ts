@@ -1,12 +1,15 @@
 import { GET } from './route';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth-config';
+import { getServerSession } from 'next-auth/next';
 import fs from 'fs';
 import { Session } from 'next-auth';
 
 // Mock dependencies
-vi.mock('@/lib/auth-config', () => ({
-  auth: vi.fn(),
+vi.mock('next-auth/next', () => ({
+  getServerSession: vi.fn(),
+}));
+vi.mock('@/lib/auth', () => ({
+  authOptions: {},
 }));
 vi.mock('@/lib/prisma');
 
@@ -40,7 +43,7 @@ describe('GET /api/system/info', () => {
   });
 
   it('should return 401 if user is not authenticated', async () => {
-    vi.mocked(auth).mockResolvedValue(null);
+    vi.mocked(getServerSession).mockResolvedValue(null);
     const response = await GET();
     expect(response.status).toBe(401);
   });
@@ -49,7 +52,7 @@ describe('GET /api/system/info', () => {
     const mockSession: MockSession = {
       user: { id: 'user-1', permissions: ['SOME_OTHER_PERMISSION'] },
     };
-    vi.mocked(auth).mockResolvedValue(mockSession as Session);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
     const response = await GET();
     expect(response.status).toBe(403);
   });
@@ -58,7 +61,7 @@ describe('GET /api/system/info', () => {
     const mockSession: MockSession = {
       user: { id: 'admin-id', permissions: ['MANAGE_SETTINGS'] },
     };
-    vi.mocked(auth).mockResolvedValue(mockSession as Session);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
 
     readFileSpy.mockResolvedValue(JSON.stringify({ version: '1.2.3' }));
     vi.mocked(prisma.$queryRaw).mockResolvedValue([1]);
@@ -76,7 +79,7 @@ describe('GET /api/system/info', () => {
     const mockSession: MockSession = {
       user: { id: 'admin-id', permissions: ['MANAGE_SETTINGS'] },
     };
-    vi.mocked(auth).mockResolvedValue(mockSession as Session);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
 
     readFileSpy.mockResolvedValue(JSON.stringify({ version: '1.2.3' }));
     vi.mocked(prisma.$queryRaw).mockRejectedValue(new Error('DB connection failed'));

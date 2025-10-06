@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from './route';
-import { auth } from '@/lib/auth-config';
+import { getServerSession } from 'next-auth/next';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 import { Session } from 'next-auth';
 
 // Mock dependencies
-vi.mock('@/lib/auth-config', () => ({ auth: vi.fn() }));
+vi.mock('next-auth/next', () => ({ getServerSession: vi.fn() }));
+vi.mock('@/lib/auth', () => ({ authOptions: {} }));
 vi.mock('@/lib/prisma');
 
 const mockUserSession = (): Session => ({
@@ -28,7 +29,7 @@ describe('GET /api/users/role/:roleName', () => {
   });
 
   it('should return 401 if user is not authenticated', async () => {
-    vi.mocked(auth).mockResolvedValue(null);
+    vi.mocked(getServerSession).mockResolvedValue(null);
     const request = {} as NextRequest;
     const context = mockContext('Manager');
 
@@ -41,7 +42,7 @@ describe('GET /api/users/role/:roleName', () => {
 
   it('should return 200 and a list of users for any authenticated user', async () => {
     const session = mockUserSession();
-    vi.mocked(auth).mockResolvedValue(session);
+    vi.mocked(getServerSession).mockResolvedValue(session);
     const mockUsers = [{ id: 'user-1', name: 'Manager One' }];
     vi.mocked(prisma.user.findMany).mockResolvedValue(mockUsers);
 

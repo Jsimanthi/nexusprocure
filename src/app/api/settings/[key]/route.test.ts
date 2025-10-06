@@ -5,11 +5,15 @@ import { Session } from 'next-auth';
 import { NextRequest } from 'next/server';
 import { Setting } from '@prisma/client';
 import { authorize } from '@/lib/auth-utils';
+import { getServerSession } from 'next-auth/next';
 
 // Mock dependencies
 vi.mock('@/lib/prisma');
-vi.mock('@/lib/auth-config', () => ({
-  auth: vi.fn(),
+vi.mock('next-auth/next', () => ({
+  getServerSession: vi.fn(),
+}));
+vi.mock('@/lib/auth', () => ({
+  authOptions: {},
 }));
 vi.mock('@/lib/auth-utils');
 
@@ -29,8 +33,7 @@ describe('GET /api/settings/[key]', () => {
   });
 
   it('should return a setting if found', async () => {
-    const { auth } = await import('@/lib/auth-config');
-    vi.mocked(auth).mockResolvedValue(mockAdminSession);
+    vi.mocked(getServerSession).mockResolvedValue(mockAdminSession);
     vi.mocked(authorize).mockReturnValue(true);
 
     const mockSetting: Setting = {
@@ -50,8 +53,7 @@ describe('GET /api/settings/[key]', () => {
   });
 
   it('should return 404 if setting is not found', async () => {
-    const { auth } = await import('@/lib/auth-config');
-    vi.mocked(auth).mockResolvedValue(mockAdminSession);
+    vi.mocked(getServerSession).mockResolvedValue(mockAdminSession);
     vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.setting.findUnique).mockResolvedValue(null);
 
@@ -63,8 +65,7 @@ describe('GET /api/settings/[key]', () => {
   });
 
   it('should return 403 if user is not authorized', async () => {
-    const { auth } = await import('@/lib/auth-config');
-    vi.mocked(auth).mockResolvedValue(mockUserSession);
+    vi.mocked(getServerSession).mockResolvedValue(mockUserSession);
     vi.mocked(authorize).mockImplementation(() => { throw new Error('Not authorized'); });
 
     const response = await GET(new Request('http://a/b') as NextRequest, { params: Promise.resolve({ key: 'any_key' }) });
@@ -81,8 +82,7 @@ describe('PUT /api/settings/[key]', () => {
     });
 
     it('should update a setting successfully for an admin', async () => {
-        const { auth } = await import('@/lib/auth-config');
-        vi.mocked(auth).mockResolvedValue(mockAdminSession);
+        vi.mocked(getServerSession).mockResolvedValue(mockAdminSession);
         vi.mocked(authorize).mockReturnValue(true);
 
         const updatedSetting: Setting = {
@@ -112,8 +112,7 @@ describe('PUT /api/settings/[key]', () => {
     });
 
     it('should return 403 Forbidden if user is not authorized', async () => {
-        const { auth } = await import('@/lib/auth-config');
-        vi.mocked(auth).mockResolvedValue(mockUserSession);
+        vi.mocked(getServerSession).mockResolvedValue(mockUserSession);
         vi.mocked(authorize).mockImplementation(() => { throw new Error('Not authorized'); });
 
 
@@ -130,8 +129,7 @@ describe('PUT /api/settings/[key]', () => {
     });
 
     it('should return 400 if value is not a string', async () => {
-        const { auth } = await import('@/lib/auth-config');
-        vi.mocked(auth).mockResolvedValue(mockAdminSession);
+        vi.mocked(getServerSession).mockResolvedValue(mockAdminSession);
         vi.mocked(authorize).mockReturnValue(true);
 
         const req = new Request('http://a/b', {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PATCH } from './route';
-import { auth } from '@/lib/auth-config';
+import { getServerSession } from 'next-auth/next';
 import { updatePRStatus } from '@/lib/pr';
 import { PRStatus, PaymentRequest as PaymentRequestType } from '@/types/pr';
 import { Session } from 'next-auth';
@@ -21,8 +21,11 @@ vi.mock('next/server', async (importOriginal) => {
         },
     };
 });
-vi.mock('@/lib/auth-config', () => ({
-  auth: vi.fn(),
+vi.mock('next-auth/next', () => ({
+  getServerSession: vi.fn(),
+}));
+vi.mock('@/lib/auth', () => ({
+  authOptions: {},
 }));
 vi.mock('@/lib/pr');
 
@@ -42,16 +45,16 @@ describe('PATCH /api/pr/[id]', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(auth).mockResolvedValue(mockSession);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession);
   });
 
   it('should return 401 if user is not authenticated', async () => {
-    vi.mocked(auth).mockResolvedValue(null);
+    vi.mocked(getServerSession).mockResolvedValue(null);
     const request = new NextRequest('http://localhost', {
       method: 'PATCH',
       body: JSON.stringify({ action: 'APPROVE' }),
     });
-    const response = await PATCH(request, { params: { id: 'pr-123' } });
+    const response = await PATCH(request, { params: Promise.resolve({ id: 'pr-123' }) });
     expect(response.status).toBe(401);
   });
 
@@ -60,7 +63,7 @@ describe('PATCH /api/pr/[id]', () => {
       method: 'PATCH',
       body: JSON.stringify({}), // No action
     });
-    const response = await PATCH(request, { params: { id: 'pr-123' } });
+    const response = await PATCH(request, { params: Promise.resolve({ id: 'pr-123' }) });
     const body = await response.json();
     expect(response.status).toBe(400);
     expect(body.error).toBe('Invalid action provided.');
@@ -74,7 +77,7 @@ describe('PATCH /api/pr/[id]', () => {
       method: 'PATCH',
       body: JSON.stringify({ action: 'APPROVE' }),
     });
-    const response = await PATCH(request, { params: { id: 'pr-123' } });
+    const response = await PATCH(request, { params: Promise.resolve({ id: 'pr-123' }) });
     const body = await response.json();
 
     expect(response.status).toBe(403);
@@ -89,7 +92,7 @@ describe('PATCH /api/pr/[id]', () => {
       method: 'PATCH',
       body: JSON.stringify({ action: 'APPROVE' }),
     });
-    const response = await PATCH(request, { params: { id: 'pr-123' } });
+    const response = await PATCH(request, { params: Promise.resolve({ id: 'pr-123' }) });
     const body = await response.json();
 
     expect(response.status).toBe(400);
@@ -98,13 +101,13 @@ describe('PATCH /api/pr/[id]', () => {
 
   it('should successfully update the PR status and return 200', async () => {
     const updatedPr = { id: 'pr-123', status: PRStatus.APPROVED };
-    vi.mocked(updatePRStatus).mockResolvedValue(updatedPr as PaymentRequestType);
+    vi.mocked(updatePRStatus).mockResolvedValue(updatedPr as unknown as PaymentRequestType);
 
     const request = new NextRequest('http://localhost', {
       method: 'PATCH',
       body: JSON.stringify({ action: 'APPROVE' }),
     });
-    const response = await PATCH(request, { params: { id: 'pr-123' } });
+    const response = await PATCH(request, { params: Promise.resolve({ id: 'pr-123' }) });
     const body = await response.json();
 
     expect(response.status).toBe(200);

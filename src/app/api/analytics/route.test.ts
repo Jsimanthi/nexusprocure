@@ -1,11 +1,11 @@
 import { GET } from './route';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth-config';
+import { getServerSession } from 'next-auth/next';
 import { Session } from 'next-auth';
 
 // Mock dependencies
-vi.mock('@/lib/auth-config', () => ({
-  auth: vi.fn(),
+vi.mock('next-auth/next', () => ({
+  getServerSession: vi.fn(),
 }));
 vi.mock('@/lib/prisma');
 
@@ -32,7 +32,7 @@ describe('GET /api/analytics', () => {
   });
 
   it('should return 401 if user is not authenticated', async () => {
-    vi.mocked(auth).mockResolvedValue(null);
+    vi.mocked(getServerSession).mockResolvedValue(null);
     const response = await GET();
     expect(response.status).toBe(401);
   });
@@ -41,7 +41,7 @@ describe('GET /api/analytics', () => {
     const mockSession: MockSession = {
       user: { id: 'user-1', permissions: [] },
     };
-    vi.mocked(auth).mockResolvedValue(mockSession as Session);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
     const response = await GET();
     expect(response.status).toBe(403);
   });
@@ -50,7 +50,7 @@ describe('GET /api/analytics', () => {
     const mockSession: MockSession = {
       user: { id: 'admin-id', permissions: ['VIEW_ANALYTICS'] },
     };
-    vi.mocked(auth).mockResolvedValue(mockSession as Session);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
 
     // Mock the data returned from the database queries
     const mockSpendOverTime = [{ month: '2023-01', total: 1000 }];
@@ -78,7 +78,7 @@ describe('GET /api/analytics', () => {
     const mockSession: MockSession = {
       user: { id: 'admin-id', permissions: ['VIEW_ANALYTICS'] },
     };
-    vi.mocked(auth).mockResolvedValue(mockSession as Session);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
 
     vi.mocked(prisma.$queryRaw).mockRejectedValue(new Error('DB Error'));
     vi.mocked(prisma.pOItem.groupBy).mockRejectedValue(new Error('DB Error'));

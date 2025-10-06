@@ -1,6 +1,7 @@
 // src/app/api/vendors/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-config";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { getVendors, createVendor } from "@/lib/po";
 import { createVendorSchema } from "@/lib/schemas";
 import { Prisma } from "@prisma/client";
@@ -8,7 +9,7 @@ import { fromZodError } from "zod-validation-error";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
