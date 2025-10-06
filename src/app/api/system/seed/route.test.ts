@@ -1,11 +1,14 @@
 import { POST } from './route';
-import { auth } from '@/lib/auth-config';
+import { getServerSession } from 'next-auth/next';
 import { main as seedDatabase } from '../../../../../prisma/seed';
 import { Session } from 'next-auth';
 
 // Mock dependencies
-vi.mock('@/lib/auth-config', () => ({
-  auth: vi.fn(),
+vi.mock('next-auth/next', () => ({
+  getServerSession: vi.fn(),
+}));
+vi.mock('@/lib/auth', () => ({
+  authOptions: {},
 }));
 vi.mock('../../../../../prisma/seed');
 
@@ -33,7 +36,7 @@ describe('POST /api/system/seed', () => {
   });
 
   it('should return 401 if user is not authenticated', async () => {
-    vi.mocked(auth).mockResolvedValue(null);
+    vi.mocked(getServerSession).mockResolvedValue(null);
     const response = await POST();
     expect(response.status).toBe(401);
   });
@@ -42,7 +45,7 @@ describe('POST /api/system/seed', () => {
     const mockSession: MockSession = {
       user: { id: 'user-1', permissions: ['SOME_OTHER_PERMISSION'] },
     };
-    vi.mocked(auth).mockResolvedValue(mockSession as Session);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
     const response = await POST();
     expect(response.status).toBe(403);
   });
@@ -51,7 +54,7 @@ describe('POST /api/system/seed', () => {
     const mockSession: MockSession = {
       user: { id: 'admin-id', email: 'admin@example.com', permissions: ['MANAGE_SETTINGS'] },
     };
-    vi.mocked(auth).mockResolvedValue(mockSession as Session);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
 
     vi.mocked(seedDatabase).mockResolvedValue(undefined);
 
@@ -68,7 +71,7 @@ describe('POST /api/system/seed', () => {
     const mockSession: MockSession = {
       user: { id: 'admin-id', email: 'admin@example.com', permissions: ['MANAGE_SETTINGS'] },
     };
-    vi.mocked(auth).mockResolvedValue(mockSession as Session);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
 
     const seedError = new Error('Seeding failed!');
     vi.mocked(seedDatabase).mockRejectedValue(seedError);

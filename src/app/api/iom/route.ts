@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getIOMs, createIOM } from "@/lib/iom";
-import { auth } from "@/lib/auth-config";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { getIOMsSchema, createIomSchema } from "@/lib/schemas";
 import { ZodError } from "zod";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

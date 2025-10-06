@@ -4,10 +4,16 @@ import { prisma } from '@/lib/prisma';
 import { Session } from 'next-auth';
 import { Role, Permission } from '@prisma/client';
 import { DeepMockProxy } from 'vitest-mock-extended';
+import { getServerSession } from 'next-auth/next';
+import { authorize } from '@/lib/auth-utils';
+import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/prisma');
-vi.mock('@/lib/auth-config', () => ({
-  auth: vi.fn(),
+vi.mock('next-auth/next', () => ({
+  getServerSession: vi.fn(),
+}));
+vi.mock('@/lib/auth', () => ({
+  authOptions: {},
 }));
 vi.mock('@/lib/auth-utils', () => ({
   authorize: vi.fn(),
@@ -32,13 +38,11 @@ describe('GET /api/roles/[id]', () => {
   });
 
   it('should return a role successfully', async () => {
-    const { auth } = await import('@/lib/auth-config');
-    const { authorize } = await import('@/lib/auth-utils');
-    vi.mocked(auth).mockResolvedValue(mockSession);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.role.findUnique).mockResolvedValue(mockRole);
 
-    const response = await GET({} as Request, { params: { id: '1' } });
+    const response = await GET({} as NextRequest, { params: Promise.resolve({ id: '1' }) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -46,13 +50,11 @@ describe('GET /api/roles/[id]', () => {
   });
 
   it('should return 404 if role not found', async () => {
-    const { auth } = await import('@/lib/auth-config');
-    const { authorize } = await import('@/lib/auth-utils');
-    vi.mocked(auth).mockResolvedValue(mockSession);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.role.findUnique).mockResolvedValue(null);
 
-    const response = await GET({} as Request, { params: { id: '1' } });
+    const response = await GET({} as NextRequest, { params: Promise.resolve({ id: '1' }) });
     expect(response.status).toBe(404);
   });
 });
@@ -74,17 +76,15 @@ describe('PUT /api/roles/[id]', () => {
     });
 
     it('should update a role successfully', async () => {
-      const { auth } = await import('@/lib/auth-config');
-      const { authorize } = await import('@/lib/auth-utils');
-      vi.mocked(auth).mockResolvedValue(mockSession);
+      vi.mocked(getServerSession).mockResolvedValue(mockSession);
       vi.mocked(authorize).mockReturnValue(true);
 
       const req = new Request('http://localhost', {
         method: 'PUT',
         body: JSON.stringify({ name: 'NEW_NAME', permissionIds: ['1', '2'] }),
-      });
+      }) as NextRequest;
 
-      const response = await PUT(req, { params: { id: '1' } });
+      const response = await PUT(req, { params: Promise.resolve({ id: '1' }) });
       const data = await response.json();
 
       expect(response.status).toBe(200);

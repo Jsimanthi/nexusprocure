@@ -1,6 +1,7 @@
 // src/app/api/iom/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-config";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { getIOMById, updateIOMStatus } from "@/lib/iom";
 import { authorize } from "@/lib/auth-utils";
 
@@ -11,7 +12,7 @@ export async function GET(
   const { id } = await context.params;
 
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -46,7 +47,7 @@ export async function PATCH(
   const { id } = await context.params;
 
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

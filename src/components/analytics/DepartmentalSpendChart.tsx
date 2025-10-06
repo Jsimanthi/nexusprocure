@@ -4,11 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
 import { formatCurrency } from "@/lib/utils";
-
-interface SpendData {
-  name: string;
-  Total: number;
-}
+import { SpendData } from "@/types/analytics";
 
 interface DepartmentalSpendChartProps {
   data: SpendData[];
@@ -23,10 +19,15 @@ export const DepartmentalSpendChart = ({ data }: DepartmentalSpendChartProps) =>
     );
   }
 
+  const chartData = data.map(item => ({
+    ...item,
+    Total: item.Total ?? 0,
+  }));
+
   return (
     <ResponsiveContainer width="100%" height={400}>
       <BarChart
-        data={data}
+        data={chartData}
         layout="vertical"
         margin={{
           top: 5,

@@ -3,10 +3,15 @@ import { POST } from './route';
 import { prisma } from '@/lib/prisma';
 import { Session } from 'next-auth';
 import { User } from '@prisma/client';
+import { getServerSession } from 'next-auth/next';
+import { authorize } from '@/lib/auth-utils';
 
 vi.mock('@/lib/prisma');
-vi.mock('@/lib/auth-config', () => ({
-  auth: vi.fn(),
+vi.mock('next-auth/next', () => ({
+  getServerSession: vi.fn(),
+}));
+vi.mock('@/lib/auth', () => ({
+  authOptions: {},
 }));
 vi.mock('@/lib/auth-utils', () => ({
   authorize: vi.fn(),
@@ -42,10 +47,7 @@ describe('POST /api/users', () => {
   }
 
   it('should create a new user successfully', async () => {
-    const { auth } = await import('@/lib/auth-config');
-    const { authorize } = await import('@/lib/auth-utils');
-
-    vi.mocked(auth).mockResolvedValue(mockSession);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
     vi.mocked(prisma.user.create).mockResolvedValue(mockUser);
@@ -69,9 +71,7 @@ describe('POST /api/users', () => {
   });
 
   it('should return 409 if user already exists', async () => {
-    const { auth } = await import('@/lib/auth-config');
-    const { authorize } = await import('@/lib/auth-utils');
-    vi.mocked(auth).mockResolvedValue(mockSession);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
 
@@ -85,9 +85,7 @@ describe('POST /api/users', () => {
   });
 
   it('should return 400 for invalid data', async () => {
-    const { auth } = await import('@/lib/auth-config');
-    const { authorize } = await import('@/lib/auth-utils');
-    vi.mocked(auth).mockResolvedValue(mockSession);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
 
     const req = new Request('http://localhost/api/users', {
@@ -100,9 +98,7 @@ describe('POST /api/users', () => {
   });
 
   it('should return 403 for unauthorized users', async () => {
-    const { auth } = await import('@/lib/auth-config');
-    const { authorize } = await import('@/lib/auth-utils');
-    vi.mocked(auth).mockResolvedValue(mockSession);
+    vi.mocked(getServerSession).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockImplementation(() => {
       throw new Error('Not authorized');
     });
