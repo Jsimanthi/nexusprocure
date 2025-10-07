@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { PrismaClient } from "@prisma/client";
+import { Session } from "next-auth";
 
 type PrismaTransactionClient = Omit<
   PrismaClient,
@@ -40,7 +41,7 @@ export async function logAudit(
 }
 
 // Helper to get user from session for logging
-export const getAuditUser = (session: { user: { id: string, name?: string | null } } | null) => {
+export const getAuditUser = (session: Session | null) => {
   if (!session?.user) {
     // This should ideally not happen if called from authenticated routes
     return { userId: 'system', userName: 'System' };
