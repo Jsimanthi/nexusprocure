@@ -73,6 +73,10 @@ export async function PUT(
         });
 
         if (permissionIds && permissionIds.length > 0) {
+            if (!session.user) {
+              // This should not happen given the check above, but it satisfies TypeScript's strictness
+              throw new Error("User not found in session during transaction.");
+            }
             await tx.permissionsOnRoles.createMany({
                 data: permissionIds.map((permissionId: string) => ({
                     roleId: params.id,

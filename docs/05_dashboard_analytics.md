@@ -66,3 +66,24 @@ The Administrator dashboard includes a set of calculated KPIs to provide deep in
 *   **Total Spend This Month**:
     *   **Calculation**: The sum of `grandTotal` for all Payment Requests that were moved to the `PROCESSED` status within the current calendar month.
     *   **Purpose**: Provides a real-time view of the organization's spending for the month.
+
+---
+
+## 3. Analytics & Reporting Page
+
+Accessible via the sidebar, the "Analytics & Reporting" page provides a dedicated space for deeper data exploration and visualization. This page is powered by the `GET /api/analytics` endpoint.
+
+### 3.1. Spend Over Time
+
+*   **Visualization**: A bar chart displaying the total procurement spend for each month.
+*   **Interactivity**: Users can click on a specific month's bar to be redirected to a filtered list of all Purchase Orders created in that month.
+
+### 3.2. Spend by Category
+
+*   **Visualization**: A pie chart showing the distribution of spend across various item categories (e.g., "Office Supplies," "IT Equipment").
+*   **Interactivity**: Users can click on a pie slice to be redirected to a filtered list of all Purchase Orders containing items from that specific category.
+
+### 3.3. Spend by Department
+
+*   **Visualization**: A horizontal bar chart that ranks departmental spending, providing a clear view of which departments are responsible for the most procurement activity.
+*   **Interactivity**: This chart is planned to have drill-down functionality in a future update.
