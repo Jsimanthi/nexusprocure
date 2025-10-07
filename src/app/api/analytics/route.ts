@@ -54,10 +54,27 @@ export async function GET() {
       ORDER BY total DESC
     `;
 
-    const [spendOverTime, spendByCategory, spendByDepartment] = await Promise.all([
+    const topVendorsPromise = prisma.purchaseOrder.groupBy({
+      by: ['vendorName'],
+      _sum: {
+        grandTotal: true,
+      },
+      where: {
+        status: { in: ['ORDERED', 'DELIVERED', 'COMPLETED'] },
+      },
+      orderBy: {
+        _sum: {
+          grandTotal: 'desc',
+        },
+      },
+      take: 5,
+    });
+
+    const [spendOverTime, spendByCategory, spendByDepartment, topVendors] = await Promise.all([
       spendOverTimePromise,
       spendByCategoryPromise,
       spendByDepartmentPromise,
+      topVendorsPromise,
     ]);
 
     const formattedSpendData = spendOverTime.map((item) => ({
@@ -75,10 +92,22 @@ export async function GET() {
         Total: item.total,
     }));
 
+    const formattedTopVendors = topVendors.map((item) => ({
+      name: item.vendorName!,
+      Total: item._sum.grandTotal || 0,
+    }));
+
+    const topCategories = [...formattedCategoryData]
+      .sort((a, b) => (b.value || 0) - (a.value || 0))
+      .slice(0, 5)
+      .map(item => ({ name: item.name, Total: item.value }));
+
     return NextResponse.json({
       spendOverTime: formattedSpendData,
       spendByCategory: formattedCategoryData,
       spendByDepartment: formattedDepartmentData,
+      topVendors: formattedTopVendors,
+      topCategories: topCategories,
     });
   } catch (error) {
     console.error("Error fetching analytics data:", error);
