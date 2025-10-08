@@ -38,6 +38,9 @@ export async function getPRs(
   }: { page?: number; pageSize?: number; search?: string; status?: string }
 ) {
   const user = session.user;
+  if (!user) {
+    throw new Error("User not found in session");
+  }
   const userPermissions = user.permissions || [];
   const where: Prisma.PaymentRequestWhereInput = {
     AND: [],
@@ -297,10 +300,10 @@ export async function updatePRStatus(
   action: "APPROVE" | "REJECT" | "PROCESS" | "CANCEL",
   session: Session
 ) {
-  const userId = session.user.id;
-  if (!userId) {
+  if (!session.user) {
     throw new Error("User not found in session");
   }
+  const userId = session.user.id;
 
   // Handle simple status changes first
   if (action === "PROCESS" || action === "CANCEL") {

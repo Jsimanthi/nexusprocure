@@ -10,4 +10,6 @@ export interface AnalyticsData {
   spendOverTime: SpendData[];
   spendByCategory: SpendData[];
   spendByDepartment: SpendData[];
+  topVendors: SpendData[];
+  topCategories: SpendData[];
 }

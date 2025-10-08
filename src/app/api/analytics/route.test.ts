@@ -54,8 +54,9 @@ describe('GET /api/analytics', () => {
 
     // Mock the data returned from the database queries
     const mockSpendOverTime = [{ month: '2023-01', total: 1000 }];
-    const mockSpendByCategory = [{ category: 'IT', _sum: { totalPrice: 500 } }];
+    const mockSpendByCategory = [{ category: 'IT', _sum: { totalPrice: 500 } }, { category: 'Office Supplies', _sum: { totalPrice: 250 } }];
     const mockSpendByDepartment = [{ department: 'Engineering', total: 750 }];
+    const mockTopVendors = [{ vendorName: 'Dell Inc.', _sum: { grandTotal: 5000 } }];
 
     // @ts-expect-error - We are mocking a raw query result
     vi.mocked(prisma.$queryRaw)
@@ -64,14 +65,18 @@ describe('GET /api/analytics', () => {
 
     // @ts-expect-error - We are mocking a groupBy result
     vi.mocked(prisma.pOItem.groupBy).mockResolvedValue(mockSpendByCategory);
+    // @ts-expect-error - We are mocking a groupBy result
+    vi.mocked(prisma.purchaseOrder.groupBy).mockResolvedValue(mockTopVendors);
 
     const response = await GET();
     const data = await response.json();
 
     expect(response.status).toBe(200);
     expect(data.spendOverTime).toEqual([{ name: '2023-01', Total: 1000 }]);
-    expect(data.spendByCategory).toEqual([{ name: 'IT', value: 500 }]);
+    expect(data.spendByCategory).toEqual([{ name: 'IT', value: 500 }, { name: 'Office Supplies', value: 250 }]);
     expect(data.spendByDepartment).toEqual([{ name: 'Engineering', Total: 750 }]);
+    expect(data.topVendors).toEqual([{ name: 'Dell Inc.', Total: 5000 }]);
+    expect(data.topCategories).toEqual([{ name: 'IT', Total: 500 }, { name: 'Office Supplies', Total: 250 }]);
   });
 
   it('should handle database errors gracefully', async () => {

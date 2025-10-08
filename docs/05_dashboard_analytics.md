@@ -87,3 +87,11 @@ Accessible via the sidebar, the "Analytics & Reporting" page provides a dedicate
 
 *   **Visualization**: A horizontal bar chart that ranks departmental spending, providing a clear view of which departments are responsible for the most procurement activity.
 *   **Interactivity**: This chart is planned to have drill-down functionality in a future update.
+
+### 3.4. Top Spenders
+
+*   **Visualization**: A dedicated section containing three ranked lists that display the top 5 spenders by:
+    *   **Vendor**: Sum of `grandTotal` from all completed Purchase Orders.
+    *   **Category**: Sum of `totalPrice` from all items in completed Purchase Orders.
+    *   **Department**: Sum of `grandTotal` from all completed Purchase Orders, grouped by the originating department of the IOM.
+*   **Purpose**: Provides a quick, at-a-glance view of the most significant areas of expenditure across the organization.

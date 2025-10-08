@@ -11,6 +11,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import { formatCurrency } from "@/lib/utils";
 import { DepartmentalSpendChart } from "@/components/analytics/DepartmentalSpendChart";
+import { TopSpendersList } from "@/components/analytics/TopSpendersList";
 import { AnalyticsData, SpendData } from "@/types/analytics";
 
 const fetchAnalyticsData = async (): Promise<AnalyticsData> => {
@@ -34,6 +35,10 @@ export default function AnalyticsPage() {
     queryKey: ["analyticsData"],
     queryFn: fetchAnalyticsData,
   });
+
+  if (analyticsData) {
+    console.log("Analytics Data:", JSON.stringify(analyticsData, null, 2));
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleBarClick = (data: any) => {
@@ -127,6 +132,26 @@ export default function AnalyticsPage() {
           <h2 className="text-xl font-semibold mb-4">Spend by Department</h2>
           <DepartmentalSpendChart data={analyticsData?.spendByDepartment || []} />
         </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-4">Top Spenders</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <TopSpendersList
+                title="By Vendor"
+                data={analyticsData?.topVendors || []}
+                isLoading={isLoading}
+              />
+              <TopSpendersList
+                title="By Category"
+                data={analyticsData?.topCategories || []}
+                isLoading={isLoading}
+              />
+              <TopSpendersList
+                title="By Department"
+                data={analyticsData?.spendByDepartment?.slice(0, 5) || []}
+                isLoading={isLoading}
+              />
+            </div>
+          </div>
       </div>
     </PageLayout>
   );
