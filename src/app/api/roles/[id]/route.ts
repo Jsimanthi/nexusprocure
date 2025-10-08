@@ -57,6 +57,8 @@ export async function PUT(
       if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
+      // Capture user to satisfy TypeScript's type narrowing within the transaction callback
+      const user = session.user;
 
       authorize(session, 'MANAGE_ROLES');
 
@@ -73,15 +75,11 @@ export async function PUT(
         });
 
         if (permissionIds && permissionIds.length > 0) {
-            if (!session.user) {
-              // This should not happen given the check above, but it satisfies TypeScript's strictness
-              throw new Error("User not found in session during transaction.");
-            }
             await tx.permissionsOnRoles.createMany({
                 data: permissionIds.map((permissionId: string) => ({
                     roleId: params.id,
                     permissionId,
-                    assignedBy: session.user.id,
+                    assignedBy: user.id, // Use the captured user object
                 })),
             });
         }

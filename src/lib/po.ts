@@ -39,6 +39,9 @@ export async function getPOs(
   }: { page?: number; pageSize?: number; search?: string; status?: string, month?: string }
 ) {
   const user = session.user;
+  if (!user) {
+    throw new Error("User not found in session");
+  }
   const userPermissions = user.permissions || [];
   const where: Prisma.PurchaseOrderWhereInput = {
     AND: [],
@@ -376,10 +379,10 @@ export async function updatePOStatus(
   action: "APPROVE" | "REJECT" | "ORDER" | "DELIVER" | "CANCEL",
   session: Session
 ) {
-  const userId = session.user.id;
-  if (!userId) {
+  if (!session.user) {
     throw new Error("User not found in session");
   }
+  const userId = session.user.id;
 
   // Handle simple status changes first
   if (action === "ORDER" || action === "DELIVER" || action === "CANCEL") {

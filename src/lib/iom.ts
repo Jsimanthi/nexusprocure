@@ -276,10 +276,10 @@ export async function updateIOMStatus(
   action: "APPROVE" | "REJECT" | "COMPLETE",
   session: Session
 ) {
-  const userId = session.user.id;
-  if (!userId) {
+  if (!session.user) {
     throw new Error("User not found in session");
   }
+  const userId = session.user.id;
 
   // Handle simple status changes first
   if (action === "COMPLETE") {
