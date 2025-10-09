@@ -123,7 +123,21 @@ Fetches approved IOMs that can be converted into a PO.
 
 ---
 
-## 8. Workflow Diagram: IOM to PO Conversion
+## 8. `GET /api/po/export`
+
+Exports all Purchase Orders as a CSV file.
+
+*   **Handler**: `src/app/api/po/export/route.ts`
+*   **Business Logic**: Calls `getAllPOsForExport(session)` from `src/lib/po.ts`.
+*   **Authorization**: Requires the `READ_ALL_POS` permission.
+*   **Success Response** (`200 OK`): Returns a CSV file with all PO data.
+*   **Headers**:
+    *   `Content-Type`: `text/csv`
+    *   `Content-Disposition`: `attachment; filename="purchase-orders-export-YYYY-MM-DDTHH-mm-ss.sssZ.csv"`
+
+---
+
+## 9. Workflow Diagram: IOM to PO Conversion
 
 This diagram illustrates the sequence of events when a user converts an approved IOM into a Purchase Order.
 

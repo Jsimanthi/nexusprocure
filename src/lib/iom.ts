@@ -407,6 +407,24 @@ export async function updateIOMStatus(
   return finalUpdate;
 }
 
+export async function getAllIOMsForExport(session: Session) {
+  if (!session.user) {
+    throw new Error("Authentication failed: No user session found.");
+  }
+  authorize(session, 'READ_ALL_IOMS'); // Assuming only users who can see all can export all
+
+  return await prisma.iOM.findMany({
+    include: {
+      items: true,
+      preparedBy: { select: { name: true } },
+      requestedBy: { select: { name: true } },
+      reviewedBy: { select: { name: true } },
+      approvedBy: { select: { name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 export async function deleteIOM(id: string, session: Session) {
   authorize(session, 'DELETE_IOM');
   const iomToDelete = await prisma.iOM.findUnique({ where: { id } });

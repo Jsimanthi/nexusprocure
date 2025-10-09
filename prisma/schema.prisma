@@ -296,6 +296,10 @@ model Vendor {
   email       String
   phone       String
   currency    String   @default("INR")
+
+  // Performance Metrics
+  onTimeDeliveryRate  Float @default(0)
+  averageQualityScore Float @default(0)
   
   // Relationships
   purchaseOrders PurchaseOrder[]

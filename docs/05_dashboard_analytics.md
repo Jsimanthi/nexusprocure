@@ -95,3 +95,18 @@ Accessible via the sidebar, the "Analytics & Reporting" page provides a dedicate
     *   **Category**: Sum of `totalPrice` from all items in completed Purchase Orders.
     *   **Department**: Sum of `grandTotal` from all completed Purchase Orders, grouped by the originating department of the IOM.
 *   **Purpose**: Provides a quick, at-a-glance view of the most significant areas of expenditure across the organization.
+
+---
+
+## 4. Vendor Performance Metrics
+
+To provide insight into vendor reliability and quality, key performance metrics are now calculated and displayed directly on the main vendors list page (`/vendors`).
+
+*   **On-Time Delivery Rate**:
+    *   **Display**: Shown as a percentage for each vendor.
+    *   **Calculation**: The percentage of a vendor's delivered purchase orders that were fulfilled on or before their `expectedDeliveryDate`.
+
+*   **Average Quality Score**:
+    *   **Display**: Shown as a score out of 5 for each vendor.
+    *   **Calculation**: The average of all `qualityScore` ratings submitted for a vendor's purchase orders.
+    *   **Note**: Users with `MANAGE_VENDORS` permission can submit or update a quality score on the new Vendor Details page for each delivered PO.

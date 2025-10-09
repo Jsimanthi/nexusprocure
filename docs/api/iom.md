@@ -145,7 +145,21 @@ Converts an approved IOM into a new Purchase Order.
 
 ---
 
-## 6. Workflow Diagram: IOM Status Update
+## 6. `GET /api/iom/export`
+
+Exports all IOMs as a CSV file.
+
+*   **Handler**: `src/app/api/iom/export/route.ts`
+*   **Business Logic**: Calls `getAllIOMsForExport(session)` from `src/lib/iom.ts`.
+*   **Authorization**: Requires the `READ_ALL_IOMS` permission.
+*   **Success Response** (`200 OK`): Returns a CSV file with all IOM data.
+*   **Headers**:
+    *   `Content-Type`: `text/csv`
+    *   `Content-Disposition`: `attachment; filename="ioms-export-YYYY-MM-DDTHH-mm-ss.sssZ.csv"`
+
+---
+
+## 7. Workflow Diagram: IOM Status Update
 
 This diagram illustrates the sequence of events when a user updates the status of an IOM (e.g., a reviewer submitting for approval).
 

@@ -8,6 +8,8 @@ import SearchAndFilter from "@/components/SearchAndFilter";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
+import { Download } from "lucide-react";
+import toast from "react-hot-toast";
 
 // Now, this import will work correctly
 import { FilterState } from "@/components/SearchAndFilter";
@@ -51,6 +53,7 @@ export default function VendorsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [formData, setFormData] = useState<Partial<Vendor>>({});
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["vendors", page, pageSize],
@@ -89,6 +92,43 @@ export default function VendorsPage() {
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this vendor?")) {
       deleteMutation.mutate(id);
+    }
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    toast.loading("Exporting vendors...");
+    try {
+      const response = await fetch("/api/vendors/export");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to export vendors.");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = response.headers.get('content-disposition');
+      let filename = `vendors-export-${new Date().toISOString()}.csv`;
+      if (disposition && disposition.indexOf('attachment') !== -1) {
+        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+        const matches = filenameRegex.exec(disposition);
+        if (matches != null && matches[1]) {
+          filename = matches[1].replace(/['"]/g, '');
+        }
+      }
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.dismiss();
+      toast.success("Vendors exported successfully!");
+    } catch (error) {
+      toast.dismiss();
+      toast.error(error instanceof Error ? error.message : "An unknown error occurred during export.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -131,12 +171,14 @@ export default function VendorsPage() {
       <>
         <div className="flex justify-end mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link
-              href="/po"
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors text-center"
+            <button
+                onClick={handleExport}
+                disabled={isExporting}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 disabled:opacity-50"
             >
-              Back to POs
-            </Link>
+                <Download size={16} />
+                {isExporting ? "Exporting..." : "Export to CSV"}
+            </button>
             <button
               onClick={() => {
                 cancelForm();
@@ -302,9 +344,9 @@ export default function VendorsPage() {
                   <div className="px-4 py-4 sm:px-6">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-medium text-gray-900 truncate">
+                        <Link href={`/dashboard/vendors/${vendor.id}`} className="text-lg font-medium text-blue-600 hover:underline truncate">
                           {vendor.name} <span className="text-sm font-normal text-gray-500">({vendor.currency})</span>
-                        </h3>
+                        </Link>
                         <p className="text-sm text-gray-500 truncate">
                           {vendor.email} | {vendor.phone}
                         </p>
@@ -325,14 +367,18 @@ export default function VendorsPage() {
                         </button>
                       </div>
                     </div>
-                    {vendor.taxId && (
-                      <p className="text-sm text-gray-500 mt-2">
-                        Tax ID: {vendor.taxId}
-                      </p>
-                    )}
-                    <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                      {vendor.address}
-                    </p>
+
+                    <div className="mt-4 flex justify-between items-center text-sm text-gray-600 border-t border-gray-200 pt-2">
+                        <div className="flex items-center gap-2">
+                            <span className="font-medium">On-Time Delivery:</span>
+                            <span className="font-bold text-green-600">{(vendor.onTimeDeliveryRate || 0).toFixed(1)}%</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="font-medium">Avg. Quality Score:</span>
+                            <span className="font-bold text-blue-600">{(vendor.averageQualityScore || 0).toFixed(2)} / 5</span>
+                        </div>
+                    </div>
+
                   </div>
                 </li>
               ))

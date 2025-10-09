@@ -6,13 +6,14 @@ import crypto from "crypto";
 import { createNotification } from "./notification";
 import { sendEmail } from "./email";
 import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
-import { createPoSchema, createVendorSchema, updateVendorSchema } from "./schemas";
+import { createPoSchema } from "./schemas";
 import { logAudit, getAuditUser } from "./audit";
 import { Session } from "next-auth";
 import * as React from "react";
 import { authorize } from "./auth-utils";
 import { Prisma } from "@prisma/client";
 import { triggerPusherEvent } from "./pusher";
+import { updateVendorPerformanceMetrics } from "./vendor";
 
 export async function generatePONumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -196,57 +197,23 @@ export async function getPublicPOById(id: string) {
   return po;
 }
 
-export async function getVendors({
-  page = 1,
-  pageSize = 10,
-}: {
-  page?: number;
-  pageSize?: number;
-}) {
-  const [vendors, total] = await prisma.$transaction([
-    prisma.vendor.findMany({
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      orderBy: { name: "asc" },
-    }),
-    prisma.vendor.count(),
-  ]);
+export async function getAllPOsForExport(session: Session) {
+  if (!session.user) {
+    throw new Error("Authentication failed: No user session found.");
+  }
+  authorize(session, 'READ_ALL_POS');
 
-  return { vendors, total };
-}
-
-export async function getVendorById(id: string) {
-  return await prisma.vendor.findUnique({
-    where: { id }
-  });
-}
-
-type CreateVendorData = z.infer<typeof createVendorSchema>;
-type UpdateVendorData = z.infer<typeof updateVendorSchema>;
-
-export async function createVendor(data: CreateVendorData, session: Session) {
-  authorize(session, 'MANAGE_VENDORS');
-  return await prisma.vendor.create({
-    data,
-  });
-}
-
-export async function updateVendor(
-  id: string,
-  data: UpdateVendorData,
-  session: Session
-) {
-  authorize(session, 'MANAGE_VENDORS');
-  return await prisma.vendor.update({
-    where: { id },
-    data,
-  });
-}
-
-export async function deleteVendor(id: string, session: Session) {
-  authorize(session, 'MANAGE_VENDORS');
-  return await prisma.vendor.delete({
-    where: { id },
+  return await prisma.purchaseOrder.findMany({
+    include: {
+      items: true,
+      preparedBy: { select: { name: true } },
+      requestedBy: { select: { name: true } },
+      reviewedBy: { select: { name: true } },
+      approvedBy: { select: { name: true } },
+      vendor: { select: { name: true } },
+      iom: { select: { iomNumber: true } },
+    },
+    orderBy: { createdAt: "desc" },
   });
 }
 
@@ -402,7 +369,14 @@ export async function updatePOStatus(
         updateData.status = POStatus.CANCELLED;
         break;
     }
-    return await prisma.purchaseOrder.update({ where: { id }, data: updateData });
+    const updatedPo = await prisma.purchaseOrder.update({ where: { id }, data: updateData });
+
+    // After a PO is marked as delivered, update the vendor's performance metrics.
+    if (action === "DELIVER" && updatedPo.vendorId) {
+      await updateVendorPerformanceMetrics(updatedPo.vendorId);
+    }
+
+    return updatedPo;
   }
 
   const po = await prisma.purchaseOrder.findUnique({
@@ -525,6 +499,34 @@ export async function updatePOStatus(
   await triggerPusherEvent("dashboard-channel", "dashboard-update", {});
 
   return finalUpdate;
+}
+
+export async function updatePODetails(
+  id: string,
+  data: { qualityScore?: number; deliveryNotes?: string },
+  session: Session
+) {
+  if (!session.user) {
+    throw new Error("User not found in session");
+  }
+  authorize(session, 'MANAGE_VENDORS'); // Reuse this permission for now
+
+  const po = await prisma.purchaseOrder.findUnique({ where: { id } });
+  if (!po) {
+    throw new Error("Purchase Order not found.");
+  }
+
+  const updatedPo = await prisma.purchaseOrder.update({
+    where: { id },
+    data,
+  });
+
+  // After updating details, trigger vendor metric recalculation
+  if (updatedPo.vendorId) {
+    await updateVendorPerformanceMetrics(updatedPo.vendorId);
+  }
+
+  return updatedPo;
 }
 
 export async function getIOMsForPO() {

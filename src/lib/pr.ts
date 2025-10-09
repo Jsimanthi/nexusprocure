@@ -435,3 +435,21 @@ export async function updatePRStatus(
 
   return finalUpdate;
 }
+
+export async function getAllPRsForExport(session: Session) {
+  if (!session.user) {
+    throw new Error("Authentication failed: No user session found.");
+  }
+  authorize(session, 'READ_ALL_PRS');
+
+  return await prisma.paymentRequest.findMany({
+    include: {
+      po: { select: { poNumber: true } },
+      preparedBy: { select: { name: true } },
+      requestedBy: { select: { name: true } },
+      reviewedBy: { select: { name: true } },
+      approvedBy: { select: { name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}

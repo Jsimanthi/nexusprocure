@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getVendors, createVendor } from "@/lib/po";
+import { getVendors, createVendor } from "@/lib/vendor";
 import { createVendorSchema } from "@/lib/schemas";
 import { Prisma } from "@prisma/client";
 import { fromZodError } from "zod-validation-error";
