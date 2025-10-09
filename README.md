@@ -1,22 +1,28 @@
-# NexusProcure - IT Procurement Management System
+# NexusProcure - Internal Procurement Management System
 
-This is a comprehensive IT procurement management system built with Next.js, Prisma, and PostgreSQL.
+NexusProcure is a full-stack web application designed to streamline internal procurement workflows. It enables users to manage the entire lifecycle of a purchase, from an internal request to vendor payment, through a three-stage process: Inter-Office Memo (IOM), Purchase Order (PO), and PaymentRequest (PR).
 
-## Project Status (As of September 2025)
+## Features
 
-Significant progress has been made on the new Dashboard & Analytics module.
+- **End-to-End Procurement Workflow**: Manage the entire procurement lifecycle, from initial request (IOM) to purchase order (PO) and final payment (PR).
+- **Role-Based Access Control (RBAC)**: A granular permissions system ensures that users can only access the features and data relevant to their roles.
+- **Dashboard & Analytics**: An actionable, role-based dashboard provides key performance indicators (KPIs) and visualizations for spend analysis.
+- **Multi-Level Approval Workflows**: Configure approval chains for IOMs, POs, and PRs to match your organization's policies.
+- **Document Management**: Generate, view, and print PDFs for all procurement documents.
+- **Vendor Management**: Maintain a central database of vendors and track their performance.
+- **System & Application Settings**: Administrators can configure application-wide settings and monitor system health.
 
-*   **Phase 1 (The Actionable & Personalized Hub) is complete.**
-*   The dashboard now features **role-based views** for different user types (Admin, Manager, etc.).
-*   The foundation for **customizable widgets** has been laid by refactoring the UI into a modular, widget-based architecture.
-*   **Key Performance Indicators (KPIs)** like Average Approval Time, Procurement Cycle Time, and Emergency Purchase Rate have been implemented.
-*   A **"Mark as Complete" workflow** has been added, allowing Finance Officers to finalize the entire procurement chain.
-*   A **"Print All" feature** is now available on Payment Requests to easily print the full document history.
-*   **Phase 2 (Advanced Analytics) has begun,** with the implementation of interactive "Spend Over Time" and "Spend by Category" charts with drill-down capabilities.
+## Technology Stack
 
-For a detailed breakdown of completed work and the project roadmap, please see the **[Project Proposal](./docs/PROPOSAL.md)**.
-
----
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Database**: SQLite (Development), PostgreSQL (Production)
+- **ORM**: Prisma
+- **Authentication**: NextAuth.js v5 (JWT Session Strategy)
+- **Styling**: Tailwind CSS
+- **State Management**: React Query (Server State), Zustand (Client State)
+- **Forms**: React Hook Form with Zod for validation
+- **Testing**: Vitest and React Testing Library
 
 ## Getting Started
 
@@ -35,47 +41,78 @@ cd nexusprocure
 npm install
 ```
 
-### 3. Set Up the Database
+### 3. Configure Environment Variables
 
-This project uses a hybrid database setup:
--   **SQLite** is used for local development within this AI-assisted environment.
--   **PostgreSQL** is used for production.
+Create a `.env` file by copying the example file:
 
-The project is configured to handle this automatically. When you run `npm install`, the environment is set up for SQLite. When you run `npm run build`, the application is prepared for a PostgreSQL database.
+```bash
+cp .env.example .env
+```
 
--   **For detailed instructions** on how to set up and connect to your PostgreSQL database for production, please see the **[Database Setup Guide](./DATABASE_SETUP.md)**.
+Open the `.env` file and fill in the required values. For local development, the `DATABASE_URL` should be `file:./dev.db`.
 
-### 4. Configure Environment Variables
+### 4. Set Up and Seed the Database
 
-You need to create a `.env` file to store your local environment variables.
+Run the following command to apply database migrations and populate the database with initial seed data (users, roles, permissions, etc.):
 
-1.  Make a copy of the example file:
-    ```bash
-    cp .env.example .env
-    ```
-2.  Open the `.env` file and fill in the required values for your environment (e.g., `NEXTAUTH_SECRET`, `PUSHER_SECRET`, etc.). For development, the `DATABASE_URL` should point to the local SQLite file (e.g., `file:./dev.db`).
+```bash
+npx prisma migrate dev
+```
+
+The seed data includes default user accounts with different roles. You can find the credentials in `prisma/seed.ts`.
 
 ### 5. Run the Development Server
-
-Once your database is running and your `.env` file is configured, you can start the development server:
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-## Learn More
+## Testing and Building
 
-To learn more about Next.js, take a look at the following resources:
+### Running Tests
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To run the test suite, use the following command:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm test
+```
 
-## Deploy on Vercel
+### Building for Production
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+To create a production-ready build of the application, run:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build
+```
+
+This command prepares the application for deployment with a PostgreSQL database. For more details, refer to the `scripts/prepare-production.js` file.
+
+## Project Structure
+
+The project follows a feature-centric structure within the Next.js App Router paradigm.
+
+- **`src/app/`**: Contains all application routes.
+  - **`api/`**: Houses all backend API endpoints.
+  - **`dashboard/`, `iom/`, `po/`, `pr/`**: Contain the frontend pages for each feature.
+- **`src/lib/`**: Core application business logic.
+  - **`iom.ts`, `po.ts`, `pr.ts`**: Backend functions for each module.
+  - **`auth.ts`, `auth-utils.ts`**: NextAuth.js configuration and authorization helpers.
+  - **`schemas.ts`**: Zod validation schemas.
+- **`src/components/`**: Shared, reusable React components.
+- **`prisma/`**: Database schema, migrations, and seed scripts.
+- **`docs/`**: Contains detailed documentation about the system.
+
+## Additional Documentation
+
+For more in-depth information, please refer to the documents in the `docs/` directory:
+
+- `SYSTEM_OVERVIEW.md`: A detailed look at the application's architecture and features.
+- `PROPOSAL.md`: The original project proposal and roadmap.
+- `01_database.md`: Information about the database schema and models.
+- `02_auth.md`: Details on the authentication and authorization implementation.
+- `03_testing.md`: The project's testing strategy.
+- `04_configuration.md`: Guidance on configuring the application.
+- `05_dashboard_analytics.md`: Information on the dashboard and analytics features.
+- `06_user_management.md`: Details on user and role management.
