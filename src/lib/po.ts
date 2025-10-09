@@ -197,6 +197,26 @@ export async function getPublicPOById(id: string) {
   return po;
 }
 
+export async function getAllPOsForExport(session: Session) {
+  if (!session.user) {
+    throw new Error("Authentication failed: No user session found.");
+  }
+  authorize(session, 'READ_ALL_POS');
+
+  return await prisma.purchaseOrder.findMany({
+    include: {
+      items: true,
+      preparedBy: { select: { name: true } },
+      requestedBy: { select: { name: true } },
+      reviewedBy: { select: { name: true } },
+      approvedBy: { select: { name: true } },
+      vendor: { select: { name: true } },
+      iom: { select: { iomNumber: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 type CreatePoData = z.infer<typeof createPoSchema> & {
   preparedById: string;
   requestedById: string;

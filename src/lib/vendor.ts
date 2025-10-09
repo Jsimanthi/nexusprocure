@@ -133,3 +133,10 @@ export async function deleteVendor(id: string, session: Session) {
     where: { id },
   });
 }
+
+export async function getAllVendorsForExport(session: Session) {
+  authorize(session, 'MANAGE_VENDORS'); // Restrict export to users who can manage vendors
+  return await prisma.vendor.findMany({
+    orderBy: { name: 'asc' },
+  });
+}

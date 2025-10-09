@@ -8,6 +8,8 @@ import SearchAndFilter from "@/components/SearchAndFilter";
 import PageLayout from "@/components/PageLayout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
+import { Download } from "lucide-react";
+import toast from "react-hot-toast";
 
 // Now, this import will work correctly
 import { FilterState } from "@/components/SearchAndFilter";
@@ -51,6 +53,7 @@ export default function VendorsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [formData, setFormData] = useState<Partial<Vendor>>({});
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["vendors", page, pageSize],
@@ -89,6 +92,43 @@ export default function VendorsPage() {
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this vendor?")) {
       deleteMutation.mutate(id);
+    }
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    toast.loading("Exporting vendors...");
+    try {
+      const response = await fetch("/api/vendors/export");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to export vendors.");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = response.headers.get('content-disposition');
+      let filename = `vendors-export-${new Date().toISOString()}.csv`;
+      if (disposition && disposition.indexOf('attachment') !== -1) {
+        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+        const matches = filenameRegex.exec(disposition);
+        if (matches != null && matches[1]) {
+          filename = matches[1].replace(/['"]/g, '');
+        }
+      }
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.dismiss();
+      toast.success("Vendors exported successfully!");
+    } catch (error) {
+      toast.dismiss();
+      toast.error(error instanceof Error ? error.message : "An unknown error occurred during export.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -131,12 +171,14 @@ export default function VendorsPage() {
       <>
         <div className="flex justify-end mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link
-              href="/po"
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors text-center"
+            <button
+                onClick={handleExport}
+                disabled={isExporting}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 disabled:opacity-50"
             >
-              Back to POs
-            </Link>
+                <Download size={16} />
+                {isExporting ? "Exporting..." : "Export to CSV"}
+            </button>
             <button
               onClick={() => {
                 cancelForm();

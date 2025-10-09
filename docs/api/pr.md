@@ -81,3 +81,17 @@ Updates the status of an existing Payment Request.
     ```
 *   **Success Response** (`200 OK`): Returns the updated PR object.
 *   **Side Effects**: Creates an `AuditLog` entry, sends notifications, and triggers a Pusher event.
+
+---
+
+## 5. `GET /api/pr/export`
+
+Exports all Payment Requests as a CSV file.
+
+*   **Handler**: `src/app/api/pr/export/route.ts`
+*   **Business Logic**: Calls `getAllPRsForExport(session)` from `src/lib/pr.ts`.
+*   **Authorization**: Requires the `READ_ALL_PRS` permission.
+*   **Success Response** (`200 OK`): Returns a CSV file with all PR data.
+*   **Headers**:
+    *   `Content-Type`: `text/csv`
+    *   `Content-Disposition`: `attachment; filename="payment-requests-export-YYYY-MM-DDTHH-mm-ss.sssZ.csv"`

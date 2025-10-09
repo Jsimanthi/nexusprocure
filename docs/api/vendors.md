@@ -95,7 +95,21 @@ Deletes a vendor.
 
 ---
 
-## 6. Vendor Performance Metrics
+## 6. `GET /api/vendors/export`
+
+Exports all vendors as a CSV file.
+
+*   **Handler**: `src/app/api/vendors/export/route.ts`
+*   **Business Logic**: Calls `getAllVendorsForExport(session)` from `src/lib/vendor.ts`.
+*   **Authorization**: Requires the `MANAGE_VENDORS` permission.
+*   **Success Response** (`200 OK`): Returns a CSV file with all vendor data.
+*   **Headers**:
+    *   `Content-Type`: `text/csv`
+    *   `Content-Disposition`: `attachment; filename="vendors-export-YYYY-MM-DDTHH-mm-ss.sssZ.csv"`
+
+---
+
+## 7. Vendor Performance Metrics
 
 Vendor performance metrics are calculated automatically to provide insights into reliability and quality.
 

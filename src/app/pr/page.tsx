@@ -11,7 +11,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import { useHasPermission } from "@/hooks/useHasPermission";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, Trash2, Pencil } from "lucide-react";
+import { Eye, Trash2, Pencil, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -35,6 +35,7 @@ export default function PRListPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPrId, setSelectedPrId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const pageSize = 10;
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -67,6 +68,43 @@ export default function PRListPage() {
   const handleDelete = (id: string) => {
     setSelectedPrId(id);
     setIsModalOpen(true);
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    toast.loading("Exporting PRs...");
+    try {
+      const response = await fetch("/api/pr/export");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to export PRs.");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const disposition = response.headers.get('content-disposition');
+      let filename = `payment-requests-export-${new Date().toISOString()}.csv`;
+      if (disposition && disposition.indexOf('attachment') !== -1) {
+        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+        const matches = filenameRegex.exec(disposition);
+        if (matches != null && matches[1]) {
+          filename = matches[1].replace(/['"]/g, '');
+        }
+      }
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.dismiss();
+      toast.success("PRs exported successfully!");
+    } catch (error) {
+      toast.dismiss();
+      toast.error(error instanceof Error ? error.message : "An unknown error occurred during export.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const confirmDelete = () => {
@@ -122,14 +160,24 @@ export default function PRListPage() {
           message="Are you sure you want to delete this Payment Request? This action cannot be undone."
         />
         <div className="flex justify-end mb-6">
-          {canCreate && (
-            <Link
-              href="/pr/create"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button
+                onClick={handleExport}
+                disabled={isExporting}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 disabled:opacity-50"
             >
-              Create New PR
-            </Link>
-          )}
+                <Download size={16} />
+                {isExporting ? "Exporting..." : "Export to CSV"}
+            </button>
+            {canCreate && (
+              <Link
+                href="/pr/create"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
+              >
+                Create New PR
+              </Link>
+            )}
+          </div>
         </div>
           <SearchAndFilter
             onSearch={handleSearch}
