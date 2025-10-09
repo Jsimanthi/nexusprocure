@@ -21,7 +21,7 @@ vi.mock('@/lib/auth-utils');
 
 
 const mockAdminSession: Session = {
-  user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['READ_ALL_POS'] },
+  user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['READ_ALL_POS'], role: { id: 'admin-role', name: 'Admin' } },
   expires: '2099-01-01T00:00:00.000Z',
 };
 
@@ -55,7 +55,7 @@ describe('GET /api/po/export', () => {
     vi.mocked(authorize).mockReturnValue(true);
     const mockPOs: MockPO[] = [
       {
-        id: '1', poNumber: 'PO-001', title: 'Test PO 1', status: 'APPROVED', totalAmount: 100, taxAmount: 10, grandTotal: 110, currency: 'USD',
+        id: '1', poNumber: 'PO-001', title: 'Test PO 1', status: 'APPROVED', totalAmount: 100, taxAmount: 10, grandTotal: 110, currency: 'USD', exchangeRate: 1,
         vendorName: 'Test Vendor', vendorAddress: '', vendorContact: '', companyName: '', companyAddress: '', companyContact: '', taxRate: 10,
         expectedDeliveryDate: new Date('2023-01-10'), fulfilledAt: null, qualityScore: null, deliveryNotes: null,
         createdAt: new Date('2023-01-01'), updatedAt: new Date('2023-01-01'), pdfToken: '', reviewerStatus: 'APPROVED', approverStatus: 'APPROVED',
@@ -73,17 +73,18 @@ describe('GET /api/po/export', () => {
     const response = await GET() as unknown as InstanceType<typeof NextResponse>;
     const text = await response.text();
     const parsed = Papa.parse(text, { header: true });
+    const firstRow = parsed.data[0] as any;
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/csv');
     expect(response.headers.get('Content-Disposition')).toContain('attachment; filename="purchase-orders-export-');
 
     expect(parsed.data).toHaveLength(1);
-    expect(parsed.data[0]['PO Number']).toBe('PO-001');
-    expect(parsed.data[0]['Title']).toBe('Test PO 1');
-    expect(parsed.data[0]['Status']).toBe('APPROVED');
-    expect(parsed.data[0]['Vendor Name']).toBe('Test Vendor');
-    expect(parsed.data[0]['Grand Total']).toBe('110');
-    expect(parsed.data[0]['Items']).toBe('Item 1 (Qty: 1, Price: 100)');
+    expect(firstRow['PO Number']).toBe('PO-001');
+    expect(firstRow['Title']).toBe('Test PO 1');
+    expect(firstRow['Status']).toBe('APPROVED');
+    expect(firstRow['Vendor Name']).toBe('Test Vendor');
+    expect(firstRow['Grand Total']).toBe('110');
+    expect(firstRow['Items']).toBe('Item 1 (Qty: 1, Price: 100)');
   });
 });

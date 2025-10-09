@@ -19,7 +19,7 @@ vi.mock('@/lib/auth-utils', () => ({
 
 
 const mockSession: Session = {
-  user: { id: '1', name: 'Test User', email: 'test@example.com' },
+  user: { id: '1', name: 'Test User', email: 'test@example.com', permissions: [], role: { id: '1', name: 'Admin' } },
   expires: '2025-01-01T00:00:00.000Z',
 };
 
@@ -31,7 +31,7 @@ describe('GET /api/permissions', () => {
   it('should return a list of permissions successfully', async () => {
     vi.mocked(getServerSession).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
-    const mockPermissions: Permission[] = [{ id: '1', name: 'TEST_PERMISSION', description: 'A test permission' }];
+    const mockPermissions: Permission[] = [{ id: '1', name: 'TEST_PERMISSION' }];
     vi.mocked(prisma.permission.findMany).mockResolvedValue(mockPermissions);
 
     const response = await GET();

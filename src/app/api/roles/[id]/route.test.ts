@@ -20,7 +20,7 @@ vi.mock('@/lib/auth-utils', () => ({
 }));
 
 const mockSession: Session = {
-  user: { id: '1', name: 'Test User', email: 'test@example.com' },
+  user: { id: '1', name: 'Test User', email: 'test@example.com', permissions: [], role: { id: '1', name: 'Admin' } },
   expires: '2025-01-01T00:00:00.000Z',
 };
 
@@ -42,7 +42,7 @@ describe('GET /api/roles/[id]', () => {
     vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.role.findUnique).mockResolvedValue(mockRole);
 
-    const response = await GET({} as NextRequest, { params: Promise.resolve({ id: '1' }) });
+    const response = await GET({} as NextRequest, { params: { id: '1' } });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -54,7 +54,7 @@ describe('GET /api/roles/[id]', () => {
     vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.role.findUnique).mockResolvedValue(null);
 
-    const response = await GET({} as NextRequest, { params: Promise.resolve({ id: '1' }) });
+    const response = await GET({} as NextRequest, { params: { id: '1' } });
     expect(response.status).toBe(404);
   });
 });
@@ -79,12 +79,12 @@ describe('PUT /api/roles/[id]', () => {
       vi.mocked(getServerSession).mockResolvedValue(mockSession);
       vi.mocked(authorize).mockReturnValue(true);
 
-      const req = new Request('http://localhost', {
+      const req = new NextRequest('http://localhost', {
         method: 'PUT',
         body: JSON.stringify({ name: 'NEW_NAME', permissionIds: ['1', '2'] }),
-      }) as NextRequest;
+      });
 
-      const response = await PUT(req, { params: Promise.resolve({ id: '1' }) });
+      const response = await PUT(req, { params: { id: '1' } });
       const data = await response.json();
 
       expect(response.status).toBe(200);

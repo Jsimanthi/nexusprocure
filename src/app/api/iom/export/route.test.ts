@@ -20,7 +20,7 @@ vi.mock('@/lib/iom');
 vi.mock('@/lib/auth-utils');
 
 const mockAdminSession: Session = {
-  user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['READ_ALL_IOMS'] },
+  user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['READ_ALL_IOMS'], role: { id: 'admin-role', name: 'Admin' } },
   expires: '2099-01-01T00:00:00.000Z',
 };
 
@@ -46,7 +46,7 @@ describe('GET /api/iom/export', () => {
 
   it('should return 403 if user does not have READ_ALL_IOMS permission', async () => {
     const mockUserSession: Session = {
-        user: { id: 'user-id', name: 'Test User', email: 'test@example.com', permissions: [] },
+        user: { id: 'user-id', name: 'Test User', email: 'test@example.com', permissions: [], role: { id: 'user-role', name: 'User' } },
         expires: '2099-01-01T00:00:00.000Z',
     };
     vi.mocked(getServerSession).mockResolvedValue(mockUserSession);
@@ -77,14 +77,15 @@ describe('GET /api/iom/export', () => {
     const response = await GET() as InstanceType<typeof NextResponse>;
     const text = await response.text();
     const parsed = Papa.parse(text, { header: true });
+    const firstRow = parsed.data[0] as any;
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/csv');
     expect(parsed.data).toHaveLength(1);
-    expect(parsed.data[0]['IOM Number']).toBe('IOM-001');
-    expect(parsed.data[0]['Title']).toBe('Test IOM 1');
-    expect(parsed.data[0]['Status']).toBe('APPROVED');
-    expect(parsed.data[0]['Prepared By']).toBe('Admin');
-    expect(parsed.data[0]['Items']).toBe('Item 1 (Qty: 1, Price: 100)');
+    expect(firstRow['IOM Number']).toBe('IOM-001');
+    expect(firstRow['Title']).toBe('Test IOM 1');
+    expect(firstRow['Status']).toBe('APPROVED');
+    expect(firstRow['Prepared By']).toBe('Admin');
+    expect(firstRow['Items']).toBe('Item 1 (Qty: 1, Price: 100)');
   });
 });

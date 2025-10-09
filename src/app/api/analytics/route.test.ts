@@ -2,6 +2,7 @@ import { GET } from './route';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { Session } from 'next-auth';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock dependencies
 vi.mock('next-auth/next', () => ({
@@ -23,6 +24,10 @@ type MockSession = DeepPartial<Session> & {
   user?: {
     id?: string;
     permissions?: string[];
+    role?: {
+      id: string;
+      name: string;
+    };
   };
 };
 
@@ -39,7 +44,7 @@ describe('GET /api/analytics', () => {
 
   it('should return 403 if user does not have VIEW_ANALYTICS permission', async () => {
     const mockSession: MockSession = {
-      user: { id: 'user-1', permissions: [] },
+      user: { id: 'user-1', permissions: [], role: { id: 'role-1', name: 'User' } },
     };
     vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
     const response = await GET();
@@ -48,7 +53,7 @@ describe('GET /api/analytics', () => {
 
   it('should return analytics data for an authorized user', async () => {
     const mockSession: MockSession = {
-      user: { id: 'admin-id', permissions: ['VIEW_ANALYTICS'] },
+      user: { id: 'admin-id', permissions: ['VIEW_ANALYTICS'], role: { id: 'role-2', name: 'Admin' } },
     };
     vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
 
@@ -81,7 +86,7 @@ describe('GET /api/analytics', () => {
 
   it('should handle database errors gracefully', async () => {
     const mockSession: MockSession = {
-      user: { id: 'admin-id', permissions: ['VIEW_ANALYTICS'] },
+      user: { id: 'admin-id', permissions: ['VIEW_ANALYTICS'], role: { id: 'role-2', name: 'Admin' } },
     };
     vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
 

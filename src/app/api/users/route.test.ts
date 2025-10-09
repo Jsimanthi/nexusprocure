@@ -5,6 +5,7 @@ import { Session } from 'next-auth';
 import { User } from '@prisma/client';
 import { getServerSession } from 'next-auth/next';
 import { authorize } from '@/lib/auth-utils';
+import { NextRequest } from 'next/server';
 
 vi.mock('@/lib/prisma');
 vi.mock('next-auth/next', () => ({
@@ -18,7 +19,7 @@ vi.mock('@/lib/auth-utils', () => ({
 }));
 
 const mockSession: Session = {
-  user: { id: '1', name: 'Test User', email: 'test@example.com' },
+  user: { id: '1', name: 'Test User', email: 'test@example.com', permissions: [], role: { id: '1', name: 'Admin' } },
   expires: '2025-01-01T00:00:00.000Z',
 };
 
@@ -52,7 +53,7 @@ describe('POST /api/users', () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
     vi.mocked(prisma.user.create).mockResolvedValue(mockUser);
 
-    const req = new Request('http://localhost/api/users', {
+    const req = new NextRequest('http://localhost/api/users', {
       method: 'POST',
       body: JSON.stringify(createUserData),
     });
@@ -75,7 +76,7 @@ describe('POST /api/users', () => {
     vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
 
-    const req = new Request('http://localhost/api/users', {
+    const req = new NextRequest('http://localhost/api/users', {
       method: 'POST',
       body: JSON.stringify(createUserData),
     });
@@ -88,7 +89,7 @@ describe('POST /api/users', () => {
     vi.mocked(getServerSession).mockResolvedValue(mockSession);
     vi.mocked(authorize).mockReturnValue(true);
 
-    const req = new Request('http://localhost/api/users', {
+    const req = new NextRequest('http://localhost/api/users', {
       method: 'POST',
       body: JSON.stringify({ ...createUserData, email: 'not-an-email' }),
     });
@@ -103,7 +104,7 @@ describe('POST /api/users', () => {
       throw new Error('Not authorized');
     });
 
-    const req = new Request('http://localhost/api/users', {
+    const req = new NextRequest('http://localhost/api/users', {
       method: 'POST',
       body: JSON.stringify(createUserData),
     });

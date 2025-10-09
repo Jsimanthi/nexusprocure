@@ -20,7 +20,7 @@ vi.mock('@/lib/pr');
 vi.mock('@/lib/auth-utils');
 
 const mockAdminSession: Session = {
-  user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['READ_ALL_PRS'] },
+  user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['READ_ALL_PRS'], role: { id: 'admin-role', name: 'Admin' } },
   expires: '2099-01-01T00:00:00.000Z',
 };
 
@@ -67,17 +67,18 @@ describe('GET /api/pr/export', () => {
     const response = await GET() as unknown as InstanceType<typeof NextResponse>;
     const text = await response.text();
     const parsed = Papa.parse(text, { header: true });
+    const firstRow = parsed.data[0] as any;
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/csv');
     expect(response.headers.get('Content-Disposition')).toContain('attachment; filename="payment-requests-export-');
 
     expect(parsed.data).toHaveLength(1);
-    expect(parsed.data[0]['PR Number']).toBe('PR-001');
-    expect(parsed.data[0]['Title']).toBe('Test PR 1');
-    expect(parsed.data[0]['Status']).toBe('APPROVED');
-    expect(parsed.data[0]['Payment To']).toBe('Test Vendor');
-    expect(parsed.data[0]['Grand Total']).toBe('110');
-    expect(parsed.data[0]['PO Number']).toBe('PO-001');
+    expect(firstRow['PR Number']).toBe('PR-001');
+    expect(firstRow['Title']).toBe('Test PR 1');
+    expect(firstRow['Status']).toBe('APPROVED');
+    expect(firstRow['Payment To']).toBe('Test Vendor');
+    expect(firstRow['Grand Total']).toBe('110');
+    expect(firstRow['PO Number']).toBe('PO-001');
   });
 });
