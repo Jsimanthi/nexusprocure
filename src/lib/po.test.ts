@@ -1,17 +1,13 @@
 // src/lib/po.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getPOs, createPurchaseOrder, updatePOStatus, createVendor, updateVendor, deleteVendor } from './po';
+import { getPOs, createPurchaseOrder, updatePOStatus } from './po';
 import { prisma } from './prisma';
 import { PurchaseOrder, POStatus } from '@/types/po';
 import { Session } from 'next-auth';
 import { Prisma } from '@prisma/client';
-import { createVendorSchema } from './schemas';
-import { z } from 'zod';
-
-// Define the type from the Zod schema
-type CreateVendorData = z.infer<typeof createVendorSchema>;
-
 import { authorize } from './auth-utils';
+import { getAuditUser } from './audit';
+import { updateVendorPerformanceMetrics } from './vendor';
 
 // Mock external dependencies
 vi.mock('@/lib/prisma');
@@ -19,7 +15,7 @@ vi.mock('@/lib/email');
 vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
 vi.mock('@/lib/auth-utils');
-import { getAuditUser } from './audit';
+vi.mock('./vendor');
 
 const mockUserSession = (permissions: string[] = []): Session => ({
   user: {
@@ -146,7 +142,6 @@ describe('Purchase Order Functions', () => {
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
       vi.mocked(prisma.purchaseOrder.create)
         .mockRejectedValueOnce(uniqueConstraintError) // Fail first time
-
         .mockResolvedValue({ id: 'po-125', ...inputData } as unknown as PurchaseOrder); // Succeed second time
 
       // Act
@@ -161,6 +156,7 @@ describe('Purchase Order Functions', () => {
     const poId = 'po-123';
     const approverId = 'approver-id';
     const reviewerId = 'reviewer-id';
+    const vendorId = 'vendor-1';
     const approverSession = mockUserSession(['APPROVE_PO']);
     approverSession.user.id = approverId;
     const reviewerSession = mockUserSession(['REVIEW_PO']);
@@ -168,6 +164,7 @@ describe('Purchase Order Functions', () => {
 
     const basePo = {
       id: poId,
+      vendorId: vendorId,
       preparedById: 'user-prepared-id',
       poNumber: 'PO-2024-0001',
       status: POStatus.PENDING_APPROVAL,
@@ -186,6 +183,24 @@ describe('Purchase Order Functions', () => {
         } as unknown as PurchaseOrder;
       });
     });
+
+    it('should call updateVendorPerformanceMetrics when a PO is delivered', async () => {
+        const deliverSession = mockUserSession(['DELIVER_PO']);
+        const deliveredPO = { ...basePo, status: POStatus.DELIVERED, fulfilledAt: new Date(), vendorId: 'vendor-1' };
+        vi.mocked(authorize).mockReturnValue(true);
+        // @ts-expect-error We are intentionally mocking a partial object for this test
+        vi.mocked(prisma.purchaseOrder.update).mockResolvedValue(deliveredPO);
+        vi.mocked(updateVendorPerformanceMetrics).mockResolvedValue(undefined);
+
+        await updatePOStatus(poId, "DELIVER", deliverSession);
+
+        expect(authorize).toHaveBeenCalledWith(deliverSession, 'DELIVER_PO');
+        expect(prisma.purchaseOrder.update).toHaveBeenCalledWith({
+          where: { id: poId },
+          data: { status: POStatus.DELIVERED, fulfilledAt: expect.any(Date) },
+        });
+        expect(updateVendorPerformanceMetrics).toHaveBeenCalledWith('vendor-1');
+      });
 
     it('should throw an error if user is not the designated reviewer or approver', async () => {
       const unrelatedUserSession = mockUserSession(['REVIEW_PO', 'APPROVE_PO']);
@@ -250,62 +265,6 @@ describe('Purchase Order Functions', () => {
         data: { status: POStatus.REJECTED },
         include: expect.any(Object),
       });
-    });
-  });
-
-  describe('Vendor Functions', () => {
-    const session = mockUserSession(['MANAGE_VENDORS']);
-    const vendorData: CreateVendorData = { name: 'New Vendor', address: '123 Vendor St', contactInfo: 'info', email: 'v@e.com', phone: '123', currency: 'USD' };
-    const vendorId = 'vendor-123';
-
-    it('should prevent creating a vendor if user lacks permission', async () => {
-      const authError = new Error('Not authorized');
-      const sessionWithoutPerm = mockUserSession([]);
-      vi.mocked(authorize).mockImplementation(() => {
-        throw authError;
-      });
-      await expect(createVendor(vendorData, sessionWithoutPerm)).rejects.toThrow(authError);
-      expect(authorize).toHaveBeenCalledWith(sessionWithoutPerm, 'MANAGE_VENDORS');
-    });
-
-    it('should allow creating a vendor if user has permission', async () => {
-      vi.mocked(authorize).mockReturnValue(true);
-      await expect(createVendor(vendorData, session)).resolves.not.toThrow();
-      expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
-    });
-
-    it('should prevent updating a vendor if user lacks permission', async () => {
-      const authError = new Error('Not authorized');
-      const sessionWithoutPerm = mockUserSession([]);
-      vi.mocked(authorize).mockImplementation(() => {
-        throw authError;
-      });
-      await expect(updateVendor(vendorId, vendorData, sessionWithoutPerm)).rejects.toThrow(
-        authError
-      );
-      expect(authorize).toHaveBeenCalledWith(sessionWithoutPerm, 'MANAGE_VENDORS');
-    });
-
-    it('should allow updating a vendor if user has permission', async () => {
-      vi.mocked(authorize).mockReturnValue(true);
-      await expect(updateVendor(vendorId, vendorData, session)).resolves.not.toThrow();
-      expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
-    });
-
-    it('should prevent deleting a vendor if user lacks permission', async () => {
-      const authError = new Error('Not authorized');
-      const sessionWithoutPerm = mockUserSession([]);
-      vi.mocked(authorize).mockImplementation(() => {
-        throw authError;
-      });
-      await expect(deleteVendor(vendorId, sessionWithoutPerm)).rejects.toThrow(authError);
-      expect(authorize).toHaveBeenCalledWith(sessionWithoutPerm, 'MANAGE_VENDORS');
-    });
-
-    it('should allow deleting a vendor if user has permission', async () => {
-      vi.mocked(authorize).mockReturnValue(true);
-      await expect(deleteVendor(vendorId, session)).resolves.not.toThrow();
-      expect(authorize).toHaveBeenCalledWith(session, 'MANAGE_VENDORS');
     });
   });
 

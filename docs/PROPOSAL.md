@@ -71,13 +71,15 @@ This phase focuses on building a powerful, self-service analytics module that al
 
 ### 3.3. Vendor Performance Analytics
 
-*   **Status:** ⏳ **Not Started**
+*   **Status:** ✅ **Complete**
 *   **Concept:** A dedicated section to analyze and rate vendor performance.
-*   **Metrics to Track:**
-    *   **On-Time Delivery Rate:** How often do vendors meet their delivery deadlines?
-    *   **Price Variance:** How does the quoted price compare to the final invoiced price?
-    *   **Quality Score:** A rating system for the quality of goods/services received.
-*   **Visualization:** A vendor scorecard or a scatter plot comparing vendors based on cost and reliability.
+*   **Update:**
+    *   The `Vendor` model in the database has been extended to store `onTimeDeliveryRate` and `averageQualityScore`.
+    *   A new function, `updateVendorPerformanceMetrics`, automatically recalculates these scores whenever a Purchase Order is marked as "Delivered".
+    *   A new **Vendor Details Page** (`/dashboard/vendors/[id]`) has been created to display these performance metrics alongside a complete history of the vendor's purchase orders.
+    *   Users with `MANAGE_VENDORS` permission can now input a **Quality Score (1-5)** directly on the Vendor Details page for each delivered purchase order.
+*   **Next Steps:**
+    *   Consider adding price variance tracking in a future iteration.
 
 ### 3.4. Export & Scheduled Reports
 

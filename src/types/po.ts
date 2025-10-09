@@ -22,6 +22,8 @@ export interface Vendor {
   email: string;
   phone: string;
   currency: string;
+  onTimeDeliveryRate?: number;
+  averageQualityScore?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }

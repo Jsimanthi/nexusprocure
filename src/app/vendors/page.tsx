@@ -302,9 +302,9 @@ export default function VendorsPage() {
                   <div className="px-4 py-4 sm:px-6">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-medium text-gray-900 truncate">
+                        <Link href={`/dashboard/vendors/${vendor.id}`} className="text-lg font-medium text-blue-600 hover:underline truncate">
                           {vendor.name} <span className="text-sm font-normal text-gray-500">({vendor.currency})</span>
-                        </h3>
+                        </Link>
                         <p className="text-sm text-gray-500 truncate">
                           {vendor.email} | {vendor.phone}
                         </p>
@@ -325,14 +325,18 @@ export default function VendorsPage() {
                         </button>
                       </div>
                     </div>
-                    {vendor.taxId && (
-                      <p className="text-sm text-gray-500 mt-2">
-                        Tax ID: {vendor.taxId}
-                      </p>
-                    )}
-                    <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                      {vendor.address}
-                    </p>
+
+                    <div className="mt-4 flex justify-between items-center text-sm text-gray-600 border-t border-gray-200 pt-2">
+                        <div className="flex items-center gap-2">
+                            <span className="font-medium">On-Time Delivery:</span>
+                            <span className="font-bold text-green-600">{(vendor.onTimeDeliveryRate || 0).toFixed(1)}%</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="font-medium">Avg. Quality Score:</span>
+                            <span className="font-bold text-blue-600">{(vendor.averageQualityScore || 0).toFixed(2)} / 5</span>
+                        </div>
+                    </div>
+
                   </div>
                 </li>
               ))

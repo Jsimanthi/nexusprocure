@@ -17,6 +17,15 @@ export const formatCurrency = (amount: number, currency = 'INR') => {
   }).format(amount);
 };
 
+export const formatDate = (date: string | Date | null | undefined) => {
+  if (!date) return 'N/A';
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
 export const getPOStatusColor = (status: POStatus) => {
   switch (status) {
     case POStatus.DRAFT: return "bg-gray-100 text-gray-800";

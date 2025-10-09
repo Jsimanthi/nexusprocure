@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getVendorById, updateVendor, deleteVendor } from "@/lib/po";
+import { getVendorById, updateVendor, deleteVendor } from "@/lib/vendor";
 import { updateVendorSchema } from "@/lib/schemas";
 import { Prisma } from "@prisma/client";
 

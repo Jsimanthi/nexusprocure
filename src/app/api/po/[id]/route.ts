@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getPOById, updatePOStatus } from "@/lib/po";
+import { getPOById, updatePOStatus, updatePODetails } from "@/lib/po";
 import { authorize } from "@/lib/auth-utils";
 
 export async function GET(
@@ -54,23 +54,22 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { action } = body;
+    const { action, qualityScore, deliveryNotes } = body;
 
-    const validActions = ["APPROVE", "REJECT", "ORDER", "DELIVER", "CANCEL"];
-    if (!action || !validActions.includes(action)) {
-      return NextResponse.json(
-        { error: "Invalid action provided." },
-        { status: 400 }
-      );
+    if (action) {
+      const validActions = ["APPROVE", "REJECT", "ORDER", "DELIVER", "CANCEL"];
+      if (!validActions.includes(action)) {
+        return NextResponse.json(
+          { error: "Invalid action provided." },
+          { status: 400 }
+        );
+      }
+      const po = await updatePOStatus(id, action as "APPROVE" | "REJECT" | "ORDER" | "DELIVER" | "CANCEL", session);
+      return NextResponse.json(po);
+    } else {
+      const po = await updatePODetails(id, { qualityScore, deliveryNotes }, session);
+      return NextResponse.json(po);
     }
-
-    const po = await updatePOStatus(id, action as "APPROVE" | "REJECT" | "ORDER" | "DELIVER" | "CANCEL", session);
-    
-    if (!po) {
-      return NextResponse.json({ error: "PO not found" }, { status: 404 });
-    }
-
-    return NextResponse.json(po);
   } catch (error) {
     console.error("Error updating PO:", error);
     if (error instanceof Error) {
