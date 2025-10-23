@@ -67,8 +67,8 @@ describe('GET /api/analytics', () => {
       .mockResolvedValueOnce(mockSpendOverTime)
       .mockResolvedValueOnce(mockSpendByDepartment);
 
-    vi.mocked(prisma.pOItem.groupBy).mockResolvedValue(mockSpendByCategory as unknown);
-    vi.mocked(prisma.purchaseOrder.groupBy).mockResolvedValue(mockTopVendors as unknown);
+    vi.mocked(prisma.pOItem.groupBy).mockResolvedValue(mockSpendByCategory as any);
+    vi.mocked(prisma.purchaseOrder.groupBy).mockResolvedValue(mockTopVendors as any);
 
     const response = await GET();
     const data = await response.json();

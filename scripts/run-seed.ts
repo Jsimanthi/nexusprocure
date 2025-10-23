@@ -1,4 +1,4 @@
-import { main } from '../prisma/seed.js';
+import { main } from '../prisma/seed';
 
 main()
   .then(async () => {

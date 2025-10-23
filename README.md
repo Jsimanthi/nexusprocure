@@ -85,7 +85,15 @@ npm run migrate:sqlite
 npm run seed
 ```
 
-The seed data includes default user accounts with different roles. You can find the credentials in `prisma/seed.ts`.
+The seed data includes default user accounts with different roles:
+
+- **Admin**: admin@nexusprocure.com / password123
+- **Manager**: manager@nexusprocure.com / password123
+- **Approver**: approver@nexusprocure.com / password123
+- **Procurement Officer**: procurement@nexusprocure.com / password123
+- **Finance Officer**: finance@nexusprocure.com / password123
+
+You can find the seed script in `prisma/seed.ts`.
 
 ### 5. Start Redis (Optional - for background jobs)
 
@@ -111,7 +119,6 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ### 7. Access the Application
 
-- **Default Admin User**: Check `prisma/seed.ts` for credentials
 - **Dashboard**: Available at `/dashboard`
 - **API Documentation**: Available at `/api` endpoints
 

@@ -57,8 +57,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // FIX: Pass the session as the second argument to createVendor
-    const vendor = await createVendor(validation.data, session);
+    const vendor = await createVendor(validation.data);
 
     return NextResponse.json(vendor, { status: 201 });
   } catch (error) {

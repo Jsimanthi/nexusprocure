@@ -26,7 +26,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const vendors = await getAllVendorsForExport(session);
+    const vendors = await getAllVendorsForExport();
 
     // Flatten the data for CSV export
     const flattenedData = vendors.map((vendor: VendorExport) => ({

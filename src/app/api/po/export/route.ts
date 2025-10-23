@@ -14,10 +14,10 @@ type POExport = {
   taxAmount: number;
   grandTotal: number;
   currency: string;
-  preparedBy: { name: string };
-  requestedBy: { name: string };
-  reviewedBy: { name: string } | null;
-  approvedBy: { name: string } | null;
+  preparedBy: { name: string | null };
+  requestedBy: { name: string | null };
+  reviewedBy: { name: string | null } | null;
+  approvedBy: { name: string | null } | null;
   iom: { iomNumber: string } | null;
   createdAt: Date;
   updatedAt: Date;

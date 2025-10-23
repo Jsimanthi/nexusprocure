@@ -13,10 +13,10 @@ type IOMExport = {
   status: string;
   totalAmount: number;
   isUrgent: boolean;
-  preparedBy: { name: string };
-  requestedBy: { name: string };
-  reviewedBy: { name: string } | null;
-  approvedBy: { name: string } | null;
+  preparedBy: { name: string | null };
+  requestedBy: { name: string | null };
+  reviewedBy: { name: string | null } | null;
+  approvedBy: { name: string | null } | null;
   createdAt: Date;
   updatedAt: Date;
   items: { itemName: string; quantity: number; unitPrice: number }[];

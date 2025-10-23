@@ -138,7 +138,7 @@ export async function getVendorById(id: string) {
   }
 }
 
-export async function createVendor(data: unknown) {
+export async function createVendor(data: any) {
   try {
     return await prisma.vendor.create({
       data: {
@@ -153,7 +153,7 @@ export async function createVendor(data: unknown) {
   }
 }
 
-export async function updateVendor(id: string, data: unknown) {
+export async function updateVendor(id: string, data: any) {
   try {
     return await prisma.vendor.update({
       where: { id },

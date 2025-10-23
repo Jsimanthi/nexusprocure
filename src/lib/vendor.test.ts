@@ -11,6 +11,18 @@ describe('Vendor Performance Metrics', () => {
   });
 
   it('should reset metrics to zero if a vendor has no completed orders', async () => {
+    vi.mocked(prisma.vendor.findUnique).mockResolvedValue({
+      id: 'vendor-1',
+      name: 'Test Vendor',
+      email: 'test@vendor.com',
+      phone: '123-456-7890',
+      address: '123 Vendor St',
+      onTimeDeliveryRate: 0,
+      averageQualityScore: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      purchaseOrders: [],
+    } as any);
     vi.mocked(prisma.purchaseOrder.findMany).mockResolvedValue([]);
 
     await updateVendorPerformanceMetrics('vendor-1');
@@ -35,6 +47,18 @@ describe('Vendor Performance Metrics', () => {
       // No expected date, should be ignored
       { id: 'po-4', vendorId: 'vendor-1', expectedDeliveryDate: null, fulfilledAt: new Date('2023-01-14'), status: 'DELIVERED', qualityScore: null, deliveryNotes: null, poNumber: '', title: '', companyName: '', companyAddress: '', companyContact: '', vendorName: '', vendorAddress: '', vendorContact: '', totalAmount: 0, taxAmount: 0, grandTotal: 0, taxRate: 0, currency: 'INR', exchangeRate: 1, reviewerStatus: 'PENDING', approverStatus: 'PENDING', preparedById: '', requestedById: '', reviewedById: null, approvedById: null, createdAt: new Date(), updatedAt: new Date(), iomId: null, pdfToken: null },
     ];
+    vi.mocked(prisma.vendor.findUnique).mockResolvedValue({
+      id: 'vendor-1',
+      name: 'Test Vendor',
+      email: 'test@vendor.com',
+      phone: '123-456-7890',
+      address: '123 Vendor St',
+      onTimeDeliveryRate: 0,
+      averageQualityScore: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      purchaseOrders: mockPOs,
+    } as any);
     vi.mocked(prisma.purchaseOrder.findMany).mockResolvedValue(mockPOs);
 
     await updateVendorPerformanceMetrics('vendor-1');
@@ -57,6 +81,18 @@ describe('Vendor Performance Metrics', () => {
       // Score of 0, should be ignored
       { id: 'po-4', vendorId: 'vendor-1', qualityScore: 0, expectedDeliveryDate: null, fulfilledAt: null, status: 'DELIVERED', deliveryNotes: null, poNumber: '', title: '', companyName: '', companyAddress: '', companyContact: '', vendorName: '', vendorAddress: '', vendorContact: '', totalAmount: 0, taxAmount: 0, grandTotal: 0, taxRate: 0, currency: 'INR', exchangeRate: 1, reviewerStatus: 'PENDING', approverStatus: 'PENDING', preparedById: '', requestedById: '', reviewedById: null, approvedById: null, createdAt: new Date(), updatedAt: new Date(), iomId: null, pdfToken: null },
     ];
+    vi.mocked(prisma.vendor.findUnique).mockResolvedValue({
+      id: 'vendor-1',
+      name: 'Test Vendor',
+      email: 'test@vendor.com',
+      phone: '123-456-7890',
+      address: '123 Vendor St',
+      onTimeDeliveryRate: 0,
+      averageQualityScore: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      purchaseOrders: mockPOs,
+    } as any);
     vi.mocked(prisma.purchaseOrder.findMany).mockResolvedValue(mockPOs);
 
     await updateVendorPerformanceMetrics('vendor-1');

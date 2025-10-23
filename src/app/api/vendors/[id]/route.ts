@@ -59,8 +59,7 @@ export async function PUT(
       );
     }
 
-    // FIX: Pass the session as the third argument
-    const vendor = await updateVendor(id, validation.data, session);
+    const vendor = await updateVendor(id, validation.data);
     
     if (!vendor) {
       return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
@@ -92,8 +91,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // FIX: Pass the session as the second argument
-    await deleteVendor(id, session);
+    await deleteVendor(id);
     
     return NextResponse.json({ success: true });
   } catch (error) {

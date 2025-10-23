@@ -248,7 +248,7 @@ describe('Purchase Order Functions', () => {
         const deliverSession = mockUserSession(['DELIVER_PO']);
         const deliveredPO = { ...basePo, status: POStatus.DELIVERED, fulfilledAt: new Date(), vendorId: 'vendor-1' };
         vi.mocked(authorize).mockReturnValue(true);
-        vi.mocked(prisma.purchaseOrder.update).mockResolvedValue(deliveredPO as unknown);
+        vi.mocked(prisma.purchaseOrder.update).mockResolvedValue(deliveredPO as any);
         vi.mocked(updateVendorPerformanceMetrics).mockResolvedValue(undefined);
 
         await updatePOStatus(poId, "DELIVER", deliverSession);

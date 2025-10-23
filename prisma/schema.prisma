@@ -85,25 +85,26 @@ model User {
   @@index([roleId])
   sessions      Session[]
   notifications Notification[]
+  refreshTokens RefreshToken[]
 
   // Reverse relations for IOM
   preparedIOMs  IOM[]     @relation("IOMPreparedBy")
   requestedIOMs IOM[]     @relation("IOMRequestedBy")
   reviewedIOMs  IOM[]     @relation("IOMReviewedBy")
   approvedIOMs  IOM[]     @relation("IOMApprovedBy")
-  
+
   // Reverse relations for PurchaseOrder
   preparedPOs  PurchaseOrder[] @relation("POPreparedBy")
   requestedPOs PurchaseOrder[] @relation("PORequestedBy")
   reviewedPOs  PurchaseOrder[] @relation("POReviewedBy")
   approvedPOs  PurchaseOrder[] @relation("POApprovedBy")
-  
+
   // Reverse relations for PaymentRequest
   preparedPRs  PaymentRequest[] @relation("PRPreparedBy")
   requestedPRs PaymentRequest[] @relation("PRRequestedBy")
   reviewedPRs  PaymentRequest[] @relation("PRReviewedBy")
   approvedPRs  PaymentRequest[] @relation("PRApprovedBy")
-  
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -410,6 +411,19 @@ enum PaymentMethod {
   BANK_TRANSFER
   CASH
   ONLINE_PAYMENT
+}
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  userId      String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
 }
 
 model Notification {

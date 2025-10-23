@@ -70,7 +70,7 @@ describe('PUT /api/roles/[id]', () => {
         },
       } as unknown as DeepMockProxy<typeof prisma>;
 
-      vi.mocked(prisma.$transaction).mockImplementation(async (callback: unknown) => {
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
         return callback(mockTx);
       });
     });

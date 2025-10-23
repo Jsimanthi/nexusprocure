@@ -16,10 +16,10 @@ type PRExport = {
   grandTotal: number;
   currency: string;
   po: { poNumber: string } | null;
-  preparedBy: { name: string };
-  requestedBy: { name: string };
-  reviewedBy: { name: string } | null;
-  approvedBy: { name: string } | null;
+  preparedBy: { name: string | null };
+  requestedBy: { name: string | null };
+  reviewedBy: { name: string | null } | null;
+  approvedBy: { name: string | null } | null;
   createdAt: Date;
   updatedAt: Date;
   paymentDate: Date;

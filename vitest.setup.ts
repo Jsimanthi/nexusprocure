@@ -9,4 +9,9 @@ vi.mock('next/server', () => ({
       ...init,
     }),
   },
+  NextRequest: class NextRequest {
+    constructor(input: string | URL, init?: RequestInit) {
+      return new Request(input, init);
+    }
+  },
 }));

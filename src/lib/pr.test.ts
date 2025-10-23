@@ -248,7 +248,7 @@ describe('Payment Request (PR) Functions', () => {
         requestedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
         reviewedBy: null,
         approvedBy: null,
-      } as unknown);
+      } as any);
     });
 
     it('should throw an error if user is not the designated reviewer or approver', async () => {

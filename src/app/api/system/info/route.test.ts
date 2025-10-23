@@ -36,7 +36,7 @@ type MockSession = DeepPartial<Session> & {
 };
 
 describe('GET /api/system/info', () => {
-  let readFileSpy: unknown;
+  let readFileSpy: any;
 
   beforeEach(() => {
     vi.clearAllMocks();

@@ -67,7 +67,7 @@ describe('GET /api/pr/export', () => {
     const response = await GET() as unknown as InstanceType<typeof NextResponse>;
     const text = await response.text();
     const parsed = Papa.parse(text, { header: true });
-    const firstRow = parsed.data[0] as unknown;
+    const firstRow = parsed.data[0] as Record<string, string>;
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/csv');
