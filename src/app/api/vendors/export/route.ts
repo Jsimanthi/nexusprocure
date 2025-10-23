@@ -14,7 +14,7 @@ export async function GET() {
     const vendors = await getAllVendorsForExport(session);
 
     // Flatten the data for CSV export
-    const flattenedData = vendors.map(vendor => ({
+    const flattenedData = vendors.map((vendor: any) => ({
       'Name': vendor.name,
       'Email': vendor.email,
       'Phone': vendor.phone,

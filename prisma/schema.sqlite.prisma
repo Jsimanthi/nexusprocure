@@ -1,0 +1,429 @@
+// prisma/schema.sqlite.prisma
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/sqlite-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL_SQLITE")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Permission {
+  id    String @id @default(cuid())
+  name  String @unique
+  roles PermissionsOnRoles[]
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  users       User[]
+  permissions PermissionsOnRoles[]
+}
+
+model PermissionsOnRoles {
+  role         Role       @relation(fields: [roleId], references: [id])
+  roleId       String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  permissionId String
+  assignedAt   DateTime   @default(now())
+  assignedBy   String // Could be a userId or a system identifier
+
+  @@id([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  roleId        String?
+  role          Role?     @relation(fields: [roleId], references: [id])
+  password      String?
+  accounts      Account[]
+  @@index([roleId])
+  sessions      Session[]
+  notifications Notification[]
+
+  // Reverse relations for IOM
+  preparedIOMs  IOM[]     @relation("IOMPreparedBy")
+  requestedIOMs IOM[]     @relation("IOMRequestedBy")
+  reviewedIOMs  IOM[]     @relation("IOMReviewedBy")
+  approvedIOMs  IOM[]     @relation("IOMApprovedBy")
+
+  // Reverse relations for PurchaseOrder
+  preparedPOs  PurchaseOrder[] @relation("POPreparedBy")
+  requestedPOs PurchaseOrder[] @relation("PORequestedBy")
+  reviewedPOs  PurchaseOrder[] @relation("POReviewedBy")
+  approvedPOs  PurchaseOrder[] @relation("POApprovedBy")
+
+  // Reverse relations for PaymentRequest
+  preparedPRs  PaymentRequest[] @relation("PRPreparedBy")
+  requestedPRs PaymentRequest[] @relation("PRRequestedBy")
+  reviewedPRs  PaymentRequest[] @relation("PRReviewedBy")
+  approvedPRs  PaymentRequest[] @relation("PRApprovedBy")
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model IOM {
+  id             String       @id @default(cuid())
+  iomNumber      String       @unique
+  pdfToken       String?      @unique
+  title          String
+  from           String
+  to             String
+  subject        String
+  content        String?
+  isUrgent       Boolean      @default(false)
+  status         IOMStatus    @default(DRAFT)
+  totalAmount    Float        @default(0)
+  reviewerStatus ActionStatus @default(PENDING)
+  approverStatus ActionStatus @default(PENDING)
+
+  // Relationships
+  items       IOMItem[]
+  preparedBy  User      @relation(fields: [preparedById], references: [id], name: "IOMPreparedBy")
+  requestedBy User      @relation(fields: [requestedById], references: [id], name: "IOMRequestedBy")
+  reviewedBy  User?     @relation(fields: [reviewedById], references: [id], name: "IOMReviewedBy")
+  approvedBy  User?     @relation(fields: [approvedById], references: [id], name: "IOMApprovedBy")
+
+  // Reverse relation for PurchaseOrder
+  purchaseOrders PurchaseOrder[]
+  attachments    Attachment[]
+
+  // Foreign keys
+  preparedById  String
+  requestedById String
+  reviewedById  String?
+  approvedById  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([preparedById])
+  @@index([requestedById])
+  @@index([reviewedById])
+  @@index([approvedById])
+  @@index([status])
+}
+
+enum ActionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  model     String
+  recordId  String
+  userId    String
+  userName  String
+  changes   String // Stored as a JSON string
+
+  createdAt DateTime @default(now())
+}
+
+model IOMItem {
+  id          String  @id @default(cuid())
+  itemName    String
+  description String?
+  category    String?
+  quantity    Int     @default(1)
+  unitPrice   Float   @default(0)
+  totalPrice  Float   @default(0)
+
+  // Relationship
+  iom     IOM   @relation(fields: [iomId], references: [id], onDelete: Cascade)
+  iomId   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([iomId])
+}
+
+enum IOMStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model PurchaseOrder {
+  id             String       @id @default(cuid())
+  poNumber       String       @unique
+  pdfToken       String?      @unique
+  iomId          String?
+  vendorId       String?
+  title          String
+  status         POStatus     @default(DRAFT)
+  expectedDeliveryDate DateTime?
+  fulfilledAt    DateTime?
+  qualityScore   Int?
+  deliveryNotes  String?
+  totalAmount    Float        @default(0)
+  taxAmount      Float        @default(0)
+  grandTotal     Float        @default(0)
+  taxRate        Float        @default(0) // GST tax rate in percentage
+  currency       String       @default("INR")
+  exchangeRate   Float        @default(1.0)
+  reviewerStatus ActionStatus @default(PENDING)
+  approverStatus ActionStatus @default(PENDING)
+
+  // Company and Vendor Details
+  companyName     String
+  companyAddress  String
+  companyContact  String
+  vendorName      String
+  vendorAddress   String
+  vendorContact   String
+
+  // Relationships
+  items           POItem[]
+  iom             IOM?             @relation(fields: [iomId], references: [id])
+  vendor          Vendor?          @relation(fields: [vendorId], references: [id])
+  preparedBy      User             @relation(fields: [preparedById], references: [id], name: "POPreparedBy")
+  requestedBy     User             @relation(fields: [requestedById], references: [id], name: "PORequestedBy")
+  reviewedBy      User?            @relation(fields: [reviewedById], references: [id], name: "POReviewedBy")
+  approvedBy      User?            @relation(fields: [approvedById], references: [id], name: "POApprovedBy")
+
+  // Reverse relation for PaymentRequest
+  paymentRequests PaymentRequest[]
+  attachments     Attachment[]
+
+  // Foreign keys
+  preparedById  String
+  requestedById String
+  reviewedById  String?
+  approvedById  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([iomId])
+  @@index([vendorId])
+  @@index([preparedById])
+  @@index([requestedById])
+  @@index([reviewedById])
+  @@index([approvedById])
+  @@index([status])
+}
+
+model POItem {
+  id          String  @id @default(cuid())
+  itemName    String
+  description String?
+  category    String?
+  quantity    Int     @default(1)
+  unitPrice   Float   @default(0)
+  taxRate     Float   @default(0) // Item-specific tax rate
+  taxAmount   Float   @default(0)
+  totalPrice  Float   @default(0)
+
+  // Relationship
+  po    PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  poId  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([poId])
+}
+
+model Vendor {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  contactInfo String
+  taxId       String?
+  website     String?
+  email       String
+  phone       String
+  currency    String   @default("INR")
+
+  // Performance Metrics
+  onTimeDeliveryRate  Float @default(0)
+  averageQualityScore Float @default(0)
+
+  // Relationships
+  purchaseOrders PurchaseOrder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum POStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  ORDERED
+  DELIVERED
+  CANCELLED
+  COMPLETED
+}
+
+model PaymentRequest {
+  id              String        @id @default(cuid())
+  prNumber        String        @unique
+  pdfToken        String?       @unique
+  poId            String?
+  title           String
+  status          PRStatus      @default(DRAFT)
+  totalAmount     Float         @default(0)
+  taxAmount       Float         @default(0)
+  grandTotal      Float         @default(0)
+  currency        String        @default("INR")
+  exchangeRate    Float         @default(1.0)
+  reviewerStatus  ActionStatus  @default(PENDING)
+  approverStatus  ActionStatus  @default(PENDING)
+
+  // Payment Details
+  paymentTo       String
+  paymentDate     DateTime
+  purpose         String
+  paymentMethod   PaymentMethod @default(CHEQUE)
+  bankAccount     String?
+  referenceNumber String?
+
+  // Relationships
+  po          PurchaseOrder? @relation(fields: [poId], references: [id])
+  attachments Attachment[]
+  preparedBy  User           @relation(fields: [preparedById], references: [id], name: "PRPreparedBy")
+  requestedBy User           @relation(fields: [requestedById], references: [id], name: "PRRequestedBy")
+  reviewedBy  User?          @relation(fields: [reviewedById], references: [id], name: "PRReviewedBy")
+  approvedBy  User?          @relation(fields: [approvedById], references: [id], name: "PRApprovedBy")
+
+  // Foreign keys
+  preparedById  String
+  requestedById String
+  reviewedById  String?
+  approvedById  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([poId])
+  @@index([preparedById])
+  @@index([requestedById])
+  @@index([reviewedById])
+  @@index([approvedById])
+  @@index([status])
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  url       String
+  filename  String
+  filetype  String
+  size      Int
+
+  // Relationships
+  iomId     String?
+  iom       IOM?      @relation(fields: [iomId], references: [id], onDelete: Cascade)
+
+  poId      String?
+  po        PurchaseOrder? @relation(fields: [poId], references: [id], onDelete: Cascade)
+
+  prId      String?
+  pr        PaymentRequest? @relation(fields: [prId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([iomId])
+  @@index([poId])
+  @@index([prId])
+}
+
+enum PRStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  PROCESSED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CHEQUE
+  BANK_TRANSFER
+  CASH
+  ONLINE_PAYMENT
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  message   String
+  read      Boolean  @default(false)
+
+  // Relation to User
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}

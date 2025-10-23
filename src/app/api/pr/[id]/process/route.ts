@@ -24,7 +24,7 @@ export async function POST(
     const { id: prId } = await context.params;
 
     // Use a transaction to ensure all updates succeed or fail together
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const pr = await tx.paymentRequest.findUnique({
         where: { id: prId },
         include: { po: { select: { id: true, iomId: true } } },

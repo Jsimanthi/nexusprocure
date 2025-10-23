@@ -14,7 +14,7 @@ export async function GET() {
     const pos = await getAllPOsForExport(session);
 
     // Flatten the data for CSV export
-    const flattenedData = pos.map(po => ({
+    const flattenedData = pos.map((po: any) => ({
       'PO Number': po.poNumber,
       'Title': po.title,
       'Status': po.status,
@@ -33,7 +33,7 @@ export async function GET() {
       'Expected Delivery': po.expectedDeliveryDate?.toISOString() || 'N/A',
       'Fulfilled At': po.fulfilledAt?.toISOString() || 'N/A',
       'Quality Score': po.qualityScore || 'N/A',
-      'Items': po.items.map(item => `${item.itemName} (Qty: ${item.quantity}, Price: ${item.unitPrice})`).join('; '),
+      'Items': po.items.map((item: any) => `${item.itemName} (Qty: ${item.quantity}, Price: ${item.unitPrice})`).join('; '),
     }));
 
     const csv = Papa.unparse(flattenedData);

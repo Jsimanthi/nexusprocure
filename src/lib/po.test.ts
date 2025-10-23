@@ -248,8 +248,7 @@ describe('Purchase Order Functions', () => {
         const deliverSession = mockUserSession(['DELIVER_PO']);
         const deliveredPO = { ...basePo, status: POStatus.DELIVERED, fulfilledAt: new Date(), vendorId: 'vendor-1' };
         vi.mocked(authorize).mockReturnValue(true);
-        // @ts-expect-error We are intentionally mocking a partial object for this test
-        vi.mocked(prisma.purchaseOrder.update).mockResolvedValue(deliveredPO);
+        vi.mocked(prisma.purchaseOrder.update).mockResolvedValue(deliveredPO as any);
         vi.mocked(updateVendorPerformanceMetrics).mockResolvedValue(undefined);
 
         await updatePOStatus(poId, "DELIVER", deliverSession);

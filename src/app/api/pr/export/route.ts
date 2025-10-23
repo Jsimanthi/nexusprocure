@@ -14,7 +14,7 @@ export async function GET() {
     const prs = await getAllPRsForExport(session);
 
     // Flatten the data for CSV export
-    const flattenedData = prs.map(pr => ({
+    const flattenedData = prs.map((pr: any) => ({
       'PR Number': pr.prNumber,
       'Title': pr.title,
       'Status': pr.status,

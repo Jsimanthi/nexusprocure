@@ -10,7 +10,10 @@
     "lint": "eslint",
     "test": "vitest",
     "postinstall": "prisma generate",
-    "seed": "node --loader ts-node/esm scripts/run-seed.ts"
+    "seed": "node --loader ts-node/esm scripts/run-seed.ts",
+    "migrate:pg": "npx prisma migrate deploy --schema=prisma/schema.postgres.prisma",
+    "migrate:sqlite": "npx prisma migrate deploy --schema=prisma/schema.sqlite.prisma",
+    "generate:prisma:all": "npx prisma generate --schema=prisma/schema.postgres.prisma && npx prisma generate --schema=prisma/schema.sqlite.prisma"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",

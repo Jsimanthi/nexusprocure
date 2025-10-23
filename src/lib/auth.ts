@@ -65,7 +65,7 @@ export const authOptions: AuthOptions = {
         token.roleId = dbUser.role?.id;
         token.roleName = dbUser.role?.name;
         token.permissions = dbUser.role?.permissions.map(
-          (p) => p.permission.name
+          (p: any) => p.permission.name
         );
       }
 

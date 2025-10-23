@@ -67,10 +67,8 @@ describe('GET /api/analytics', () => {
       .mockResolvedValueOnce(mockSpendOverTime)
       .mockResolvedValueOnce(mockSpendByDepartment);
 
-    // @ts-expect-error - We are mocking a groupBy result
-    vi.mocked(prisma.pOItem.groupBy).mockResolvedValue(mockSpendByCategory);
-    // @ts-expect-error - We are mocking a groupBy result
-    vi.mocked(prisma.purchaseOrder.groupBy).mockResolvedValue(mockTopVendors);
+    vi.mocked(prisma.pOItem.groupBy).mockResolvedValue(mockSpendByCategory as any);
+    vi.mocked(prisma.purchaseOrder.groupBy).mockResolvedValue(mockTopVendors as any);
 
     const response = await GET();
     const data = await response.json();

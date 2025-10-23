@@ -1,8 +1,6 @@
 // prisma/seed.ts
-import { PrismaClient } from '@prisma/client';
+import getPrimaryClient from '../src/lib/db';
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
 
 const permissions = [
   // User Permissions
@@ -75,6 +73,7 @@ const usersToCreate = [
 ];
 
 export async function main() {
+  const prisma = await getPrimaryClient() as any;
   console.log('Start seeding...');
 
   // Create all permissions
@@ -105,7 +104,7 @@ export async function main() {
       data: {
         permissions: {
           deleteMany: {}, // Clear existing permissions
-          create: permissionsToConnect.map((p) => ({
+          create: permissionsToConnect.map((p: any) => ({
             assignedBy: 'system',
             permission: { connect: { id: p.id } },
           })),

@@ -58,7 +58,7 @@ export async function POST(
     }
 
     // Convert IOM items to PO items
-    const poItems = iom.items.map(item => ({
+    const poItems = iom.items.map((item: any) => ({
       itemName: item.itemName,
       description: item.description || '',
       quantity: item.quantity,

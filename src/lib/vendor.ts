@@ -34,26 +34,26 @@ export async function updateVendorPerformanceMetrics(vendorId: string) {
 
   // 2. Calculate On-Time Delivery Rate
   const posWithDeliveryDates = purchaseOrders.filter(
-    (po) => po.expectedDeliveryDate && po.fulfilledAt
+    (po: any) => po.expectedDeliveryDate && po.fulfilledAt
   );
 
   let onTimeDeliveryRate = 0;
   if (posWithDeliveryDates.length > 0) {
     const onTimeDeliveries = posWithDeliveryDates.filter(
-      (po) => po.fulfilledAt! <= po.expectedDeliveryDate!
+      (po: any) => po.fulfilledAt! <= po.expectedDeliveryDate!
     ).length;
     onTimeDeliveryRate = (onTimeDeliveries / posWithDeliveryDates.length) * 100;
   }
 
   // 3. Calculate Average Quality Score
   const posWithQualityScores = purchaseOrders.filter(
-    (po) => po.qualityScore !== null && po.qualityScore > 0
+    (po: any) => po.qualityScore !== null && po.qualityScore > 0
   );
 
   let averageQualityScore = 0;
   if (posWithQualityScores.length > 0) {
     const totalScore = posWithQualityScores.reduce(
-      (acc, po) => acc + po.qualityScore!,
+      (acc: any, po: any) => acc + po.qualityScore!,
       0
     );
     averageQualityScore = totalScore / posWithQualityScores.length;

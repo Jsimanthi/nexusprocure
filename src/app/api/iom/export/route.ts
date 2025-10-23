@@ -14,7 +14,7 @@ export async function GET() {
     const ioms = await getAllIOMsForExport(session);
 
     // Flatten the data for CSV export
-    const flattenedData = ioms.map(iom => ({
+    const flattenedData = ioms.map((iom: any) => ({
       'IOM Number': iom.iomNumber,
       'Title': iom.title,
       'From': iom.from,
@@ -29,7 +29,7 @@ export async function GET() {
       'Approved By': iom.approvedBy?.name || 'N/A',
       'Created At': iom.createdAt.toISOString(),
       'Updated At': iom.updatedAt.toISOString(),
-      'Items': iom.items.map(item => `${item.itemName} (Qty: ${item.quantity}, Price: ${item.unitPrice})`).join('; '),
+      'Items': iom.items.map((item: any) => `${item.itemName} (Qty: ${item.quantity}, Price: ${item.unitPrice})`).join('; '),
     }));
 
     const csv = Papa.unparse(flattenedData);

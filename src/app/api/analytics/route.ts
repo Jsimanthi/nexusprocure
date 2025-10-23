@@ -77,22 +77,22 @@ export async function GET() {
       topVendorsPromise,
     ]);
 
-    const formattedSpendData = spendOverTime.map((item) => ({
+    const formattedSpendData = spendOverTime.map((item: any) => ({
       name: item.month,
       Total: item.total,
     }));
 
-    const formattedCategoryData = spendByCategory.map((item) => ({
+    const formattedCategoryData = spendByCategory.map((item: any) => ({
       name: item.category!,
       value: item._sum.totalPrice || 0,
     }));
 
-    const formattedDepartmentData = spendByDepartment.map((item) => ({
+    const formattedDepartmentData = spendByDepartment.map((item: any) => ({
         name: item.department,
         Total: item.total,
     }));
 
-    const formattedTopVendors = topVendors.map((item) => ({
+    const formattedTopVendors = topVendors.map((item: any) => ({
       name: item.vendorName!,
       Total: item._sum.grandTotal || 0,
     }));
