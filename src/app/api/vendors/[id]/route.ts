@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { getVendorById, updateVendor, deleteVendor } from "@/lib/vendor";
 import { updateVendorSchema } from "@/lib/schemas";
 import { Prisma } from "@prisma/client";
+import logger from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
@@ -27,7 +28,7 @@ export async function GET(
 
     return NextResponse.json(vendor);
   } catch (error) {
-    console.error("Error fetching vendor:", error);
+    logger.error(`Error fetching vendor: ${String(error)}`);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -67,7 +68,7 @@ export async function PUT(
 
     return NextResponse.json(vendor);
   } catch (error) {
-    console.error("Error updating vendor:", error);
+    logger.error(`Error updating vendor: ${String(error)}`);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return NextResponse.json({ error: "A vendor with this name or email already exists." }, { status: 409 });
     }
@@ -96,7 +97,7 @@ export async function DELETE(
     
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting vendor:", error);
+    logger.error(`Error deleting vendor: ${String(error)}`);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2001') {
       return NextResponse.json({ error: "Vendor not found." }, { status: 404 });
     }

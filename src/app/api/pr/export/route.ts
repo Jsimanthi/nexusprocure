@@ -4,6 +4,27 @@ import { authOptions } from '@/lib/auth';
 import { getAllPRsForExport } from '@/lib/pr';
 import Papa from 'papaparse';
 
+type PRExport = {
+  prNumber: string;
+  title: string;
+  status: string;
+  paymentTo: string;
+  purpose: string;
+  paymentMethod: string;
+  totalAmount: number;
+  taxAmount: number;
+  grandTotal: number;
+  currency: string;
+  po: { poNumber: string } | null;
+  preparedBy: { name: string };
+  requestedBy: { name: string };
+  reviewedBy: { name: string } | null;
+  approvedBy: { name: string } | null;
+  createdAt: Date;
+  updatedAt: Date;
+  paymentDate: Date;
+};
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -14,7 +35,7 @@ export async function GET() {
     const prs = await getAllPRsForExport(session);
 
     // Flatten the data for CSV export
-    const flattenedData = prs.map((pr: any) => ({
+    const flattenedData = prs.map((pr: PRExport) => ({
       'PR Number': pr.prNumber,
       'Title': pr.title,
       'Status': pr.status,

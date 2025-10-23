@@ -3,6 +3,8 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import crypto from "crypto";
+import { Permission } from "@prisma/client";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -12,6 +14,9 @@ const credentialsSchema = z.object({
 export const authOptions: AuthOptions = {
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
+  jwt: {
+    maxAge: 15 * 60, // 15 minutes
+  },
   providers: [
     Credentials({
       credentials: {
@@ -45,9 +50,26 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
+      }
+
+      if (account && account.type === 'credentials') {
+        // Generate refresh token
+        const refreshToken = crypto.randomBytes(32).toString('hex');
+        const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+        await prisma.refreshToken.create({
+          data: {
+            token: hashedRefreshToken,
+            userId: token.id as string,
+            expiresAt,
+          },
+        });
+
+        token.refreshToken = refreshToken;
       }
 
       const dbUser = await prisma.user.findUnique({
@@ -65,7 +87,7 @@ export const authOptions: AuthOptions = {
         token.roleId = dbUser.role?.id;
         token.roleName = dbUser.role?.name;
         token.permissions = dbUser.role?.permissions.map(
-          (p: any) => p.permission.name
+          (p: { permission: Permission }) => p.permission.name
         );
       }
 

@@ -3,6 +3,12 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { authorize } from '@/lib/auth-utils';
+import logger from '@/lib/logger';
+
+type SpendOverTimeItem = { month: string; total: number };
+type SpendByCategoryItem = { category: string | null; _sum: { totalPrice: number | null } };
+type SpendByDepartmentItem = { department: string; total: number };
+type TopVendorsItem = { vendorName: string | null; _sum: { grandTotal: number | null } };
 
 export async function GET() {
   try {
@@ -77,22 +83,22 @@ export async function GET() {
       topVendorsPromise,
     ]);
 
-    const formattedSpendData = spendOverTime.map((item: any) => ({
+    const formattedSpendData = spendOverTime.map((item: SpendOverTimeItem) => ({
       name: item.month,
       Total: item.total,
     }));
 
-    const formattedCategoryData = spendByCategory.map((item: any) => ({
+    const formattedCategoryData = spendByCategory.map((item: SpendByCategoryItem) => ({
       name: item.category!,
       value: item._sum.totalPrice || 0,
     }));
 
-    const formattedDepartmentData = spendByDepartment.map((item: any) => ({
+    const formattedDepartmentData = spendByDepartment.map((item: SpendByDepartmentItem) => ({
         name: item.department,
         Total: item.total,
     }));
 
-    const formattedTopVendors = topVendors.map((item: any) => ({
+    const formattedTopVendors = topVendors.map((item: TopVendorsItem) => ({
       name: item.vendorName!,
       Total: item._sum.grandTotal || 0,
     }));
@@ -110,7 +116,7 @@ export async function GET() {
       topCategories: topCategories,
     });
   } catch (error) {
-    console.error("Error fetching analytics data:", error);
+    logger.error(`Error fetching analytics data: ${error}`);
     if (error instanceof Error && error.message.includes('Not authorized')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

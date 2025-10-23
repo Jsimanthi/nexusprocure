@@ -86,6 +86,8 @@ model User {
   @@index([roleId])
   sessions      Session[]
   notifications Notification[]
+  refreshTokens RefreshToken[]
+  workflowInstances WorkflowInstance[]
 
   // Reverse relations for IOM
   preparedIOMs  IOM[]     @relation("IOMPreparedBy")
@@ -426,4 +428,50 @@ model Notification {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([token])
+}
+
+model WorkflowDefinition {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  steps       String
+  isActive    Boolean  @default(true)
+  instances   WorkflowInstance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WorkflowInstance {
+  id                String   @id @default(cuid())
+  workflowDefId     String
+  workflowDef       WorkflowDefinition @relation(fields: [workflowDefId], references: [id])
+  entityType        String
+  entityId          String
+  currentStep       Int      @default(0)
+  status            String   @default("PENDING")
+  stepData          String
+  assignedTo        String?
+  assignedToUser    User?    @relation(fields: [assignedTo], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workflowDefId])
+  @@index([entityType, entityId])
+  @@index([assignedTo])
 }

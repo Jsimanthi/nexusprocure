@@ -1,5 +1,5 @@
 // prisma/seed.ts
-import getPrimaryClient from '../src/lib/db';
+import getPrimaryClient from '../src/lib/db/index';
 import bcrypt from 'bcryptjs';
 
 const permissions = [

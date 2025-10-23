@@ -6,6 +6,7 @@ import { getVendors, createVendor } from "@/lib/vendor";
 import { createVendorSchema } from "@/lib/schemas";
 import { Prisma } from "@prisma/client";
 import { fromZodError } from "zod-validation-error";
+import logger from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
       pageCount: Math.ceil(total / pageSize),
     });
   } catch (error) {
-    console.error("Error fetching vendors:", error);
+    logger.error(`Error fetching vendors: ${String(error)}`);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(vendor, { status: 201 });
   } catch (error) {
-    console.error("Error creating vendor:", error);
+    logger.error(`Error creating vendor: ${String(error)}`);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         return NextResponse.json({ error: "A vendor with this email or name already exists." }, { status: 409 });
     }

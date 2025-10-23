@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import puppeteer from 'puppeteer';
+import pdfService from '@/lib/pdfService';
 
 export async function GET(
   request: NextRequest,
@@ -23,27 +23,10 @@ export async function GET(
     }
 
     // Construct the URL to the printable page
-    const url = `${process.env.NEXT_PUBLIC_APP_URL}/print/iom/${iom.id}`;
+    const url = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/print/iom/${iom.id}`;
 
-    const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-    const page = await browser.newPage();
-
-    // Go to the URL and wait for the page to be fully loaded
-    await page.goto(url, { waitUntil: 'networkidle0' });
-
-    // Generate the PDF
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20px',
-        right: '20px',
-        bottom: '20px',
-        left: '20px'
-      }
-    });
-
-    await browser.close();
+    // Generate the PDF using the service
+    const pdfBuffer = await pdfService.generatePDF(url);
 
     // Create a new Blob from the pdfBuffer
     const pdfBlob = new Blob([new Uint8Array(pdfBuffer)], { type: 'application/pdf' });

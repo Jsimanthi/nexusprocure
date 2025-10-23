@@ -77,7 +77,7 @@ describe('GET /api/iom/export', () => {
     const response = await GET() as InstanceType<typeof NextResponse>;
     const text = await response.text();
     const parsed = Papa.parse(text, { header: true });
-    const firstRow = parsed.data[0] as any;
+    const firstRow = parsed.data[0] as unknown;
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/csv');

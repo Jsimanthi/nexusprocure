@@ -35,7 +35,7 @@ const renderWithProviders = (ui: React.ReactElement) => {
 };
 
 describe('SettingsPage', () => {
-  let fetchSpy: any;
+  let fetchSpy: vi.SpyInstance;
 
   beforeEach(() => {
     vi.clearAllMocks();

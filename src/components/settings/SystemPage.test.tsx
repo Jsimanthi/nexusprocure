@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type SpyInstance } from 'vitest';
 import SystemPage from './SystemPage';
 import toast from 'react-hot-toast';
 
@@ -25,7 +25,7 @@ const renderWithProviders = (ui: React.ReactElement) => {
 };
 
 describe('SystemPage', () => {
-  let fetchSpy: any;
+  let fetchSpy: SpyInstance;
 
   beforeEach(() => {
     vi.clearAllMocks();

@@ -12,12 +12,12 @@ async function getPrimaryClient() {
     await pg.$queryRaw`SELECT 1`;
     await sq.$disconnect().catch(()=>{});
     return pg;
-  } catch (e) {
+  } catch {
     // fallback to sqlite
     try {
       await sq.$connect();
       return sq;
-    } catch (err) {
+    } catch {
       throw new Error('No database available');
     }
   }

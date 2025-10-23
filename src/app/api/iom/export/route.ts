@@ -4,6 +4,24 @@ import { authOptions } from '@/lib/auth';
 import { getAllIOMsForExport } from '@/lib/iom';
 import Papa from 'papaparse';
 
+type IOMExport = {
+  iomNumber: string;
+  title: string;
+  from: string;
+  to: string;
+  subject: string;
+  status: string;
+  totalAmount: number;
+  isUrgent: boolean;
+  preparedBy: { name: string };
+  requestedBy: { name: string };
+  reviewedBy: { name: string } | null;
+  approvedBy: { name: string } | null;
+  createdAt: Date;
+  updatedAt: Date;
+  items: { itemName: string; quantity: number; unitPrice: number }[];
+};
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -14,7 +32,7 @@ export async function GET() {
     const ioms = await getAllIOMsForExport(session);
 
     // Flatten the data for CSV export
-    const flattenedData = ioms.map((iom: any) => ({
+    const flattenedData = ioms.map((iom: IOMExport) => ({
       'IOM Number': iom.iomNumber,
       'Title': iom.title,
       'From': iom.from,
@@ -29,7 +47,7 @@ export async function GET() {
       'Approved By': iom.approvedBy?.name || 'N/A',
       'Created At': iom.createdAt.toISOString(),
       'Updated At': iom.updatedAt.toISOString(),
-      'Items': iom.items.map((item: any) => `${item.itemName} (Qty: ${item.quantity}, Price: ${item.unitPrice})`).join('; '),
+      'Items': iom.items.map((item: { itemName: string; quantity: number; unitPrice: number }) => `${item.itemName} (Qty: ${item.quantity}, Price: ${item.unitPrice})`).join('; '),
     }));
 
     const csv = Papa.unparse(flattenedData);

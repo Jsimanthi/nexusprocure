@@ -13,6 +13,7 @@ import { authorize } from "./auth-utils";
 import { logAudit, getAuditUser } from "./audit";
 import { Prisma } from "@prisma/client";
 import { triggerPusherEvent } from "./pusher";
+import logger from "./logger";
 
 export async function generateIOMNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -169,7 +170,7 @@ export async function getPublicIOMById(id: string) {
         select: selectClause,
       });
     } catch (error) {
-      console.warn(`Failed to update IOM with new PDF token, likely due to a race condition. Refetching...`, error);
+      logger.warn(`Failed to update IOM with new PDF token, likely due to a race condition. Refetching...: ${error}`);
       iom = await prisma.iOM.findUnique({
         where: { id },
         select: selectClause,

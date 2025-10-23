@@ -4,6 +4,29 @@ import { authOptions } from '@/lib/auth';
 import { getAllPOsForExport } from '@/lib/po';
 import Papa from 'papaparse';
 
+type POExport = {
+  poNumber: string;
+  title: string;
+  status: string;
+  vendor: { name: string } | null;
+  vendorName: string;
+  totalAmount: number;
+  taxAmount: number;
+  grandTotal: number;
+  currency: string;
+  preparedBy: { name: string };
+  requestedBy: { name: string };
+  reviewedBy: { name: string } | null;
+  approvedBy: { name: string } | null;
+  iom: { iomNumber: string } | null;
+  createdAt: Date;
+  updatedAt: Date;
+  expectedDeliveryDate: Date | null;
+  fulfilledAt: Date | null;
+  qualityScore: number | null;
+  items: { itemName: string; quantity: number; unitPrice: number }[];
+};
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -14,7 +37,7 @@ export async function GET() {
     const pos = await getAllPOsForExport(session);
 
     // Flatten the data for CSV export
-    const flattenedData = pos.map((po: any) => ({
+    const flattenedData = pos.map((po: POExport) => ({
       'PO Number': po.poNumber,
       'Title': po.title,
       'Status': po.status,
@@ -33,7 +56,7 @@ export async function GET() {
       'Expected Delivery': po.expectedDeliveryDate?.toISOString() || 'N/A',
       'Fulfilled At': po.fulfilledAt?.toISOString() || 'N/A',
       'Quality Score': po.qualityScore || 'N/A',
-      'Items': po.items.map((item: any) => `${item.itemName} (Qty: ${item.quantity}, Price: ${item.unitPrice})`).join('; '),
+      'Items': po.items.map((item: { itemName: string; quantity: number; unitPrice: number }) => `${item.itemName} (Qty: ${item.quantity}, Price: ${item.unitPrice})`).join('; '),
     }));
 
     const csv = Papa.unparse(flattenedData);

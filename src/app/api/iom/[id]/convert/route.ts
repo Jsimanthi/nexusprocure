@@ -6,6 +6,8 @@ import { getIOMById } from "@/lib/iom";
 import { createPurchaseOrder } from "@/lib/po";
 import { prisma } from "@/lib/prisma";
 
+type IOMItemType = { itemName: string; description: string | null; quantity: number; unitPrice: number };
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -58,7 +60,7 @@ export async function POST(
     }
 
     // Convert IOM items to PO items
-    const poItems = iom.items.map((item: any) => ({
+    const poItems = iom.items.map((item: IOMItemType) => ({
       itemName: item.itemName,
       description: item.description || '',
       quantity: item.quantity,

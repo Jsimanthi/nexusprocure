@@ -58,7 +58,7 @@ describe('GET /api/vendors/export', () => {
     expect(response.headers.get('Content-Disposition')).toContain('attachment; filename="vendors-export-');
 
     expect(parsed.data).toHaveLength(1);
-    const data = parsed.data[0] as any;
+    const data = parsed.data[0] as unknown;
     expect(data['Name']).toBe('Test Vendor');
     expect(data['Email']).toBe('vendor@test.com');
     expect(data['On-Time Delivery Rate (%)']).toBe('95.50');
