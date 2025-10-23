@@ -17,14 +17,15 @@ export interface UserRef {
 }
 
 export interface IOM {
-  id?: string;
+  id: string;
   iomNumber: string;
-  pdfToken?: string | null;
+  pdfToken: string | null;
   title: string;
   from: string;
   to: string;
   subject: string;
-  content?: string;
+  content: string | null;
+  isUrgent: boolean;
   status: IOMStatus;
   totalAmount: number;
   reviewerStatus: ActionStatus;
@@ -32,11 +33,11 @@ export interface IOM {
   items: IOMItem[];
   preparedById: string;
   requestedById: string;
-  reviewedById?: string;
-  approvedById?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-  
+  reviewedById: string | null;
+  approvedById: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+
   // Relation fields (added by Prisma includes)
   preparedBy?: UserRef;
   requestedBy?: UserRef;

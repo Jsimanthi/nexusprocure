@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -15,7 +16,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const renderWithProviders = (ui) => {
+const renderWithProviders = (ui: React.ReactElement) => {
   return render(
     <QueryClientProvider client={queryClient}>
       {ui}
@@ -24,7 +25,7 @@ const renderWithProviders = (ui) => {
 };
 
 describe('SystemPage', () => {
-  let fetchSpy;
+  let fetchSpy: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -74,7 +75,7 @@ describe('SystemPage', () => {
 
   it('should call the seed API and show a success toast when the "Re-seed Database" button is clicked', async () => {
     const mockSystemInfo = { appVersion: '1.0.0', nodeVersion: 'v18.0.0', dbStatus: 'ok' };
-    fetchSpy.mockImplementation((url) => {
+    fetchSpy.mockImplementation((url: string) => {
       if (url.toString().includes('/api/system/seed')) {
         return Promise.resolve({
           ok: true, status: 200,
@@ -106,7 +107,7 @@ describe('SystemPage', () => {
 
   it('should show an error toast if the seed API call fails', async () => {
     const mockSystemInfo = { appVersion: '1.0.0', nodeVersion: 'v18.0.0', dbStatus: 'ok' };
-    fetchSpy.mockImplementation((url) => {
+    fetchSpy.mockImplementation((url: string) => {
       if (url.toString().includes('/api/system/seed')) {
         return Promise.resolve({
           ok: false, status: 500,

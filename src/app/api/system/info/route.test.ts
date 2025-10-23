@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import fs from 'fs';
 import { Session } from 'next-auth';
+import { vi } from 'vitest';
 
 // Mock dependencies
 vi.mock('next-auth/next', () => ({
@@ -27,11 +28,15 @@ type MockSession = DeepPartial<Session> & {
   user?: {
     id?: string;
     permissions?: string[];
+    role?: {
+      id: string;
+      name: string;
+    };
   };
 };
 
 describe('GET /api/system/info', () => {
-  let readFileSpy: vi.SpyInstance;
+  let readFileSpy: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -50,7 +55,7 @@ describe('GET /api/system/info', () => {
 
   it('should return 403 if user does not have MANAGE_SETTINGS permission', async () => {
     const mockSession: MockSession = {
-      user: { id: 'user-1', permissions: ['SOME_OTHER_PERMISSION'] },
+      user: { id: 'user-1', permissions: ['SOME_OTHER_PERMISSION'], role: { id: 'role-1', name: 'User' } },
     };
     vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
     const response = await GET();
@@ -59,7 +64,7 @@ describe('GET /api/system/info', () => {
 
   it('should return system information for an authorized user', async () => {
     const mockSession: MockSession = {
-      user: { id: 'admin-id', permissions: ['MANAGE_SETTINGS'] },
+      user: { id: 'admin-id', permissions: ['MANAGE_SETTINGS'], role: { id: 'role-2', name: 'Admin' } },
     };
     vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
 
@@ -77,7 +82,7 @@ describe('GET /api/system/info', () => {
 
   it('should return dbStatus as "error" if the database query fails', async () => {
     const mockSession: MockSession = {
-      user: { id: 'admin-id', permissions: ['MANAGE_SETTINGS'] },
+      user: { id: 'admin-id', permissions: ['MANAGE_SETTINGS'], role: { id: 'role-2', name: 'Admin' } },
     };
     vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
 

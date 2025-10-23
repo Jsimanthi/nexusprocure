@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider } from 'next-auth/react';
@@ -19,9 +20,9 @@ const queryClient = new QueryClient({
 });
 
 // Wrapper component to provide necessary contexts
-const renderWithProviders = (ui) => {
+const renderWithProviders = (ui: React.ReactElement) => {
   const mockSession = {
-    user: { id: 'test-user', name: 'Test User' },
+    user: { id: 'test-user', name: 'Test User', role: { id: 'role-1', name: 'User' }, permissions: [] },
     expires: '2099-01-01T00:00:00.000Z',
   };
   return render(
@@ -34,7 +35,7 @@ const renderWithProviders = (ui) => {
 };
 
 describe('SettingsPage', () => {
-  let fetchSpy;
+  let fetchSpy: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -76,7 +77,7 @@ describe('SettingsPage', () => {
     vi.mocked(useHasPermission).mockReturnValue(true);
     let mockSettings = [{ id: '1', key: 'company_name', value: 'Nexus Inc.' }];
 
-    fetchSpy.mockImplementation((url, options) => {
+    fetchSpy.mockImplementation((url: string, options: RequestInit) => {
       if (options?.method === 'PUT') {
         const updatedSetting = { id: '1', key: 'company_name', value: 'Nexus Corp.' };
         // This update is crucial for the refetch to get the new value
@@ -113,7 +114,7 @@ describe('SettingsPage', () => {
     vi.mocked(useHasPermission).mockReturnValue(true);
     const mockSettings = [{ id: '1', key: 'company_name', value: 'Nexus Inc.' }];
 
-    fetchSpy.mockImplementation((url, options) => {
+    fetchSpy.mockImplementation((url: string, options: RequestInit) => {
         if (options?.method === 'PUT') {
             return Promise.resolve({
                 ok: false, status: 500,

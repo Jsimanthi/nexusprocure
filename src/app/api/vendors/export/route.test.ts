@@ -20,7 +20,7 @@ vi.mock('@/lib/vendor');
 vi.mock('@/lib/auth-utils');
 
 const mockAdminSession: Session = {
-  user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['MANAGE_VENDORS'] },
+  user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['MANAGE_VENDORS'], role: { id: 'role-1', name: 'Admin' } },
   expires: '2099-01-01T00:00:00.000Z',
 };
 
@@ -58,9 +58,10 @@ describe('GET /api/vendors/export', () => {
     expect(response.headers.get('Content-Disposition')).toContain('attachment; filename="vendors-export-');
 
     expect(parsed.data).toHaveLength(1);
-    expect(parsed.data[0]['Name']).toBe('Test Vendor');
-    expect(parsed.data[0]['Email']).toBe('vendor@test.com');
-    expect(parsed.data[0]['On-Time Delivery Rate (%)']).toBe('95.50');
-    expect(parsed.data[0]['Average Quality Score']).toBe('4.80');
+    const data = parsed.data[0] as any;
+    expect(data['Name']).toBe('Test Vendor');
+    expect(data['Email']).toBe('vendor@test.com');
+    expect(data['On-Time Delivery Rate (%)']).toBe('95.50');
+    expect(data['Average Quality Score']).toBe('4.80');
   });
 });

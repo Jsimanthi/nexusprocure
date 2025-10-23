@@ -23,6 +23,7 @@ const mockUserSession = (permissions: string[] = []): Session => ({
     name: 'Test User',
     email: 'test@example.com',
     permissions,
+    role: { id: 'role-1', name: 'User' },
   },
   expires: '2099-01-01T00:00:00.000Z',
 });
@@ -42,12 +43,30 @@ describe('IOM Functions', () => {
         subject: 'Test',
         preparedById: 'user-1',
         requestedById: 'user-1',
-        items: []
+        reviewerId: 'reviewer-1',
+        approverId: 'approver-1',
+        items: [],
+        isUrgent: false
       };
       const session = mockUserSession(['CREATE_IOM']);
       vi.mocked(authorize).mockReturnValue(true);
 
-      vi.mocked(prisma.iOM.create).mockResolvedValue({ id: 'new-iom-id', ...iomData } as unknown as IOM);
+      vi.mocked(prisma.iOM.create).mockResolvedValue({
+        id: 'new-iom-id',
+        ...iomData,
+        isUrgent: false,
+        iomNumber: 'IOM-2024-0001',
+        pdfToken: 'pdf-token',
+        totalAmount: 0,
+        reviewerStatus: 'PENDING',
+        approverStatus: 'PENDING',
+        status: IOMStatus.DRAFT,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        content: null,
+        reviewedById: 'reviewer-1',
+        approvedById: 'approver-1'
+      } as IOM);
 
       await createIOM(iomData, session);
 
@@ -65,7 +84,10 @@ describe('IOM Functions', () => {
         subject: 'Test',
         preparedById: 'user-1',
         requestedById: 'user-1',
-        items: []
+        reviewerId: 'reviewer-1',
+        approverId: 'approver-1',
+        items: [],
+        isUrgent: false
       };
       const session = mockUserSession(['CREATE_IOM']);
       vi.mocked(authorize).mockReturnValue(true);
@@ -78,7 +100,7 @@ describe('IOM Functions', () => {
       vi.mocked(prisma.iOM.create)
         .mockRejectedValueOnce(uniqueConstraintError)
 
-        .mockResolvedValue({ id: 'new-iom-id', ...iomData } as unknown as IOM);
+        .mockResolvedValue({ id: 'new-iom-id', ...iomData, isUrgent: false } as unknown as IOM);
 
       await createIOM(iomData, session);
 
@@ -98,7 +120,23 @@ describe('IOM Functions', () => {
       const session = mockUserSession(['CREATE_IOM']);
       vi.mocked(authorize).mockReturnValue(true);
 
-      const createdIomMock = { id: 'new-iom-id-no-items', ...iomData, items: [] } as unknown as IOM;
+      const createdIomMock = {
+        id: 'new-iom-id-no-items',
+        ...iomData,
+        items: [],
+        isUrgent: false,
+        iomNumber: 'IOM-2024-0002',
+        pdfToken: 'pdf-token-2',
+        totalAmount: 0,
+        reviewerStatus: 'PENDING',
+        approverStatus: 'PENDING',
+        status: IOMStatus.DRAFT,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        content: null,
+        reviewedById: null,
+        approvedById: null
+      } as IOM;
       vi.mocked(prisma.iOM.create).mockResolvedValue(createdIomMock);
 
       // We need to cast because the base type expects `items`
@@ -127,13 +165,18 @@ describe('IOM Functions', () => {
     const approverId = 'approver-id';
     const reviewerId = 'reviewer-id';
     const approverSession = mockUserSession(['APPROVE_IOM']);
-    approverSession.user.id = approverId;
+    approverSession.user!.id = approverId;
     const reviewerSession = mockUserSession(['REVIEW_IOM']);
-    reviewerSession.user.id = reviewerId;
+    reviewerSession.user!.id = reviewerId;
 
     const baseIom = {
       id: iomId,
+      title: 'Test IOM',
+      from: 'Dept A',
+      to: 'Dept B',
+      subject: 'Test Subject',
       preparedById: 'user-prepared-id',
+      requestedById: 'user-prepared-id',
       iomNumber: 'IOM-2024-0001',
       status: IOMStatus.PENDING_APPROVAL,
       reviewerStatus: "PENDING",
@@ -141,25 +184,30 @@ describe('IOM Functions', () => {
       approvedById: approverId,
       reviewedById: reviewerId,
       preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+      isUrgent: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      pdfToken: null,
+      content: null,
+      totalAmount: 0,
+      items: [],
     };
 
     beforeEach(() => {
       // Mock the final update call that sets the overall status
-      vi.mocked(prisma.iOM.update).mockImplementation(async (args) => {
-        // This is a bit tricky. We need to return the result of the *first* update
-        // when the test is checking the sub-status, and the result of the *second*
-        // update for the final result.
-        // For simplicity, we'll just return a mock that works for all cases.
-        return {
-          ...baseIom,
-          ...(args.data as object),
-        } as unknown as IOM;
-      });
+      vi.mocked(prisma.iOM.update).mockResolvedValue({
+        ...baseIom,
+        items: [],
+        preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+        requestedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+        reviewedBy: undefined,
+        approvedBy: undefined,
+      } as IOM);
     });
 
     it('should throw an error if user is not the designated reviewer or approver', async () => {
       const unrelatedUserSession = mockUserSession(['REVIEW_IOM', 'APPROVE_IOM']);
-      unrelatedUserSession.user.id = 'unrelated-user';
+      unrelatedUserSession.user!.id = 'unrelated-user';
       vi.mocked(prisma.iOM.findUnique).mockResolvedValue(baseIom as IOM);
 
       await expect(
@@ -240,7 +288,28 @@ describe('IOM Functions', () => {
       const session = mockUserSession(['DELETE_IOM']);
       vi.mocked(authorize).mockReturnValue(true);
 
-      vi.mocked(prisma.iOM.findUnique).mockResolvedValue({ id: iomId, title: 'IOM to Delete' } as IOM);
+      vi.mocked(prisma.iOM.findUnique).mockResolvedValue({
+        id: iomId,
+        title: 'IOM to Delete',
+        from: 'Dept A',
+        to: 'Dept B',
+        subject: 'Test Subject',
+        preparedById: 'user-prepared-id',
+        requestedById: 'user-prepared-id',
+        iomNumber: 'IOM-2024-0001',
+        status: IOMStatus.DRAFT,
+        reviewerStatus: 'PENDING',
+        approverStatus: 'PENDING',
+        approvedById: null,
+        reviewedById: null,
+        isUrgent: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pdfToken: null,
+        content: null,
+        totalAmount: 0,
+        items: [],
+      } as IOM);
 
       await deleteIOM(iomId, session);
 
@@ -254,10 +323,7 @@ describe('IOM Functions', () => {
     beforeEach(() => {
       vi.mocked(prisma.iOM.findMany).mockResolvedValue([]);
       vi.mocked(prisma.iOM.count).mockResolvedValue(0);
-      vi.mocked(prisma.$transaction).mockImplementation(async (promises: [Prisma.PrismaPromise<IOM[]>, Prisma.PrismaPromise<number>]) => {
-        const [findManyResult, countResult] = await Promise.all(promises);
-        return [findManyResult, countResult];
-      });
+      vi.mocked(prisma.$transaction).mockResolvedValue([[], 0]);
     });
 
     it('should filter by user involvement if user lacks READ_ALL_IOMS permission', async () => {
@@ -269,10 +335,10 @@ describe('IOM Functions', () => {
             AND: expect.arrayContaining([
               {
                 OR: [
-                  { preparedById: session.user.id },
-                  { requestedById: session.user.id },
-                  { reviewedById: session.user.id },
-                  { approvedById: session.user.id },
+                  { preparedById: session.user!.id },
+                  { requestedById: session.user!.id },
+                  { reviewedById: session.user!.id },
+                  { approvedById: session.user!.id },
                 ],
               },
             ]),

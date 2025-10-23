@@ -63,7 +63,6 @@ describe('GET /api/analytics', () => {
     const mockSpendByDepartment = [{ department: 'Engineering', total: 750 }];
     const mockTopVendors = [{ vendorName: 'Dell Inc.', _sum: { grandTotal: 5000 } }];
 
-    // @ts-expect-error - We are mocking a raw query result
     vi.mocked(prisma.$queryRaw)
       .mockResolvedValueOnce(mockSpendOverTime)
       .mockResolvedValueOnce(mockSpendByDepartment);

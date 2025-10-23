@@ -23,6 +23,7 @@ const mockUserSession = (permissions: string[] = []): Session => ({
     name: 'Test User',
     email: 'test@example.com',
     permissions,
+    role: { id: 'role-1', name: 'User' },
   },
   expires: '2099-01-01T00:00:00.000Z',
 });
@@ -45,6 +46,9 @@ const mockPaymentRequest: PaymentRequest = {
   paymentMethod: PaymentMethod.CASH,
   bankAccount: null,
   referenceNumber: null,
+  pdfToken: null,
+  reviewerStatus: 'PENDING',
+  approverStatus: 'PENDING',
   preparedById: 'user-1',
   requestedById: 'user-1',
   reviewedById: null,
@@ -66,7 +70,6 @@ const mockPurchaseOrder: PurchaseOrder = {
   grandTotal: 1000,
   currency: 'USD',
   exchangeRate: 1,
-  notes: null,
   vendorId: 'vendor-1',
   vendorName: 'Test Vendor',
   vendorContact: 'contact@example.com',
@@ -74,13 +77,19 @@ const mockPurchaseOrder: PurchaseOrder = {
   requestedById: 'user-1',
   reviewedById: null,
   approvedById: null,
-  companyId: 'company-1',
   companyName: 'Test Company',
   companyAddress: '123 Main St',
   companyContact: 'company@example.com',
   vendorAddress: '456 Vendor St',
+  expectedDeliveryDate: null,
+  fulfilledAt: null,
+  qualityScore: null,
+  deliveryNotes: null,
   createdAt: new Date(),
   updatedAt: new Date(),
+  pdfToken: null,
+  reviewerStatus: 'PENDING',
+  approverStatus: 'PENDING',
 };
 
 describe('Payment Request (PR) Functions', () => {
@@ -101,7 +110,9 @@ describe('Payment Request (PR) Functions', () => {
         taxAmount: 10,
         grandTotal: 110,
         preparedById: 'user-1',
-        requestedById: 'user-1'
+        requestedById: 'user-1',
+        reviewerId: 'reviewer-1',
+        approverId: 'approver-1'
       };
       const session = mockUserSession(['CREATE_PR']);
       vi.mocked(authorize).mockReturnValue(true);
@@ -126,7 +137,9 @@ describe('Payment Request (PR) Functions', () => {
         taxAmount: 10,
         grandTotal: 110,
         preparedById: 'user-1',
-        requestedById: 'user-1'
+        requestedById: 'user-1',
+        reviewerId: 'reviewer-1',
+        approverId: 'approver-1'
       };
       const session = mockUserSession(['CREATE_PR']);
       vi.mocked(authorize).mockReturnValue(true);
@@ -158,7 +171,9 @@ describe('Payment Request (PR) Functions', () => {
         totalAmount: 1400,
         taxAmount: 100,
         preparedById: 'user-1',
-        requestedById: 'user-1'
+        requestedById: 'user-1',
+        reviewerId: 'reviewer-1',
+        approverId: 'approver-1'
       };
       const session = mockUserSession(['CREATE_PR']);
       vi.mocked(authorize).mockReturnValue(true);
@@ -186,7 +201,9 @@ describe('Payment Request (PR) Functions', () => {
         totalAmount: 850,
         taxAmount: 50,
         preparedById: 'user-1',
-        requestedById: 'user-1'
+        requestedById: 'user-1',
+        reviewerId: 'reviewer-1',
+        approverId: 'approver-1'
       };
       const session = mockUserSession(['CREATE_PR']);
       vi.mocked(authorize).mockReturnValue(true);
@@ -207,9 +224,9 @@ describe('Payment Request (PR) Functions', () => {
     const approverId = 'approver-id';
     const reviewerId = 'reviewer-id';
     const approverSession = mockUserSession(['APPROVE_PR']);
-    approverSession.user.id = approverId;
+    approverSession.user!.id = approverId;
     const reviewerSession = mockUserSession(['REVIEW_PR']);
-    reviewerSession.user.id = reviewerId;
+    reviewerSession.user!.id = reviewerId;
 
     const basePr = {
       ...mockPaymentRequest,
@@ -223,17 +240,20 @@ describe('Payment Request (PR) Functions', () => {
     };
 
     beforeEach(() => {
-      vi.mocked(prisma.paymentRequest.update).mockImplementation(async (args) => {
-        return {
-          ...basePr,
-          ...(args.data as object),
-        } as unknown as PaymentRequest;
-      });
+      vi.mocked(prisma.paymentRequest.update).mockResolvedValue({
+        ...basePr,
+        po: null,
+        attachments: [],
+        preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+        requestedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+        reviewedBy: null,
+        approvedBy: null,
+      } as any);
     });
 
     it('should throw an error if user is not the designated reviewer or approver', async () => {
       const unrelatedUserSession = mockUserSession(['REVIEW_PR', 'APPROVE_PR']);
-      unrelatedUserSession.user.id = 'unrelated-user';
+      unrelatedUserSession.user!.id = 'unrelated-user';
       vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(basePr as PaymentRequest);
 
       await expect(
@@ -301,10 +321,7 @@ describe('Payment Request (PR) Functions', () => {
     beforeEach(() => {
       vi.mocked(prisma.paymentRequest.findMany).mockResolvedValue([]);
       vi.mocked(prisma.paymentRequest.count).mockResolvedValue(0);
-      vi.mocked(prisma.$transaction).mockImplementation(async (promises: [Prisma.PrismaPromise<PaymentRequest[]>, Prisma.PrismaPromise<number>]) => {
-        const [findManyResult, countResult] = await Promise.all(promises);
-        return [findManyResult, countResult];
-      });
+      vi.mocked(prisma.$transaction).mockResolvedValue([[], 0]);
     });
 
     it('should filter by user involvement if user lacks READ_ALL_PRS permission', async () => {
@@ -316,10 +333,10 @@ describe('Payment Request (PR) Functions', () => {
             AND: expect.arrayContaining([
               {
                 OR: [
-                  { preparedById: session.user.id },
-                  { requestedById: session.user.id },
-                  { reviewedById: session.user.id },
-                  { approvedById: session.user.id },
+                  { preparedById: session.user!.id },
+                  { requestedById: session.user!.id },
+                  { reviewedById: session.user!.id },
+                  { approvedById: session.user!.id },
                 ],
               },
             ]),

@@ -18,12 +18,12 @@ vi.mock('@/lib/auth', () => ({
 vi.mock('@/lib/auth-utils');
 
 const mockAdminSession: Session = {
-  user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['MANAGE_SETTINGS'] },
+  user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['MANAGE_SETTINGS'], role: { id: 'role-1', name: 'Admin' } },
   expires: '2099-01-01T00:00:00.000Z',
 };
 
 const mockUserSession: Session = {
-    user: { id: 'user-id', name: 'User', email: 'user@test.com', permissions: [] },
+    user: { id: 'user-id', name: 'User', email: 'user@test.com', permissions: [], role: { id: 'role-2', name: 'User' } },
     expires: '2099-01-01T00:00:00.000Z',
 };
 

@@ -30,7 +30,7 @@ const mockRole: Role & { permissions: { permission: Permission }[] } = {
     permissions: [],
     createdAt: new Date(),
     updatedAt: new Date(),
-};
+} as Role & { permissions: { permission: Permission }[] };
 
 describe('GET /api/roles/[id]', () => {
   beforeEach(() => {
@@ -42,7 +42,7 @@ describe('GET /api/roles/[id]', () => {
     vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.role.findUnique).mockResolvedValue(mockRole);
 
-    const response = await GET({} as NextRequest, { params: { id: '1' } });
+    const response = await GET({} as NextRequest, { params: Promise.resolve({ id: '1' }) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -54,7 +54,7 @@ describe('GET /api/roles/[id]', () => {
     vi.mocked(authorize).mockReturnValue(true);
     vi.mocked(prisma.role.findUnique).mockResolvedValue(null);
 
-    const response = await GET({} as NextRequest, { params: { id: '1' } });
+    const response = await GET({} as NextRequest, { params: Promise.resolve({ id: '1' }) });
     expect(response.status).toBe(404);
   });
 });
@@ -84,7 +84,7 @@ describe('PUT /api/roles/[id]', () => {
         body: JSON.stringify({ name: 'NEW_NAME', permissionIds: ['1', '2'] }),
       });
 
-      const response = await PUT(req, { params: { id: '1' } });
+      const response = await PUT(req, { params: Promise.resolve({ id: '1' }) });
       const data = await response.json();
 
       expect(response.status).toBe(200);

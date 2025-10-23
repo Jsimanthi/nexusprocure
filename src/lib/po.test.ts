@@ -23,6 +23,7 @@ const mockUserSession = (permissions: string[] = []): Session => ({
     name: 'Test User',
     email: 'test@example.com',
     permissions,
+    role: { id: 'role-1', name: 'User' },
   },
   expires: '2099-01-01T00:00:00.000Z',
 });
@@ -51,16 +52,42 @@ describe('Purchase Order Functions', () => {
         vendorAddress: '456 Vendor Ave',
         vendorContact: 'Vendor Contact',
         taxRate: 10,
-        items: [{ itemName: 'Item 1', quantity: 2, unitPrice: 100, taxRate: 5 }],
+        items: [{ itemName: 'Item 1', description: 'Test item', quantity: 2, unitPrice: 100, taxRate: 5, taxAmount: 10, totalPrice: 210 }],
         preparedById: 'user-prepared-id',
         requestedById: 'user-requested-id',
+        reviewerId: 'reviewer-1',
+        approverId: 'approver-1',
         attachments: [], // Explicitly empty
       };
       const session = mockUserSession(['CREATE_PO']);
       vi.mocked(authorize).mockReturnValue(true);
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
 
-      vi.mocked(prisma.purchaseOrder.create).mockResolvedValue({ id: 'po-123', ...inputData } as unknown as PurchaseOrder);
+      vi.mocked(prisma.purchaseOrder.create).mockResolvedValue({
+        id: 'po-123',
+        ...inputData,
+        poNumber: 'PO-2024-0001',
+        totalAmount: 200,
+        taxAmount: 20,
+        grandTotal: 220,
+        taxRate: 10,
+        reviewerStatus: 'PENDING',
+        approverStatus: 'PENDING',
+        currency: 'INR',
+        exchangeRate: 1,
+        expectedDeliveryDate: null,
+        fulfilledAt: null,
+        qualityScore: null,
+        deliveryNotes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        pdfToken: null,
+        reviewedById: 'reviewer-1',
+        approvedById: 'approver-1',
+        iomId: null,
+        status: POStatus.DRAFT,
+        vendorId: 'vendor-1'
+      } as PurchaseOrder);
 
       // Act
       await createPurchaseOrder(inputData, session);
@@ -88,6 +115,8 @@ describe('Purchase Order Functions', () => {
         items: [{ itemName: 'Item 1', quantity: 1, unitPrice: 100, taxRate: 10 }],
         preparedById: 'user-prepared-id',
         requestedById: 'user-requested-id',
+        reviewerId: 'reviewer-1',
+        approverId: 'approver-1',
         attachments: [
           { url: 'http://example.com/file1.pdf', filename: 'file1.pdf', filetype: 'application/pdf', size: 12345 },
         ],
@@ -130,6 +159,8 @@ describe('Purchase Order Functions', () => {
         items: [],
         preparedById: 'user-prepared-id',
         requestedById: 'user-requested-id',
+        reviewerId: 'reviewer-1',
+        approverId: 'approver-1',
         attachments: [],
       };
       const session = mockUserSession(['CREATE_PO']);
@@ -158,14 +189,22 @@ describe('Purchase Order Functions', () => {
     const reviewerId = 'reviewer-id';
     const vendorId = 'vendor-1';
     const approverSession = mockUserSession(['APPROVE_PO']);
-    approverSession.user.id = approverId;
+    approverSession.user!.id = approverId;
     const reviewerSession = mockUserSession(['REVIEW_PO']);
-    reviewerSession.user.id = reviewerId;
+    reviewerSession.user!.id = reviewerId;
 
     const basePo = {
       id: poId,
+      title: 'Test PO',
+      companyName: 'Test Company',
+      companyAddress: '123 Test St',
+      companyContact: 'Test Contact',
       vendorId: vendorId,
+      vendorName: 'Test Vendor',
+      vendorAddress: '456 Vendor Ave',
+      vendorContact: 'Vendor Contact',
       preparedById: 'user-prepared-id',
+      requestedById: 'user-prepared-id',
       poNumber: 'PO-2024-0001',
       status: POStatus.PENDING_APPROVAL,
       reviewerStatus: "PENDING",
@@ -173,15 +212,36 @@ describe('Purchase Order Functions', () => {
       approvedById: approverId,
       reviewedById: reviewerId,
       preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+      expectedDeliveryDate: new Date(),
+      fulfilledAt: null,
+      qualityScore: null,
+      deliveryNotes: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      pdfToken: null,
+      totalAmount: 0,
+      taxAmount: 0,
+      grandTotal: 0,
+      taxRate: 10,
+      currency: 'INR',
+      exchangeRate: 1,
+      items: [],
+      iomId: null,
+      iom: undefined,
+      vendor: undefined,
     };
 
     beforeEach(() => {
-      vi.mocked(prisma.purchaseOrder.update).mockImplementation(async (args) => {
-        return {
-          ...basePo,
-          ...(args.data as object),
-        } as unknown as PurchaseOrder;
-      });
+      vi.mocked(prisma.purchaseOrder.update).mockResolvedValue({
+        ...basePo,
+        items: [],
+        iom: undefined,
+        vendor: undefined,
+        preparedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+        requestedBy: { id: 'user-id', name: 'Test User', email: 'test@example.com' },
+        reviewedBy: undefined,
+        approvedBy: undefined,
+      } as PurchaseOrder);
     });
 
     it('should call updateVendorPerformanceMetrics when a PO is delivered', async () => {
@@ -204,7 +264,7 @@ describe('Purchase Order Functions', () => {
 
     it('should throw an error if user is not the designated reviewer or approver', async () => {
       const unrelatedUserSession = mockUserSession(['REVIEW_PO', 'APPROVE_PO']);
-      unrelatedUserSession.user.id = 'unrelated-user';
+      unrelatedUserSession.user!.id = 'unrelated-user';
       vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue(basePo as PurchaseOrder);
 
       await expect(
@@ -272,10 +332,7 @@ describe('Purchase Order Functions', () => {
     beforeEach(() => {
       vi.mocked(prisma.purchaseOrder.findMany).mockResolvedValue([]);
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
-      vi.mocked(prisma.$transaction).mockImplementation(async (promises: [Prisma.PrismaPromise<PurchaseOrder[]>, Prisma.PrismaPromise<number>]) => {
-        const [findManyResult, countResult] = await Promise.all(promises);
-        return [findManyResult, countResult];
-      });
+      vi.mocked(prisma.$transaction).mockResolvedValue([[], 0]);
     });
 
     it('should filter by user involvement if user lacks READ_ALL_POS permission', async () => {
@@ -287,10 +344,10 @@ describe('Purchase Order Functions', () => {
             AND: expect.arrayContaining([
               {
                 OR: [
-                  { preparedById: session.user.id },
-                  { requestedById: session.user.id },
-                  { reviewedById: session.user.id },
-                  { approvedById: session.user.id },
+                  { preparedById: session.user!.id },
+                  { requestedById: session.user!.id },
+                  { reviewedById: session.user!.id },
+                  { approvedById: session.user!.id },
                 ],
               },
             ]),

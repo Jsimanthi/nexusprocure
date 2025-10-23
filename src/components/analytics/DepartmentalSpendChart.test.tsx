@@ -1,3 +1,4 @@
+import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { DepartmentalSpendChart } from './DepartmentalSpendChart';
@@ -7,8 +8,8 @@ vi.mock('recharts', async () => {
   const original = await vi.importActual('recharts');
   return {
     ...original,
-    ResponsiveContainer: ({ children }) => <div data-testid="responsive-container">{children}</div>,
-    BarChart: ({ children }) => <div data-testid="bar-chart">{children}</div>,
+    ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="responsive-container">{children}</div>,
+    BarChart: ({ children }: { children: React.ReactNode }) => <div data-testid="bar-chart">{children}</div>,
     Bar: () => <div data-testid="bar" />,
     XAxis: () => <div data-testid="x-axis" />,
     YAxis: () => <div data-testid="y-axis" />,

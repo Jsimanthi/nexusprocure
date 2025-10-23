@@ -47,20 +47,22 @@ export interface IOMRef {
 import { ActionStatus } from "./iom";
 
 export interface PurchaseOrder {
-  id?: string;
+  id: string;
   poNumber: string;
-  pdfToken?: string | null;
-  iomId?: string;
-  vendorId?: string;
+  pdfToken: string | null;
+  iomId: string | null;
+  vendorId: string | null;
   title: string;
   status: POStatus;
   totalAmount: number;
   taxAmount: number;
   grandTotal: number;
   taxRate: number;
+  currency: string;
+  exchangeRate: number;
   reviewerStatus: ActionStatus;
   approverStatus: ActionStatus;
-  
+
   // Company and Vendor Details
   companyName: string;
   companyAddress: string;
@@ -68,15 +70,21 @@ export interface PurchaseOrder {
   vendorName: string;
   vendorAddress: string;
   vendorContact: string;
-  
+
+  // Optional fields
+  expectedDeliveryDate: Date | null;
+  fulfilledAt: Date | null;
+  qualityScore: number | null;
+  deliveryNotes: string | null;
+
   items: POItem[];
   preparedById: string;
   requestedById: string;
-  reviewedById?: string;
-  approvedById?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-  
+  reviewedById: string | null;
+  approvedById: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+
   // Relation fields (added by Prisma includes)
   preparedBy?: UserRef;
   requestedBy?: UserRef;

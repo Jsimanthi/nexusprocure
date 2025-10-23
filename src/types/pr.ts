@@ -1,9 +1,7 @@
 // src/types/pr.ts
 import { PaymentRequest as PrismaPaymentRequest, PRStatus, PaymentMethod } from "@prisma/client";
 
-export type PaymentRequest = PrismaPaymentRequest & {
-  pdfToken?: string | null;
-};
+export type PaymentRequest = PrismaPaymentRequest;
 
 // This type is used to create a new Payment Request
 // It includes all required fields but omits automatically generated ones like `id` and `createdAt`
@@ -21,6 +19,8 @@ export interface CreatePrData {
   bankAccount?: string;
   referenceNumber?: string;
   preparedById: string;
+  reviewerId: string;
+  approverId: string;
 }
 
 export interface UserRef {

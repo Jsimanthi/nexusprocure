@@ -15,6 +15,8 @@ const mockUserSession = (): Session => ({
     id: 'user-id',
     name: 'Test User',
     email: 'test@example.com',
+    role: { id: 'role-1', name: 'User' },
+    permissions: ['SOME_PERMISSION'],
   },
   expires: '2099-01-01T00:00:00.000Z',
 });
@@ -43,7 +45,7 @@ describe('GET /api/users/role/:roleName', () => {
   it('should return 200 and a list of users for any authenticated user', async () => {
     const session = mockUserSession();
     vi.mocked(getServerSession).mockResolvedValue(session);
-    const mockUsers = [{ id: 'user-1', name: 'Manager One' }];
+    const mockUsers = [{ id: 'user-1', name: 'Manager One', email: 'manager@example.com', emailVerified: null, image: null, roleId: 'role-1', password: null, createdAt: new Date(), updatedAt: new Date() }];
     vi.mocked(prisma.user.findMany).mockResolvedValue(mockUsers);
 
     const request = {} as NextRequest;
