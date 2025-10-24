@@ -119,4 +119,12 @@
   body {
     @apply bg-background text-foreground;
   }
+  html {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
 }

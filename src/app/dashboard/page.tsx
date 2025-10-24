@@ -85,7 +85,7 @@ export default function DashboardPage() {
   const DashboardComponent = userRole ? dashboardComponents[userRole] : null;
 
   return (
-    <PageLayout title={`${userRole || ''} Dashboard`}>
+    <PageLayout>
       <ErrorBoundary>
         <>
           {isError && (

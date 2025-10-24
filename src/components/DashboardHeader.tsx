@@ -37,18 +37,18 @@ export default function DashboardHeader() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
-            <div className="flex items-center">
-              <Image src="https://i.postimg.cc/Kctw8crn/sblt-logo.png" alt="NexusProcure Logo" width={64} height={32} className="mr-3" />
+            <div className="flex items-center flex-shrink-0">
+              <Image src="/logo.png" alt="NexusProcure Logo" width={64} height={32} className="mr-3" />
               <h1 className="text-2xl font-bold text-gray-900">NexusProcure</h1>
             </div>
             
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex ml-8 space-x-4">
+            <nav className="hidden md:flex ml-8 space-x-2">
               {visibleNavLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-2 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                     pathname === link.href
                       ? "bg-gray-100 text-gray-900"
                       : "text-gray-700 hover:text-gray-900"
@@ -60,9 +60,9 @@ export default function DashboardHeader() {
             </nav>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 flex-shrink-0">
             <Notifications />
-            
+
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -71,12 +71,12 @@ export default function DashboardHeader() {
               {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
 
-            <span className="hidden sm:block text-sm text-gray-700">
+            <span className="hidden sm:block text-sm text-gray-700 whitespace-nowrap">
               Welcome, {session?.user?.name}
             </span>
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
             >
               Logout
             </button>
