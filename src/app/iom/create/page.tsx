@@ -1,15 +1,20 @@
-// src/app/iom/create/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import PageLayout from "@/components/PageLayout";
-import { useSession } from "next-auth/react";
-import { z } from "zod";
-import { createIomSchema } from "@/lib/schemas";
+import { CatalogGrid } from "@/components/CatalogGrid";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { PROCUREMENT_CATEGORIES } from "@/lib/constants";
+import PageLayout from "@/components/PageLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CATALOG_ITEMS } from "@/lib/catalog-data";
+import { createIomSchema } from "@/lib/schemas";
+import { ArrowLeft, ArrowRight, ShoppingCart, Trash2 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { z } from "zod";
 
 interface IOMItem {
   itemName: string;
@@ -30,9 +35,11 @@ export default function CreateIOMPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [draftLoading, setDraftLoading] = useState(false);
+  const [view, setView] = useState<"catalog" | "review">("catalog");
+
   const [formData, setFormData] = useState({
-    title: "",
-    from: "",
+    title: "Request for " + new Date().toLocaleDateString(),
+    from: session?.user?.name || "",
     to: "",
     subject: "",
     content: "",
@@ -66,6 +73,29 @@ export default function CreateIOMPage() {
     };
     fetchUsers();
   }, []);
+
+  const handleCatalogSelect = (item: typeof CATALOG_ITEMS[0]) => {
+    // Check if item already exists
+    const existingIndex = items.findIndex(i => i.itemName === item.name);
+    if (existingIndex > -1) {
+      const newItems = [...items];
+      newItems[existingIndex].quantity += 1;
+      newItems[existingIndex].totalPrice = newItems[existingIndex].quantity * newItems[existingIndex].unitPrice;
+      setItems(newItems);
+    } else {
+      setItems([
+        ...items,
+        {
+          itemName: item.name,
+          description: item.description,
+          category: item.category,
+          quantity: 1,
+          unitPrice: item.price,
+          totalPrice: item.price
+        }
+      ]);
+    }
+  };
 
   const addItem = () => {
     setItems([
@@ -109,7 +139,7 @@ export default function CreateIOMPage() {
         title: formData.title,
         from: formData.from,
         to: formData.to,
-        subject: formData.subject,
+        subject: formData.subject || `Purchase Request for ${items.length} items`,
         content: formData.content,
         isUrgent: formData.isUrgent,
         items: items.map((item) => ({
@@ -139,6 +169,8 @@ export default function CreateIOMPage() {
         const errorData = await response.json();
         if (response.status === 400) {
           setErrors(errorData.details.fieldErrors);
+          // If validation error, go back to review to show them
+          setView("review");
         } else {
           console.error("Failed to create IOM:", errorData.error);
         }
@@ -157,265 +189,208 @@ export default function CreateIOMPage() {
   const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
   return (
-    <PageLayout title="Create New IOM">
-      <div className="mb-6">
-        <Link href="/iom" className="text-blue-600 hover:text-blue-800">
-          &larr; Back to IOM List
-        </Link>
-      </div>
-      <form onSubmit={(e) => { e.preventDefault(); handleSave(false); }} className="bg-white shadow-sm rounded-lg p-6 space-y-6">
-        {/* Basic IOM Information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Title *</label>
-            <input
-              type="text"
-              required
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              autoFocus
-            />
-            {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title[0]}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Subject *</label>
-            <input
-              type="text"
-              required
-              value={formData.subject}
-              onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-            {errors.subject && <p className="text-red-500 text-xs mt-1">{errors.subject[0]}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">From *</label>
-            <input
-              type="text"
-              required
-              value={formData.from}
-              onChange={(e) => setFormData({ ...formData, from: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-            {errors.from && <p className="text-red-500 text-xs mt-1">{errors.from[0]}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">To *</label>
-            <input
-              type="text"
-              required
-              value={formData.to}
-              onChange={(e) => setFormData({ ...formData, to: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-            {errors.to && <p className="text-red-500 text-xs mt-1">{errors.to[0]}</p>}
-          </div>
-        </div>
+    <PageLayout title="Create New Request">
+      <div className="flex flex-col space-y-6">
+        {/* Navigation / Progress */}
+        <div className="flex justify-between items-center mb-4">
+          <Button variant="ghost" onClick={() => router.back()} className="text-muted-foreground">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Cancel
+          </Button>
 
-        <div className="relative flex items-start">
-          <div className="flex h-6 items-center">
-            <input
-              id="isUrgent"
-              name="isUrgent"
-              type="checkbox"
-              checked={formData.isUrgent}
-              onChange={(e) => setFormData({ ...formData, isUrgent: e.target.checked })}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
-            />
-          </div>
-          <div className="ml-3 text-sm leading-6">
-            <label htmlFor="isUrgent" className="font-medium text-gray-900">
-              Urgent Request
-            </label>
-            <p className="text-gray-500">Check this if the request requires immediate attention.</p>
-          </div>
-        </div>
-
-        {/* Approval Workflow Section */}
-        <div className="border-t pt-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Approval Workflow</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Reviewer</label>
-              <select
-                value={formData.reviewerId}
-                onChange={(e) => setFormData({ ...formData, reviewerId: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">Select a reviewer</option>
-                {reviewers.map((reviewer) => (
-                  <option key={reviewer.id} value={reviewer.id}>
-                    {reviewer.name}
-                  </option>
-                ))}
-              </select>
-              {errors.reviewerId && <p className="text-red-500 text-xs mt-1">{errors.reviewerId[0]}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Approver (Manager)</label>
-              <select
-                value={formData.approverId}
-                onChange={(e) => setFormData({ ...formData, approverId: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">Select an approver</option>
-                {approvers.map((approver) => (
-                  <option key={approver.id} value={approver.id}>
-                    {approver.name}
-                  </option>
-                ))}
-              </select>
-              {errors.approverId && <p className="text-red-500 text-xs mt-1">{errors.approverId[0]}</p>}
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Content</label>
-          <textarea
-            rows={3}
-            value={formData.content}
-            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-        </div>
-
-        {/* Items Section */}
-        <div className="border-t pt-6">
-          {items.length === 0 ? (
-            <button
-              type="button"
-              onClick={addItem}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 border-2 border-dashed border-gray-300 px-4 py-3 rounded-md text-sm font-medium"
+          <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-lg">
+            <Button
+              variant={view === "catalog" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setView("catalog")}
+              className={view === "catalog" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}
             >
-              + Add Item Section (for purchases)
-            </button>
-          ) : (
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Items</h3>
-                <button
-                  type="button"
-                  onClick={addItem}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md text-sm"
-                >
-                  Add Another Item
-                </button>
+              1. Shop Catalog
+            </Button>
+            <ArrowRight className="h-4 w-4 text-slate-300" />
+            <Button
+              variant={view === "review" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setView("review")}
+              className={view === "review" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}
+            >
+              2. Review & Submit
+            </Button>
+          </div>
+
+          <Button onClick={() => setView(view === "catalog" ? "review" : "catalog")} disabled={items.length === 0} className={view === "review" ? "invisible" : ""}>
+            Review Cart ({items.length}) <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+
+        {view === "catalog" ? (
+          <div className="space-y-6 animate-in fade-in zoom-in duration-300">
+            <div className="bg-indigo-600 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 opacity-10 transform translate-x-1/4 -translate-y-1/4">
+                <ShoppingCart className="h-64 w-64" />
               </div>
-
-              {items.map((item, index) => (
-                <div key={index} className="border rounded-lg p-4 mb-4 relative">
-                  <button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    className="absolute top-2 right-2 text-red-600 hover:text-red-800"
-                  >
-                    ×
-                  </button>
-
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Item Name</label>
-                      <input
-                        type="text"
-                        value={item.itemName}
-                        onChange={(e) => updateItem(index, "itemName", e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Description</label>
-                      <input
-                        type="text"
-                        value={item.description}
-                        onChange={(e) => updateItem(index, "description", e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Category</label>
-                      <select
-                        value={item.category}
-                        onChange={(e) => updateItem(index, "category", e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      >
-                        <option value="">Select a category</option>
-                        {PROCUREMENT_CATEGORIES.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Quantity</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Unit Price (₹)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.unitPrice}
-                        onChange={(e) =>
-                          updateItem(index, "unitPrice", parseFloat(e.target.value) || 0)
-                        }
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-2 text-right">
-                    <span className="text-sm font-medium">Total: ₹{item.totalPrice.toFixed(2)}</span>
-                  </div>
-                </div>
-              ))}
-
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-semibold">Grand Total:</span>
-                  <span className="text-xl font-bold">₹{totalAmount.toFixed(2)}</span>
-                </div>
+              <div className="relative z-10">
+                <h2 className="text-3xl font-bold mb-2">Internal Procurement Catalog</h2>
+                <p className="text-indigo-100 max-w-xl">Browse approved items for your department. Select items to add them to your automated purchase request.</p>
               </div>
             </div>
-          )}
-        </div>
 
-        <div className="flex justify-end space-x-4">
-          <Link
-            href="/iom"
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md"
-          >
-            Cancel
-          </Link>
-          <button
-            type="button"
-            onClick={() => handleSave(true)}
-            disabled={draftLoading || loading}
-            className="bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
-          >
-            {draftLoading && <LoadingSpinner />}
-            {draftLoading ? "Saving..." : "Save as Draft"}
-          </button>
-          <button
-            type="submit"
-            disabled={draftLoading || loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-md flex items-center justify-center"
-          >
-            {loading && <LoadingSpinner />}
-            {loading ? "Submitting..." : "Submit for Approval"}
-          </button>
-        </div>
-      </form>
+            <h3 className="text-xl font-bold text-slate-800">Featured Categories</h3>
+            <CatalogGrid onSelect={handleCatalogSelect} />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in slide-in-from-right duration-300">
+            {/* Left Col: Cart Items */}
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle>Request Items ({items.length})</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {items.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      Your cart is empty. <br />
+                      <Button variant="link" onClick={() => setView("catalog")} className="mt-2">Go back to catalog</Button>
+                    </div>
+                  ) : (
+                    items.map((item, index) => (
+                      <div key={index} className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 border rounded-lg bg-slate-50/50 hover:bg-white transition-colors">
+                        <div className="flex-1 space-y-1">
+                          <div className="flex justify-between">
+                            <h4 className="font-semibold text-slate-800">{item.itemName || "New Item"}</h4>
+                            <Button variant="ghost" size="sm" onClick={() => removeItem(index)} className="text-red-500 h-6 w-6 p-0 sm:hidden">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="text-sm text-slate-500 line-clamp-1">{item.description}</p>
+                          <div className="flex gap-2 mt-2">
+                            <Badge variant="secondary" className="text-xs">{item.category}</Badge>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 mt-2 sm:mt-0 w-full sm:w-auto">
+                          <div className="flex flex-col w-20">
+                            <label className="text-[10px] text-slate-400 uppercase font-bold">Qty</label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                              className="h-8"
+                            />
+                          </div>
+                          <div className="flex flex-col w-24">
+                            <label className="text-[10px] text-slate-400 uppercase font-bold">Price</label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={item.unitPrice}
+                              onChange={(e) => updateItem(index, "unitPrice", e.target.value)}
+                              className="h-8"
+                            />
+                          </div>
+                          <div className="text-right min-w-[80px]">
+                            <p className="font-bold text-slate-700">{formatCurrency(item.totalPrice)}</p>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => removeItem(index)} className="text-red-500 hidden sm:flex">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  <Button onClick={addItem} variant="outline" className="w-full border-dashed">
+                    <Plus className="mr-2 h-4 w-4" /> Add Custom Item manually
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Col: Details & Submit */}
+            <div className="space-y-6">
+              <Card className="border-0 shadow-lg bg-indigo-50/50 border-indigo-100">
+                <CardHeader>
+                  <CardTitle className="text-indigo-900">Request Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title / Project Name</Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="bg-white"
+                    />
+                    {errors.title && <p className="text-red-500 text-xs">{errors.title[0]}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reason">Business Justification</Label>
+                    <Input
+                      id="reason"
+                      value={formData.content}
+                      onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                      placeholder="Why do you need this?"
+                      className="bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Select Approver</Label>
+                    <select
+                      className="w-full h-10 rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      value={formData.approverId}
+                      onChange={(e) => setFormData({ ...formData, approverId: e.target.value })}
+                    >
+                      <option value="">Select Manager...</option>
+                      {approvers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    </select>
+                    {errors.approverId && <p className="text-red-500 text-xs">{errors.approverId[0]}</p>}
+                  </div>
+
+                  <div className="pt-4 border-t border-indigo-200">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-slate-600">Subtotal</span>
+                      <span className="font-medium text-slate-800">{formatCurrency(totalAmount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-lg font-bold text-indigo-700">
+                      <span>Total</span>
+                      <span>{formatCurrency(totalAmount)}</span>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-3">
+                  <Button
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-lg py-6"
+                    onClick={() => handleSave(false)}
+                    disabled={loading || items.length === 0}
+                  >
+                    {loading && <LoadingSpinner />}
+                    {loading ? "Ordering..." : `Place Order (${items.length})`}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleSave(true)}
+                    disabled={draftLoading}
+                  >
+                    Save as Draft
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+          </div>
+        )}
+      </div>
     </PageLayout>
   );
 }
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+  }).format(amount);
+}
+
+import { Plus } from "lucide-react";

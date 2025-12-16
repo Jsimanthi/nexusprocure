@@ -1,18 +1,41 @@
-// src/app/vendors/page.tsx
 "use client";
-import { useState } from "react";
-import Link from "next/link";
-import { Vendor } from "@/types/po";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import SearchAndFilter from "@/components/SearchAndFilter";
-import PageLayout from "@/components/PageLayout";
-import LoadingSpinner from "@/components/LoadingSpinner";
+
 import ErrorDisplay from "@/components/ErrorDisplay";
-import { Download } from "lucide-react";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import PageLayout from "@/components/PageLayout";
+import SearchAndFilter, { FilterState } from "@/components/SearchAndFilter";
+import { Vendor } from "@/types/po";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Building2, Download, Mail, Pencil, Phone, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 
-// Now, this import will work correctly
-import { FilterState } from "@/components/SearchAndFilter";
+// New UI Components
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "../../components/ui/textarea";
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const fetchVendors = async (page = 1, pageSize = 10) => {
   const response = await fetch(`/api/vendors?page=${page}&pageSize=${pageSize}`);
@@ -50,7 +73,7 @@ export default function VendorsPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const pageSize = 10;
-  const [showForm, setShowForm] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [formData, setFormData] = useState<Partial<Vendor>>({});
   const [isExporting, setIsExporting] = useState(false);
@@ -67,15 +90,23 @@ export default function VendorsPage() {
     mutationFn: saveVendor,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
-      cancelForm();
+      handleCloseDialog();
+      toast.success(editingVendor ? "Vendor updated successfully" : "Vendor added successfully");
     },
+    onError: (err) => {
+      toast.error(err.message);
+    }
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteVendor,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      toast.success("Vendor deleted");
     },
+    onError: (err) => {
+      toast.error(err.message);
+    }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -86,7 +117,13 @@ export default function VendorsPage() {
   const handleEdit = (vendor: Vendor) => {
     setEditingVendor(vendor);
     setFormData(vendor);
-    setShowForm(true);
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingVendor(null);
+    setFormData({});
   };
 
   const handleDelete = (id: string) => {
@@ -132,12 +169,6 @@ export default function VendorsPage() {
     }
   };
 
-  const cancelForm = () => {
-    setShowForm(false);
-    setEditingVendor(null);
-    setFormData({});
-  };
-
   const handleSearch = (query: string) => {
     console.log("Search query:", query);
   };
@@ -168,255 +199,174 @@ export default function VendorsPage() {
 
   return (
     <PageLayout title="Vendor Management">
-      <>
-        <div className="flex justify-end mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
-                onClick={handleExport}
-                disabled={isExporting}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 disabled:opacity-50"
-            >
-                <Download size={16} />
-                {isExporting ? "Exporting..." : "Export to CSV"}
-            </button>
-            <button
-              onClick={() => {
-                cancelForm();
-                setShowForm(true);
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              Add New Vendor
-            </button>
-          </div>
-        </div>
+      <div className="space-y-6 animate-in fade-in duration-500">
 
-        {/* Search and Filter */}
-        <SearchAndFilter
-          onSearch={handleSearch}
-          onFilter={handleFilter}
-          filterOptions={{
-            dateRange: true
-          }}
-          placeholder="Search vendors by name, email, phone, or currency..."
-        />
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <SearchAndFilter
+            onSearch={handleSearch}
+            onFilter={handleFilter}
+            filterOptions={{ dateRange: true }}
+            placeholder="Search vendors..."
+            className="w-full md:w-auto md:flex-1 md:max-w-xl mb-0"
+          />
 
-        {/* Vendor Form */}
-        {showForm && (
-          <div className="bg-white shadow rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">
-              {editingVendor ? "Edit Vendor" : "Add New Vendor"}
-            </h2>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Vendor Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name || ''}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Enter vendor name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email || ''}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="vendor@example.com"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
-                <input
-                  type="tel"
-                  required
-                  value={formData.phone || ''}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="+91 1234567890"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tax ID (GSTIN)</label>
-                <input
-                  type="text"
-                  value={formData.taxId || ''}
-                  onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="GSTIN number"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
-                <textarea
-                  rows={3}
-                  required
-                  value={formData.address || ''}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Full vendor address"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Info *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.contactInfo || ''}
-                  onChange={(e) => setFormData({ ...formData, contactInfo: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Contact person name"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-                <input
-                  type="url"
-                  value={formData.website || ''}
-                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="https://vendor-website.com"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Default Currency</label>
-                <select
-                  value={formData.currency || 'INR'}
-                  onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                >
-                  <option value="INR">INR (Indian Rupee)</option>
-                  <option value="USD">USD (US Dollar)</option>
-                  <option value="EUR">EUR (Euro)</option>
-                  <option value="GBP">GBP (British Pound)</option>
-                  <option value="JPY">JPY (Japanese Yen)</option>
-                </select>
-              </div>
-              <div className="md:col-span-2 flex justify-end space-x-4 pt-4">
-                <button
-                  type="button"
-                  onClick={cancelForm}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={mutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
-                >
-                  {mutation.isPending ? 'Saving...' : (editingVendor ? "Update Vendor" : "Add Vendor")}
-                </button>
-              </div>
-              {mutation.isError && (
-                <div className="md:col-span-2">
-                  <p className="text-red-500 text-sm">{mutation.error.message}</p>
-                </div>
-              )}
-            </form>
-          </div>
-        )}
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+              {isExporting ? <LoadingSpinner /> : <Download className="mr-2 h-4 w-4" />}
+              Export
+            </Button>
 
-        {/* Vendors List */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <div className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6">
-            <h3 className="text-lg font-medium leading-6 text-gray-900">Vendors</h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">List of all vendors in the system</p>
-          </div>
-          
-          <ul className="divide-y divide-gray-200">
-            {vendors.length === 0 ? (
-              <li className="px-6 py-12 text-center">
-                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <p className="text-gray-500 text-lg">No vendors found.</p>
-                <p className="text-gray-400 text-sm mt-2">Add your first vendor to get started</p>
-              </li>
-            ) : (
-              vendors.map((vendor: Vendor) => (
-                <li key={vendor.id} className="hover:bg-gray-50 transition-colors">
-                  <div className="px-4 py-4 sm:px-6">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/dashboard/vendors/${vendor.id}`} className="text-lg font-medium text-blue-600 hover:underline truncate">
-                          {vendor.name} <span className="text-sm font-normal text-gray-500">({vendor.currency})</span>
-                        </Link>
-                        <p className="text-sm text-gray-500 truncate">
-                          {vendor.email} | {vendor.phone}
-                        </p>
-                      </div>
-                      <div className="flex space-x-4 flex-shrink-0">
-                        <button
-                          onClick={() => handleEdit(vendor)}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(vendor.id!)}
-                          disabled={deleteMutation.isPending && deleteMutation.variables === vendor.id}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium transition-colors disabled:opacity-50"
-                        >
-                          {deleteMutation.isPending && deleteMutation.variables === vendor.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </div>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200" onClick={() => { setEditingVendor(null); setFormData({}); }}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Vendor
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editingVendor ? "Edit Vendor" : "Add New Vendor"}</DialogTitle>
+                  <DialogDescription>
+                    {editingVendor ? "Update the vendor details below." : "Enter the details for the new vendor."}
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Vendor Name *</Label>
+                      <Input id="name" required value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Vendor Name" />
                     </div>
-
-                    <div className="mt-4 flex justify-between items-center text-sm text-gray-600 border-t border-gray-200 pt-2">
-                        <div className="flex items-center gap-2">
-                            <span className="font-medium">On-Time Delivery:</span>
-                            <span className="font-bold text-green-600">{(vendor.onTimeDeliveryRate || 0).toFixed(1)}%</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="font-medium">Avg. Quality Score:</span>
-                            <span className="font-bold text-blue-600">{(vendor.averageQualityScore || 0).toFixed(2)} / 5</span>
-                        </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="taxId">Tax ID (GSTIN)</Label>
+                      <Input id="taxId" value={formData.taxId || ''} onChange={(e) => setFormData({ ...formData, taxId: e.target.value })} placeholder="GSTIN" />
                     </div>
-
                   </div>
-                </li>
-              ))
-            )}
-          </ul>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input id="email" type="email" required value={formData.email || ''} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="vendor@co.com" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone *</Label>
+                      <Input id="phone" type="tel" required value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="+91..." />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address *</Label>
+                    <Textarea id="address" required value={formData.address || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, address: e.target.value })} placeholder="Full billing address" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="contactInfo">Contact Person *</Label>
+                      <Input id="contactInfo" required value={formData.contactInfo || ''} onChange={(e) => setFormData({ ...formData, contactInfo: e.target.value })} placeholder="John Doe" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="currency">Currency</Label>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={formData.currency || 'INR'}
+                        onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                      >
+                        <option value="INR">INR</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <DialogFooter className="pt-4">
+                    <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancel</Button>
+                    <Button type="submit" disabled={mutation.isPending}>
+                      {mutation.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
-        {/* Pagination Controls */}
-        {(pageCount > 1 || total > 0) && (
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to <span className="font-medium">{Math.min(page * pageSize, total)}</span> of{' '}
-                <span className="font-medium">{total}</span> results
-              </p>
+        <Card className="border-0 shadow-xl bg-white/70 backdrop-blur-md">
+          <CardHeader className="pb-2">
+            <CardTitle>Approved Vendors</CardTitle>
+            <CardDescription>Directory of authorized suppliers and service providers.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border bg-white/50">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vendor</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Performance</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vendors.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center">
+                        No vendors found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    vendors.map((vendor: Vendor) => (
+                      <TableRow key={vendor.id} className="hover:bg-slate-50/80 transition-colors">
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-slate-800 flex items-center gap-2">
+                              <Building2 className="h-3 w-3 text-slate-400" />
+                              {vendor.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-5">{vendor.address?.substring(0, 30)}...</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col text-sm text-slate-600 space-y-1">
+                            <span className="flex items-center gap-2">
+                              <Mail className="h-3 w-3 text-slate-400" /> {vendor.email}
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <Phone className="h-3 w-3 text-slate-400" /> {vendor.phone}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col space-y-1">
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="font-medium">On-Time:</span>
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                {(vendor.onTimeDeliveryRate || 0).toFixed(0)}%
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="font-medium">Quality:</span>
+                              <span className="font-bold text-blue-600">{(vendor.averageQualityScore || 0).toFixed(1)}/5</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(vendor)}>
+                              <Pencil className="h-4 w-4 text-blue-500" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(vendor.id!)} disabled={deleteMutation.isPending} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setPage(page - 1)}
-                disabled={page === 1}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-700">
-                Page <span className="font-medium">{page}</span> of <span className="font-medium">{pageCount}</span>
-              </span>
-              <button
-                onClick={() => setPage(page + 1)}
-                disabled={page >= pageCount}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-      </>
+          </CardContent>
+        </Card>
+      </div>
     </PageLayout>
   );
 }

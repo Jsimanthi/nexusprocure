@@ -1,18 +1,28 @@
 "use client";
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { PurchaseOrder, POStatus } from "@/types/po";
-import SearchAndFilter from "@/components/SearchAndFilter";
-import { useState, Suspense } from "react"; // Import Suspense
-import PageLayout from "@/components/PageLayout";
 import ConfirmationModal from "@/components/ConfirmationModal";
-import { formatCurrency, getPOStatusColor } from "@/lib/utils";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import PageLayout from "@/components/PageLayout";
+import SearchAndFilter from "@/components/SearchAndFilter";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useHasPermission } from "@/hooks/useHasPermission";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, Trash2, Pencil, Download } from "lucide-react";
+import { formatCurrency, getPOStatusColor } from "@/lib/utils";
+import { POStatus, PurchaseOrder } from "@/types/po";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, Eye, Pencil, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import toast from "react-hot-toast";
 
 const fetchPOs = async (page = 1, pageSize = 10, searchTerm = "", status = "", month = "") => {
@@ -68,7 +78,7 @@ function POList() {
     },
   });
 
-  const handleDelete = (id:string) => {
+  const handleDelete = (id: string) => {
     setSelectedPoId(id);
     setIsModalOpen(true);
   };
@@ -162,123 +172,139 @@ function POList() {
           title="Confirm Deletion"
           message="Are you sure you want to delete this Purchase Order? This action cannot be undone."
         />
-        <div className="flex justify-end mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
+
+        <div className="flex flex-col space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <SearchAndFilter
+              onSearch={handleSearch}
+              onFilter={handleFilter}
+              filterOptions={{
+                status: Object.values(POStatus),
+                dateRange: true
+              }}
+              placeholder="Search POs..."
+              className="w-full sm:w-auto flex-1"
+            />
+
+            <div className="flex gap-3">
+              <Button
                 onClick={handleExport}
                 disabled={isExporting}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 disabled:opacity-50"
-            >
-                <Download size={16} />
-                {isExporting ? "Exporting..." : "Export to CSV"}
-            </button>
-            {canCreate && (
-              <Link
-                href="/po/create"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20"
+                size="sm"
               >
-                Create New PO
-              </Link>
-            )}
-          </div>
-        </div>
+                <Download className="mr-2 h-4 w-4" />
+                {isExporting ? "Exporting..." : "Export CSV"}
+              </Button>
 
-          <SearchAndFilter
-            onSearch={handleSearch}
-            onFilter={handleFilter}
-            filterOptions={{
-              status: Object.values(POStatus),
-              dateRange: true
-            }}
-            placeholder="Search POs by number, title, vendor, or status..."
-          />
-
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">Purchase Orders</h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">List of all purchase orders in the system</p>
+              {canCreate && (
+                <Link href="/po/create">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20" size="sm">
+                    Create PO
+                  </Button>
+                </Link>
+              )}
             </div>
-            
-            <ul className="divide-y divide-gray-200">
-              {pos.length === 0 ? (
-                <li className="px-6 py-12 text-center">
-                  <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="text-gray-500 text-lg">No purchase orders found.</p>
-                  <p className="text-gray-400 text-sm mt-2">Create your first purchase order to get started</p>
-                </li>
-              ) : (
-                pos.map((po: PurchaseOrder) => (
-                  <li key={po.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/po/${po.id}`} className="text-sm font-medium text-blue-600 truncate hover:underline">
+          </div>
+
+          <Card className="border-0 shadow-xl bg-white/50 backdrop-blur-xl ring-1 ring-slate-900/5">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-slate-200/60">
+                  <TableHead className="w-[120px] pl-6">PO Number</TableHead>
+                  <TableHead>Vendor & Title</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Total Amount</TableHead>
+                  <TableHead className="text-right pr-6">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pos.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                      No Purchase Orders found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pos.map((po: PurchaseOrder) => (
+                    <TableRow key={po.id} className="cursor-pointer hover:bg-blue-50/30 transition-colors border-slate-200/60">
+                      <TableCell className="font-semibold text-blue-600 pl-6">
+                        <Link href={`/po/${po.id}`} className="hover:underline">
                           {po.poNumber}
                         </Link>
-                        <p className="ml-3 text-sm text-gray-900 font-semibold truncate">
-                          {po.title}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-4 flex-shrink-0">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPOStatusColor(po.status)}`}>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-slate-700">{po.title}</span>
+                          <span className="text-xs text-slate-500">Vendor ID: {po.vendorId}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`${getPOStatusColor(po.status)} border-0`}>
                           {po.status.replace("_", " ")}
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
-                          {formatCurrency(po.grandTotal)}
-                        </span>
-                        <div className="flex items-center space-x-2">
-                          <button onClick={() => router.push(`/po/${po.id}`)} className="p-1 text-gray-500 hover:text-gray-700">
-                            <Eye size={18} />
-                          </button>
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-slate-700">
+                        {formatCurrency(po.grandTotal)}
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => router.push(`/po/${po.id}`)} className="h-8 w-8 hover:bg-indigo-100/50 hover:text-indigo-600">
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           {canUpdate && po.status === "DRAFT" && (
-                            <button onClick={() => router.push(`/po/${po.id}/edit`)} className="p-1 text-gray-500 hover:text-gray-700">
-                              <Pencil size={18} />
-                            </button>
+                            <Button variant="ghost" size="icon" onClick={() => router.push(`/po/${po.id}/edit`)} className="h-8 w-8 hover:bg-blue-100/50 hover:text-blue-600">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                           )}
-                          {canDelete && po.status === "DRAFT" && po.id && (
-                            <button onClick={() => handleDelete(po.id as string)} disabled={deleteMutation.isPending} className="p-1 text-red-500 hover:text-red-700 disabled:opacity-50">
-                              <Trash2 size={18} />
-                            </button>
+                          {canDelete && po.status === "DRAFT" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(po.id as string)}
+                              disabled={deleteMutation.isPending}
+                              className="h-8 w-8 hover:bg-red-100/50 hover:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
-                      </div>
-                    </div>
-                  </li>
-                ))
-              )}
-            </ul>
-          </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
 
           {(pageCount > 1 || total > 0) && (
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to <span className="font-medium">{Math.min(page * pageSize, total)}</span> of{' '}
-                  <span className="font-medium">{total}</span> results
-                </p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button
+            <div className="flex items-center justify-between px-2">
+              <p className="text-sm text-slate-500">
+                Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} of {total} results
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setPage(page - 1)}
                   disabled={page === 1}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="bg-white"
                 >
                   Previous
-                </button>
-                <span className="text-sm text-gray-700">
-                  Page <span className="font-medium">{page}</span> of <span className="font-medium">{pageCount}</span>
-                </span>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setPage(page + 1)}
                   disabled={page >= pageCount}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="bg-white"
                 >
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           )}
+        </div>
       </>
     </PageLayout>
   );

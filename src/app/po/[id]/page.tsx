@@ -1,19 +1,20 @@
 // src/app/po/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import ErrorDisplay from "@/components/ErrorDisplay";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import PageLayout from "@/components/PageLayout";
+import POPrintView from "@/components/POPrintView";
+import { ThreeWayMatch } from "@/components/ThreeWayMatch";
+import { useHasPermission } from "@/hooks/useHasPermission";
+import { getPOStatusColor } from "@/lib/utils";
 import { PurchaseOrder } from "@/types/po";
 import { PaymentMethod } from "@/types/pr";
-import PageLayout from "@/components/PageLayout";
-import LoadingSpinner from "@/components/LoadingSpinner";
-import ErrorDisplay from "@/components/ErrorDisplay";
-import { getPOStatusColor } from "@/lib/utils";
-import { useSession } from "next-auth/react";
-import { useHasPermission } from "@/hooks/useHasPermission";
-import POPrintView from "@/components/POPrintView";
 import { ArrowLeft } from "lucide-react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
 export default function PODetailPage() {
   const params = useParams();
@@ -103,7 +104,7 @@ export default function PODetailPage() {
       }
     } catch (error) {
       console.error("Error converting PO to PR:", error);
-        alert("An unexpected error occurred while converting the PO to a PR.");
+      alert("An unexpected error occurred while converting the PO to a PR.");
     } finally {
       setConverting(false);
     }
@@ -212,7 +213,7 @@ export default function PODetailPage() {
     doc.close();
 
     // Wait for the iframe to load before printing
-    iframe.onload = function() {
+    iframe.onload = function () {
       if (iframe.contentWindow) {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
@@ -255,182 +256,188 @@ export default function PODetailPage() {
         </div>
       </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            <POPrintView po={po} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          <ThreeWayMatch
+            poId={po.poNumber}
+            poAmount={po.grandTotal}
+            grnAmount={po.status === 'DELIVERED' || po.status === 'ORDERED' ? po.grandTotal : undefined} // Mock logic
+            invoiceAmount={po.status === 'DELIVERED' ? po.grandTotal : undefined} // Mock logic
+          />
+          <POPrintView po={po} />
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-4">
+          {/* PO Actions */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">PO Actions</h3>
+            <div className="space-y-2">
+              {isReviewer && po.reviewerStatus === 'PENDING' && (
+                <div className="flex space-x-2">
+                  <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                    {updating ? "Processing..." : "Approve (Review)"}
+                  </button>
+                  <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                    {updating ? "Processing..." : "Reject (Review)"}
+                  </button>
+                </div>
+              )}
+              {isApprover && po.approverStatus === 'PENDING' && (
+                <div className="flex space-x-2">
+                  <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                    {updating ? "Processing..." : "Approve (Final)"}
+                  </button>
+                  <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                    {updating ? "Processing..." : "Reject (Final)"}
+                  </button>
+                </div>
+              )}
+              {po.status === 'APPROVED' && canMarkAsOrdered && (
+                <button onClick={() => handleAction('ORDER')} disabled={updating} className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                  {updating ? "Processing..." : "Mark as Ordered"}
+                </button>
+              )}
+              {po.status === 'ORDERED' && canMarkAsDelivered && (
+                <button onClick={() => handleAction('DELIVER')} disabled={updating} className="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                  {updating ? "Processing..." : "Mark as Delivered"}
+                </button>
+              )}
+              {po.status === 'APPROVED' && canCancel && (
+                <button onClick={() => handleAction('CANCEL')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
+                  {updating ? "Processing..." : "Cancel PO"}
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-4">
-            {/* PO Actions */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">PO Actions</h3>
-              <div className="space-y-2">
-                {isReviewer && po.reviewerStatus === 'PENDING' && (
-                  <div className="flex space-x-2">
-                    <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                      {updating ? "Processing..." : "Approve (Review)"}
-                    </button>
-                    <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                      {updating ? "Processing..." : "Reject (Review)"}
-                    </button>
-                  </div>
-                )}
-                {isApprover && po.approverStatus === 'PENDING' && (
-                  <div className="flex space-x-2">
-                    <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                      {updating ? "Processing..." : "Approve (Final)"}
-                    </button>
-                    <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                      {updating ? "Processing..." : "Reject (Final)"}
-                    </button>
-                  </div>
-                )}
-                {po.status === 'APPROVED' && canMarkAsOrdered && (
-                  <button onClick={() => handleAction('ORDER')} disabled={updating} className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Mark as Ordered"}
-                  </button>
-                )}
-                {po.status === 'ORDERED' && canMarkAsDelivered && (
-                  <button onClick={() => handleAction('DELIVER')} disabled={updating} className="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Mark as Delivered"}
-                  </button>
-                )}
-                {po.status === 'APPROVED' && canCancel && (
-                  <button onClick={() => handleAction('CANCEL')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Cancel PO"}
-                  </button>
-                )}
+          {/* Approval Status */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Approval Status</h3>
+            <dl className="space-y-3">
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Reviewer Status</dt>
+                <dd className={`text-sm font-semibold ${getActionStatusColor(po.reviewerStatus)}`}>
+                  {po.reviewerStatus}
+                </dd>
               </div>
-            </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Approver Status</dt>
+                <dd className={`text-sm font-semibold ${getActionStatusColor(po.approverStatus)}`}>
+                  {po.approverStatus}
+                </dd>
+              </div>
+            </dl>
+          </div>
 
-            {/* Approval Status */}
+          {/* Convert to PR Button */}
+          {isAllowedToConvertToPR(po.status) && (
             <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Approval Status</h3>
-              <dl className="space-y-3">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Reviewer Status</dt>
-                  <dd className={`text-sm font-semibold ${getActionStatusColor(po.reviewerStatus)}`}>
-                    {po.reviewerStatus}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Approver Status</dt>
-                  <dd className={`text-sm font-semibold ${getActionStatusColor(po.approverStatus)}`}>
-                    {po.approverStatus}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            {/* Convert to PR Button */}
-            {isAllowedToConvertToPR(po.status) && (
-              <div className="bg-white shadow rounded-lg p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Payment Processing
-                </h3>
-                <div className="mb-4">
-                  <label
-                    htmlFor="paymentMethod"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Payment Method
-                  </label>
-                  <select
-                    id="paymentMethod"
-                    name="paymentMethod"
-                    value={paymentMethod}
-                    onChange={(e) =>
-                      setPaymentMethod(e.target.value as PaymentMethod)
-                    }
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                  >
-                    {Object.values(PaymentMethod).map((method) => (
-                      <option key={method} value={method}>
-                        {method.replace("_", " ")}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <button
-                  onClick={convertToPR}
-                  disabled={converting}
-                  className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-2 rounded-md text-sm font-medium"
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Payment Processing
+              </h3>
+              <div className="mb-4">
+                <label
+                  htmlFor="paymentMethod"
+                  className="block text-sm font-medium text-gray-700"
                 >
-                  {converting ? "Converting..." : "Convert to Payment Request"}
-                </button>
-                <p className="text-sm text-gray-500 mt-2">
-                  Create a payment request for this purchase order.
-                </p>
+                  Payment Method
+                </label>
+                <select
+                  id="paymentMethod"
+                  name="paymentMethod"
+                  value={paymentMethod}
+                  onChange={(e) =>
+                    setPaymentMethod(e.target.value as PaymentMethod)
+                  }
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                >
+                  {Object.values(PaymentMethod).map((method) => (
+                    <option key={method} value={method}>
+                      {method.replace("_", " ")}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
-
-            {/* People Involved */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">People Involved</h3>
-              <dl className="space-y-3">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Prepared By</dt>
-                  <dd className="text-sm text-gray-900">
-                    {po.preparedBy?.name} ({po.preparedBy?.email})
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Requested By</dt>
-                  <dd className="text-sm text-gray-900">
-                    {po.requestedBy?.name} ({po.requestedBy?.email})
-                  </dd>
-                </div>
-                {po.reviewedBy && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Selected Reviewer</dt>
-                    <dd className="text-sm text-gray-900">
-                      {po.reviewedBy.name} ({po.reviewedBy.email})
-                    </dd>
-                  </div>
-                )}
-                {po.approvedBy && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Selected Approver</dt>
-                    <dd className="text-sm text-gray-900">
-                      {po.approvedBy.name} ({po.approvedBy.email})
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            </div>
-
-            {/* Financial Summary */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Financial Summary</h3>
-              <dl className="space-y-2">
-                <div className="flex justify-between">
-                  <dt className="text-sm font-medium text-gray-500">Subtotal</dt>
-                  <dd className="text-sm text-gray-900">₹{po.totalAmount.toFixed(2)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-sm font-medium text-gray-500">Tax ({po.taxRate}%)</dt>
-                  <dd className="text-sm text-gray-900">₹{po.taxAmount.toFixed(2)}</dd>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <dt className="text-sm font-semibold text-gray-900">Grand Total</dt>
-                  <dd className="text-sm font-bold text-gray-900">₹{po.grandTotal.toFixed(2)}</dd>
-                </div>
-              </dl>
-            </div>
-
-            {/* Print Button */}
-            <div className="bg-white shadow rounded-lg p-6">
               <button
-                onClick={handlePrint}
-                className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                onClick={convertToPR}
+                disabled={converting}
+                className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
-                Print PO
+                {converting ? "Converting..." : "Convert to Payment Request"}
               </button>
+              <p className="text-sm text-gray-500 mt-2">
+                Create a payment request for this purchase order.
+              </p>
             </div>
+          )}
+
+          {/* People Involved */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">People Involved</h3>
+            <dl className="space-y-3">
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Prepared By</dt>
+                <dd className="text-sm text-gray-900">
+                  {po.preparedBy?.name} ({po.preparedBy?.email})
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Requested By</dt>
+                <dd className="text-sm text-gray-900">
+                  {po.requestedBy?.name} ({po.requestedBy?.email})
+                </dd>
+              </div>
+              {po.reviewedBy && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Selected Reviewer</dt>
+                  <dd className="text-sm text-gray-900">
+                    {po.reviewedBy.name} ({po.reviewedBy.email})
+                  </dd>
+                </div>
+              )}
+              {po.approvedBy && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Selected Approver</dt>
+                  <dd className="text-sm text-gray-900">
+                    {po.approvedBy.name} ({po.approvedBy.email})
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
+
+          {/* Financial Summary */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Financial Summary</h3>
+            <dl className="space-y-2">
+              <div className="flex justify-between">
+                <dt className="text-sm font-medium text-gray-500">Subtotal</dt>
+                <dd className="text-sm text-gray-900">₹{po.totalAmount.toFixed(2)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-sm font-medium text-gray-500">Tax ({po.taxRate}%)</dt>
+                <dd className="text-sm text-gray-900">₹{po.taxAmount.toFixed(2)}</dd>
+              </div>
+              <div className="flex justify-between border-t pt-2">
+                <dt className="text-sm font-semibold text-gray-900">Grand Total</dt>
+                <dd className="text-sm font-bold text-gray-900">₹{po.grandTotal.toFixed(2)}</dd>
+              </div>
+            </dl>
+          </div>
+
+          {/* Print Button */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <button
+              onClick={handlePrint}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
+              Print PO
+            </button>
           </div>
         </div>
+      </div>
     </PageLayout>
   );
 }

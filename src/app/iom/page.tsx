@@ -1,19 +1,29 @@
 "use client";
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { IOM, IOMStatus } from "@/types/iom";
-import SearchAndFilter from "@/components/SearchAndFilter";
-import { useState } from "react";
-import PageLayout from "@/components/PageLayout";
-import { formatCurrency, getIOMStatusColor } from "@/lib/utils";
-import LoadingSpinner from "@/components/LoadingSpinner";
-import ErrorDisplay from "@/components/ErrorDisplay";
-import { useHasPermission } from "@/hooks/useHasPermission";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, Trash2, Pencil, Download } from "lucide-react";
-import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
 import ConfirmationModal from "@/components/ConfirmationModal";
+import ErrorDisplay from "@/components/ErrorDisplay";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import PageLayout from "@/components/PageLayout";
+import SearchAndFilter from "@/components/SearchAndFilter";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useHasPermission } from "@/hooks/useHasPermission";
+import { formatCurrency, getIOMStatusColor } from "@/lib/utils";
+import { IOM, IOMStatus } from "@/types/iom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, Eye, Pencil, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
 const fetchIOMs = async (page = 1, pageSize = 10, searchTerm = "", status = "") => {
   const params = new URLSearchParams({
@@ -130,150 +140,165 @@ export default function IOMListPage() {
     setStatusFilter(filters.status.join(','));
   };
 
-if (isLoading) {
+  if (isLoading) {
+    return (
+      <PageLayout title="IOM Management">
+        <LoadingSpinner />
+      </PageLayout>
+    );
+  }
+
+  if (isError) {
+    return (
+      <PageLayout title="IOM Management">
+        <ErrorDisplay
+          title="Error Loading IOMs"
+          message={error.message}
+          onRetry={() => window.location.reload()}
+        />
+      </PageLayout>
+    );
+  }
+
   return (
     <PageLayout title="IOM Management">
-      <LoadingSpinner />
-    </PageLayout>
-  );
-}
+      <>
+        <ConfirmationModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onConfirm={confirmDelete}
+          title="Confirm Deletion"
+          message="Are you sure you want to delete this IOM? This action cannot be undone."
+        />
 
-if (isError) {
-  return (
-    <PageLayout title="IOM Management">
-      <ErrorDisplay
-        title="Error Loading IOMs"
-        message={error.message}
-        onRetry={() => window.location.reload()}
-      />
-    </PageLayout>
-  );
-}
+        <div className="flex flex-col space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <SearchAndFilter
+              onSearch={handleSearch}
+              onFilter={handleFilter}
+              filterOptions={{
+                status: Object.values(IOMStatus),
+                dateRange: true
+              }}
+              placeholder="Search IOMs..."
+              className="w-full sm:w-auto flex-1"
+            />
 
-return (
-  <PageLayout title="IOM Management">
-    <>
-      <ConfirmationModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onConfirm={confirmDelete}
-        title="Confirm Deletion"
-        message="Are you sure you want to delete this IOM? This action cannot be undone."
-      />
-      <div className="flex justify-end mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
+            <div className="flex gap-3">
+              <Button
                 onClick={handleExport}
                 disabled={isExporting}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 disabled:opacity-50"
-            >
-                <Download size={16} />
-                {isExporting ? "Exporting..." : "Export to CSV"}
-            </button>
-            {canCreate && (
-            <Link
-                href="/iom/create"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
-            >
-                Create New IOM
-            </Link>
-            )}
-        </div>
-        </div>
-        <SearchAndFilter
-          onSearch={handleSearch}
-          onFilter={handleFilter}
-          filterOptions={{
-            status: Object.values(IOMStatus),
-            dateRange: true
-          }}
-          placeholder="Search IOMs by title, number, from, to, or subject..."
-        />
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <div className="border-b border-gray-200 bg-white px-4 py-5 sm:px-6">
-            <h3 className="text-lg font-medium leading-6 text-gray-900">Internal Office Memos</h3>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">List of all IOMs in the system</p>
+                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20"
+                size="sm"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {isExporting ? "Exporting..." : "Export CSV"}
+              </Button>
+
+              {canCreate && (
+                <Link href="/iom/create">
+                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20" size="sm">
+                    Create IOM
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
-          <ul className="divide-y divide-gray-200">
-            {ioms.length === 0 ? (
-              <li className="px-6 py-12 text-center">
-                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <p className="text-gray-500 text-lg">No IOMs found.</p>
-                <p className="text-gray-400 text-sm mt-2">Create your first IOM to get started</p>
-              </li>
-            ) : (
-              ioms.map((iom: IOM) => (
-                <li key={iom.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex-1 min-w-0">
-                      <Link href={`/iom/${iom.id}`} className="text-sm font-medium text-blue-600 truncate hover:underline">
-                        {iom.iomNumber}
-                      </Link>
-                      <p className="ml-3 text-sm text-gray-900 font-semibold truncate">
-                        {iom.title}
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-4 flex-shrink-0">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getIOMStatusColor(iom.status)}`}>
-                        {iom.status.replace("_", " ")}
-                      </span>
-                      <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+
+          <Card className="border-0 shadow-xl bg-white/50 backdrop-blur-xl ring-1 ring-slate-900/5">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-slate-200/60">
+                  <TableHead className="w-[120px] pl-6">ID</TableHead>
+                  <TableHead>Subject</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right pr-6">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ioms.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                      No IOMs found. Create one to get started.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  ioms.map((iom: IOM) => (
+                    <TableRow key={iom.id} className="cursor-pointer hover:bg-indigo-50/30 transition-colors border-slate-200/60">
+                      <TableCell className="font-semibold text-indigo-600 pl-6">
+                        <Link href={`/iom/${iom.id}`} className="hover:underline">
+                          {iom.iomNumber}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="font-medium text-slate-700">{iom.title}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`${getIOMStatusColor(iom.status)} border-0`}>
+                          {iom.status.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-slate-700">
                         {formatCurrency(iom.totalAmount)}
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        <button onClick={() => router.push(`/iom/${iom.id}`)} className="p-1 text-gray-500 hover:text-gray-700">
-                          <Eye size={18} />
-                        </button>
-                        {canUpdate && iom.status === "DRAFT" && (
-                          <button onClick={() => router.push(`/iom/${iom.id}/edit`)} className="p-1 text-gray-500 hover:text-gray-700">
-                            <Pencil size={18} />
-                          </button>
-                        )}
-                        {canDelete && iom.status === "DRAFT" && iom.id && (
-                          <button onClick={() => handleDelete(iom.id as string)} disabled={deleteMutation.isPending} className="p-1 text-red-500 hover:text-red-700 disabled:opacity-50">
-                            <Trash2 size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
-        {(pageCount > 1 || total > 0) && (
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to <span className="font-medium">{Math.min(page * pageSize, total)}</span> of{' '}
-                <span className="font-medium">{total}</span> results
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => router.push(`/iom/${iom.id}`)} className="h-8 w-8 hover:bg-indigo-100/50 hover:text-indigo-600">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {canUpdate && iom.status === "DRAFT" && (
+                            <Button variant="ghost" size="icon" onClick={() => router.push(`/iom/${iom.id}/edit`)} className="h-8 w-8 hover:bg-blue-100/50 hover:text-blue-600">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDelete && iom.status === "DRAFT" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(iom.id as string)}
+                              disabled={deleteMutation.isPending}
+                              className="h-8 w-8 hover:bg-red-100/50 hover:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+
+          {(pageCount > 1 || total > 0) && (
+            <div className="flex items-center justify-between px-2">
+              <p className="text-sm text-slate-500">
+                Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} of {total} results
               </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1}
+                  className="bg-white"
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page + 1)}
+                  disabled={page >= pageCount}
+                  className="bg-white"
+                >
+                  Next
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setPage(page - 1)}
-                disabled={page === 1}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-700">
-                Page <span className="font-medium">{page}</span> of <span className="font-medium">{pageCount}</span>
-              </span>
-              <button
-                onClick={() => setPage(page + 1)}
-                disabled={page >= pageCount}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-    </>
-  </PageLayout>
-);
+          )}
+        </div>
+      </>
+    </PageLayout>
+  );
 }

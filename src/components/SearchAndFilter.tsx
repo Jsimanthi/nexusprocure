@@ -1,8 +1,8 @@
 // src/components/SearchAndFilter.tsx
 "use client";
 
+import { Filter, Search, X } from "lucide-react";
 import { useState } from "react";
-import { Search, Filter, X } from "lucide-react";
 
 export interface FilterState {
   status: string[];
@@ -21,13 +21,15 @@ interface SearchAndFilterProps {
     // Add more filter options as needed
   };
   placeholder?: string;
+  className?: string;
 }
 
 export default function SearchAndFilter({
   onSearch,
   onFilter,
   filterOptions,
-  placeholder = "Search..."
+  placeholder = "Search...",
+  className = ""
 }: SearchAndFilterProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -64,7 +66,7 @@ export default function SearchAndFilter({
   const hasActiveFilters = selectedStatus.length > 0 || dateRange.from || dateRange.to;
 
   return (
-    <div className="mb-6">
+    <div className={`mb-6 ${className}`}>
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Search Input */}
         <div className="relative flex-1">
@@ -81,11 +83,10 @@ export default function SearchAndFilter({
         {/* Filter Toggle Button */}
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-4 py-2 border rounded-md ${
-            hasActiveFilters
+          className={`flex items-center gap-2 px-4 py-2 border rounded-md ${hasActiveFilters
               ? "border-blue-500 bg-blue-50 text-blue-700"
               : "border-gray-300 text-gray-700 hover:bg-gray-50"
-          }`}
+            }`}
         >
           <Filter className="w-4 h-4" />
           Filters
