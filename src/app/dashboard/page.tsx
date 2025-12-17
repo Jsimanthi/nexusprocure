@@ -1,75 +1,38 @@
 "use client";
-import { useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
-import Pusher from "pusher-js";
-import { redirect } from "next/navigation";
-import PageLayout from "@/components/PageLayout";
-import LoadingSpinner from "@/components/LoadingSpinner";
-import ErrorDisplay from "@/components/ErrorDisplay";
-import { DashboardStats } from "@/types/dashboard";
 import { AdminDashboard } from "@/components/dashboard/AdminDashboard";
+import { FinanceOfficerDashboard } from "@/components/dashboard/FinanceOfficerDashboard";
 import { ManagerDashboard } from "@/components/dashboard/ManagerDashboard";
 import { ProcurementOfficerDashboard } from "@/components/dashboard/ProcurementOfficerDashboard";
-import { FinanceOfficerDashboard } from "@/components/dashboard/FinanceOfficerDashboard";
-import { Role } from "@prisma/client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-
-const fetchDashboardData = async (): Promise<DashboardStats> => {
-  const response = await fetch("/api/dashboard");
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || "Failed to fetch dashboard data");
-  }
-  return response.json();
-};
+import ErrorDisplay from "@/components/ErrorDisplay";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import PageLayout from "@/components/PageLayout";
+import { useDashboardData } from "@/hooks/useDashboard";
+import { useUser } from "@/hooks/useUser";
+import { Role } from "@/types/auth";
+import { DashboardStats } from "@/types/dashboard";
+import { redirect } from "next/navigation";
+import React from "react"; // Explicit import for React.FC
 
 const dashboardComponents: { [key: string]: React.FC<{ stats: DashboardStats }> } = {
-  Administrator: AdminDashboard,
-  Manager: ManagerDashboard,
-  Approver: ManagerDashboard, // Using ManagerDashboard for Approvers as well
-  "Procurement Officer": ProcurementOfficerDashboard,
-  "Finance Officer": FinanceOfficerDashboard,
+  [Role.ADMINISTRATOR]: AdminDashboard,
+  [Role.MANAGER]: ManagerDashboard,
+  [Role.APPROVER]: ManagerDashboard, // Using ManagerDashboard for Approvers as well
+  [Role.PROCUREMENT_OFFICER]: ProcurementOfficerDashboard,
+  [Role.FINANCE_OFFICER]: FinanceOfficerDashboard,
 };
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const { user, isLoading: isUserLoading, isAuthenticated } = useUser();
   const {
     data: stats,
-    isLoading,
+    isLoading: isStatsLoading,
     isError,
     error,
     refetch,
-  } = useQuery<DashboardStats>({
-    queryKey: ["dashboardData"],
-    queryFn: fetchDashboardData,
-    enabled: status === "authenticated",
-  });
+  } = useDashboardData();
 
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (
-      process.env.NEXT_PUBLIC_PUSHER_KEY &&
-      process.env.NEXT_PUBLIC_PUSHER_KEY !== "placeholder"
-    ) {
-      const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY, {
-        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-      });
-
-      const channel = pusher.subscribe("dashboard-channel");
-
-      channel.bind("dashboard-update", () => {
-        queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
-      });
-
-      return () => {
-        pusher.unsubscribe("dashboard-channel");
-      };
-    }
-  }, [queryClient]);
-
-  if (status === "loading" || isLoading) {
+  if (isUserLoading || isStatsLoading) {
     return (
       <PageLayout title="Dashboard Overview">
         <LoadingSpinner />
@@ -77,11 +40,11 @@ export default function DashboardPage() {
     );
   }
 
-  if (!session) {
+  if (!isAuthenticated || !user) {
     redirect("/login");
   }
 
-  const userRole = (session?.user?.role as Role)?.name;
+  const userRole = user.role?.name;
   const DashboardComponent = userRole ? dashboardComponents[userRole] : null;
 
   return (

@@ -1,9 +1,11 @@
 // src/app/api/iom/[id]/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getIOMById, updateIOMStatus } from "@/lib/iom";
 import { authorize } from "@/lib/auth-utils";
+import { getIOMById, updateIOMStatus } from "@/lib/iom";
+import logger from "@/lib/logger";
+import { Permission } from "@/types/auth";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   request: NextRequest,
@@ -13,23 +15,23 @@ export async function GET(
 
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Use the authorize utility to check for READ_IOM permission
-    authorize(session, 'READ_IOM');
+    authorize(session, Permission.READ_IOM);
 
     const iom = await getIOMById(id);
-    
+
     if (!iom) {
       return NextResponse.json({ error: "IOM not found" }, { status: 404 });
     }
 
     return NextResponse.json(iom);
   } catch (error) {
-    console.error("Error fetching IOM:", error);
+    logger.error({ error }, "Error fetching IOM");
     if (error instanceof Error && error.message.includes('Not authorized')) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
@@ -48,7 +50,7 @@ export async function PATCH(
 
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -65,7 +67,7 @@ export async function PATCH(
     }
 
     const iom = await updateIOMStatus(id, action, session);
-    
+
     if (!iom) {
       return NextResponse.json({ error: "IOM not found" }, { status: 404 });
     }

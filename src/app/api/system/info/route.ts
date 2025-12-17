@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import { authorize } from '@/lib/auth-utils';
+import { prisma } from '@/lib/prisma';
+import { Permission } from '@/types/auth';
 import { promises as fs } from 'fs';
+import { getServerSession } from 'next-auth/next';
+import { NextResponse } from 'next/server';
 import path from 'path';
 
 export async function GET() {
@@ -14,7 +15,7 @@ export async function GET() {
     }
 
     // Only administrators should be able to see system info
-    authorize(session, 'MANAGE_SETTINGS');
+    authorize(session, Permission.MANAGE_SETTINGS);
 
     // 1. Get App Version from package.json
     const packageJsonPath = path.join(process.cwd(), 'package.json');

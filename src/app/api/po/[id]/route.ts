@@ -1,9 +1,11 @@
 // src/app/api/po/[id]/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getPOById, updatePOStatus, updatePODetails } from "@/lib/po";
 import { authorize } from "@/lib/auth-utils";
+import logger from "@/lib/logger";
+import { getPOById, updatePODetails, updatePOStatus } from "@/lib/po";
+import { Permission } from "@/types/auth";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   request: NextRequest,
@@ -13,23 +15,23 @@ export async function GET(
 
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Use the authorize utility to check for READ_PO permission
-    authorize(session, 'READ_PO');
+    authorize(session, Permission.READ_PO);
 
     const po = await getPOById(id);
-    
+
     if (!po) {
       return NextResponse.json({ error: "PO not found" }, { status: 404 });
     }
 
     return NextResponse.json(po);
   } catch (error) {
-    console.error("Error fetching PO:", error);
+    logger.error({ error }, "Error fetching PO");
     if (error instanceof Error && error.message.includes('Not authorized')) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
@@ -48,7 +50,7 @@ export async function PATCH(
 
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

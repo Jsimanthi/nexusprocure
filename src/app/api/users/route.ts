@@ -1,11 +1,13 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { authorize } from '@/lib/auth-utils';
+import logger from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
 import { createUserSchema } from '@/lib/schemas';
+import { Permission, Role } from '@/types/auth';
+import { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { getServerSession } from 'next-auth/next';
+import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 
@@ -16,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    authorize(session, 'MANAGE_USERS');
+    authorize(session, Permission.MANAGE_USERS);
 
     const body = await req.json();
     const validation = createUserSchema.safeParse(body);
@@ -54,7 +56,7 @@ export async function POST(req: Request) {
     if (error instanceof Error && error.message.includes('Not authorized')) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
-    console.error('Error creating user:', error);
+    logger.error({ error }, 'Error creating user');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -81,17 +83,17 @@ export async function GET(req: Request) {
     } else if (roleName) {
       const permissions = session.user.permissions || [];
       const canFetchManagers =
-        permissions.includes('REVIEW_IOM') ||
-        permissions.includes('REVIEW_PO') ||
-        permissions.includes('CREATE_PR');
+        permissions.includes(Permission.REVIEW_IOM) ||
+        permissions.includes(Permission.REVIEW_PO) ||
+        permissions.includes(Permission.CREATE_PR);
 
-      if (roleName === 'Manager' && canFetchManagers) {
+      if (roleName === Role.MANAGER && canFetchManagers) {
         // Allow users with specific permissions to fetch managers
       } else {
-        authorize(session, 'MANAGE_USERS');
+        authorize(session, Permission.MANAGE_USERS);
       }
     } else {
-      authorize(session, 'MANAGE_USERS');
+      authorize(session, Permission.MANAGE_USERS);
     }
 
     const whereClause: Prisma.UserWhereInput = {};
@@ -109,7 +111,7 @@ export async function GET(req: Request) {
         },
       };
     }
-    if(roleName || permissionName) {
+    if (roleName || permissionName) {
       whereClause.role = roleClause;
     }
 
@@ -136,7 +138,7 @@ export async function GET(req: Request) {
     if (error instanceof Error && error.message.includes('Not authorized')) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
-    console.error('Error fetching users:', error);
+    logger.error({ error }, 'Error fetching users');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

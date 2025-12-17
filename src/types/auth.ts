@@ -1,0 +1,57 @@
+export enum Role {
+    ADMINISTRATOR = "Administrator",
+    MANAGER = "Manager",
+    APPROVER = "Approver",
+    PROCUREMENT_OFFICER = "Procurement Officer",
+    FINANCE_OFFICER = "Finance Officer",
+}
+
+export enum Permission {
+    // User Management
+    MANAGE_USERS = "MANAGE_USERS",
+    MANAGE_ROLES = "MANAGE_ROLES",
+    MANAGE_SETTINGS = "MANAGE_SETTINGS",
+
+    // Analytics
+    VIEW_ANALYTICS = "VIEW_ANALYTICS",
+
+    // Vendors
+    MANAGE_VENDORS = "MANAGE_VENDORS",
+    READ_ALL_VENDORS = "READ_ALL_VENDORS",
+
+    // IOM (Inter-Office Memo)
+    CREATE_IOM = "CREATE_IOM",
+    READ_IOM = "READ_IOM",
+    UPDATE_IOM = "UPDATE_IOM",
+    DELETE_IOM = "DELETE_IOM",
+    APPROVE_IOM = "APPROVE_IOM",
+    REJECT_IOM = "REJECT_IOM",
+    REVIEW_IOM = "REVIEW_IOM",
+    COMPLETE_IOM = "COMPLETE_IOM",
+    READ_ALL_IOMS = "READ_ALL_IOMS",
+
+    // PO (Purchase Order)
+    CREATE_PO = "CREATE_PO",
+    READ_PO = "READ_PO",
+    UPDATE_PO = "UPDATE_PO",
+    DELETE_PO = "DELETE_PO",
+    APPROVE_PO = "APPROVE_PO",
+    REJECT_PO = "REJECT_PO",
+    REVIEW_PO = "REVIEW_PO",
+    ORDER_PO = "ORDER_PO",
+    DELIVER_PO = "DELIVER_PO",
+    CANCEL_PO = "CANCEL_PO",
+    READ_ALL_POS = "READ_ALL_POS",
+
+    // PR (Payment Request)
+    CREATE_PR = "CREATE_PR",
+    READ_PR = "READ_PR",
+    UPDATE_PR = "UPDATE_PR",
+    DELETE_PR = "DELETE_PR",
+    APPROVE_PR = "APPROVE_PR",
+    REJECT_PR = "REJECT_PR",
+    REVIEW_PR = "REVIEW_PR",
+    CANCEL_PR = "CANCEL_PR",
+    PROCESS_PAYMENT_REQUEST = "PROCESS_PAYMENT_REQUEST",
+    READ_ALL_PRS = "READ_ALL_PRS",
+}

@@ -1,7 +1,10 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { authorize } from "@/lib/auth-utils";
+import logger from "@/lib/logger";
 import { getAllPRsForExport } from '@/lib/pr';
+import { Permission } from "@/types/auth";
+import { getServerSession } from 'next-auth/next';
+import { NextResponse } from 'next/server';
 import Papa from 'papaparse';
 
 type PRExport = {
@@ -31,6 +34,15 @@ export async function GET() {
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Check permission - assuming authorize helper is not used here or needs to be added
+    // If not using authorize helper, we need to manually check or import it.
+    // The previous code didn't show authorize usage in this file, but getAllPRsForExport likely checks it?
+    // Wait, getAllPRsForExport in src/lib/pr.ts CHECKS IT internally.
+    // let's check src/lib/pr.ts content again.
+    // Yes, getAllPRsForExport calls authorize(session, Permission.READ_ALL_PRS).
+    // So distinct authorization here might be redundant but good for explicit API security.
+    authorize(session, Permission.READ_ALL_PRS);
 
     const prs = await getAllPRsForExport(session);
 
@@ -65,7 +77,7 @@ export async function GET() {
     return new NextResponse(csv, { status: 200, headers });
 
   } catch (error) {
-    console.error('Error exporting PRs:', error);
+    logger.error({ error }, 'Error exporting PRs');
     if (error instanceof Error && error.message.includes('Not authorized')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

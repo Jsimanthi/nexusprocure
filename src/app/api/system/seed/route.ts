@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { authorize } from '@/lib/auth-utils';
-import { main as seedDatabase } from '../../../../../prisma/seed';
 import { prisma } from '@/lib/prisma';
+import { Permission } from '@/types/auth';
+import { getServerSession } from 'next-auth/next';
+import { NextResponse } from 'next/server';
+import { main as seedDatabase } from '../../../../../prisma/seed';
 
 export async function POST() {
   try {
@@ -12,7 +13,7 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    authorize(session, 'MANAGE_SETTINGS');
+    authorize(session, Permission.MANAGE_SETTINGS);
 
     console.log('Database seeding initiated by user:', session.user.email);
 

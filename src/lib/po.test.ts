@@ -1,12 +1,13 @@
 // src/lib/po.test.ts
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getPOs, createPurchaseOrder, updatePOStatus } from './po';
-import { prisma } from './prisma';
-import { PurchaseOrder, POStatus } from '@/types/po';
-import { Session } from 'next-auth';
+import { Permission, Role } from '@/types/auth'; // Import Enums
+import { POStatus, PurchaseOrder } from '@/types/po';
 import { Prisma } from '@prisma/client';
-import { authorize } from './auth-utils';
+import { Session } from 'next-auth';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAuditUser } from './audit';
+import { authorize } from './auth-utils';
+import { createPurchaseOrder, getPOs, updatePOStatus } from './po';
+import { prisma } from './prisma';
 import { updateVendorPerformanceMetrics } from './vendor';
 
 // Mock external dependencies
@@ -17,13 +18,13 @@ vi.mock('@/lib/audit');
 vi.mock('@/lib/auth-utils');
 vi.mock('./vendor');
 
-const mockUserSession = (permissions: string[] = []): Session => ({
+const mockUserSession = (permissions: Permission[] = []): Session => ({
   user: {
     id: 'user-id',
     name: 'Test User',
     email: 'test@example.com',
     permissions,
-    role: { id: 'role-1', name: 'User' },
+    role: { id: 'role-1', name: Role.MANAGER },
   },
   expires: '2099-01-01T00:00:00.000Z',
 });
@@ -59,7 +60,8 @@ describe('Purchase Order Functions', () => {
         approverId: 'approver-1',
         attachments: [], // Explicitly empty
       };
-      const session = mockUserSession(['CREATE_PO']);
+
+      const session = mockUserSession([Permission.CREATE_PO]);
       vi.mocked(authorize).mockReturnValue(true);
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
 
@@ -93,7 +95,7 @@ describe('Purchase Order Functions', () => {
       await createPurchaseOrder(inputData, session);
 
       // Assert
-      expect(authorize).toHaveBeenCalledWith(session, 'CREATE_PO');
+      expect(authorize).toHaveBeenCalledWith(session, Permission.CREATE_PO);
       expect(prisma.purchaseOrder.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.not.objectContaining({ attachments: expect.any(Object) }),
@@ -121,7 +123,8 @@ describe('Purchase Order Functions', () => {
           { url: 'http://example.com/file1.pdf', filename: 'file1.pdf', filetype: 'application/pdf', size: 12345 },
         ],
       };
-      const session = mockUserSession(['CREATE_PO']);
+
+      const session = mockUserSession([Permission.CREATE_PO]);
       vi.mocked(authorize).mockReturnValue(true);
       vi.mocked(prisma.purchaseOrder.count).mockResolvedValue(0);
 
@@ -131,7 +134,7 @@ describe('Purchase Order Functions', () => {
       await createPurchaseOrder(inputData, session);
 
       // Assert
-      expect(authorize).toHaveBeenCalledWith(session, 'CREATE_PO');
+      expect(authorize).toHaveBeenCalledWith(session, Permission.CREATE_PO);
       expect(prisma.purchaseOrder.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -163,7 +166,8 @@ describe('Purchase Order Functions', () => {
         approverId: 'approver-1',
         attachments: [],
       };
-      const session = mockUserSession(['CREATE_PO']);
+
+      const session = mockUserSession([Permission.CREATE_PO]);
       vi.mocked(authorize).mockReturnValue(true);
       const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed',
@@ -188,9 +192,10 @@ describe('Purchase Order Functions', () => {
     const approverId = 'approver-id';
     const reviewerId = 'reviewer-id';
     const vendorId = 'vendor-1';
-    const approverSession = mockUserSession(['APPROVE_PO']);
+
+    const approverSession = mockUserSession([Permission.APPROVE_PO]);
     approverSession.user!.id = approverId;
-    const reviewerSession = mockUserSession(['REVIEW_PO']);
+    const reviewerSession = mockUserSession([Permission.REVIEW_PO]);
     reviewerSession.user!.id = reviewerId;
 
     const basePo = {
@@ -245,24 +250,24 @@ describe('Purchase Order Functions', () => {
     });
 
     it('should call updateVendorPerformanceMetrics when a PO is delivered', async () => {
-        const deliverSession = mockUserSession(['DELIVER_PO']);
-        const deliveredPO = { ...basePo, status: POStatus.DELIVERED, fulfilledAt: new Date(), vendorId: 'vendor-1' };
-        vi.mocked(authorize).mockReturnValue(true);
-        vi.mocked(prisma.purchaseOrder.update).mockResolvedValue(deliveredPO as any);
-        vi.mocked(updateVendorPerformanceMetrics).mockResolvedValue(undefined);
+      const deliverSession = mockUserSession([Permission.DELIVER_PO]);
+      const deliveredPO = { ...basePo, status: POStatus.DELIVERED, fulfilledAt: new Date(), vendorId: 'vendor-1' };
+      vi.mocked(authorize).mockReturnValue(true);
+      vi.mocked(prisma.purchaseOrder.update).mockResolvedValue(deliveredPO as any);
+      vi.mocked(updateVendorPerformanceMetrics).mockResolvedValue(undefined);
 
-        await updatePOStatus(poId, "DELIVER", deliverSession);
+      await updatePOStatus(poId, "DELIVER", deliverSession);
 
-        expect(authorize).toHaveBeenCalledWith(deliverSession, 'DELIVER_PO');
-        expect(prisma.purchaseOrder.update).toHaveBeenCalledWith({
-          where: { id: poId },
-          data: { status: POStatus.DELIVERED, fulfilledAt: expect.any(Date) },
-        });
-        expect(updateVendorPerformanceMetrics).toHaveBeenCalledWith('vendor-1');
+      expect(authorize).toHaveBeenCalledWith(deliverSession, Permission.DELIVER_PO);
+      expect(prisma.purchaseOrder.update).toHaveBeenCalledWith({
+        where: { id: poId },
+        data: { status: POStatus.DELIVERED, fulfilledAt: expect.any(Date) },
       });
+      expect(updateVendorPerformanceMetrics).toHaveBeenCalledWith('vendor-1');
+    });
 
     it('should throw an error if user is not the designated reviewer or approver', async () => {
-      const unrelatedUserSession = mockUserSession(['REVIEW_PO', 'APPROVE_PO']);
+      const unrelatedUserSession = mockUserSession([Permission.REVIEW_PO, Permission.APPROVE_PO]);
       unrelatedUserSession.user!.id = 'unrelated-user';
       vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue(basePo as PurchaseOrder);
 
@@ -280,7 +285,7 @@ describe('Purchase Order Functions', () => {
 
       await updatePOStatus(poId, "APPROVE", reviewerSession);
 
-      expect(authorize).toHaveBeenCalledWith(reviewerSession, 'REVIEW_PO');
+      expect(authorize).toHaveBeenCalledWith(reviewerSession, Permission.REVIEW_PO);
       expect(prisma.purchaseOrder.update).toHaveBeenCalledWith({
         where: { id: poId },
         data: { reviewerStatus: "APPROVED" },
@@ -297,7 +302,7 @@ describe('Purchase Order Functions', () => {
 
       await updatePOStatus(poId, "APPROVE", approverSession);
 
-      expect(authorize).toHaveBeenCalledWith(approverSession, 'APPROVE_PO');
+      expect(authorize).toHaveBeenCalledWith(approverSession, Permission.APPROVE_PO);
       expect(prisma.purchaseOrder.update).toHaveBeenCalledWith({
         where: { id: poId },
         data: { approverStatus: "APPROVED" },
@@ -318,7 +323,7 @@ describe('Purchase Order Functions', () => {
 
       await updatePOStatus(poId, "REJECT", reviewerSession);
 
-      expect(authorize).toHaveBeenCalledWith(reviewerSession, 'REVIEW_PO');
+      expect(authorize).toHaveBeenCalledWith(reviewerSession, Permission.REVIEW_PO);
       expect(prisma.purchaseOrder.update).toHaveBeenCalledWith({
         where: { id: poId },
         data: { status: POStatus.REJECTED },
@@ -335,7 +340,7 @@ describe('Purchase Order Functions', () => {
     });
 
     it('should filter by user involvement if user lacks READ_ALL_POS permission', async () => {
-      const session = mockUserSession(['SOME_OTHER_PERMISSION']);
+      const session = mockUserSession([Permission.CREATE_PO]); // Arbitrary non-read-all perm
       await getPOs(session, {});
       expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -356,7 +361,7 @@ describe('Purchase Order Functions', () => {
     });
 
     it('should not apply user-based filters if user has READ_ALL_POS permission', async () => {
-      const session = mockUserSession(['READ_ALL_POS']);
+      const session = mockUserSession([Permission.READ_ALL_POS]);
       await getPOs(session, {});
       expect(prisma.purchaseOrder.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

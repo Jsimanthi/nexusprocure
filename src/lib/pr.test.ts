@@ -1,12 +1,13 @@
-// src/lib/cr.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getPRs, createPaymentRequest, updatePRStatus } from './pr';
-import { prisma } from './prisma';
-import { PRStatus, CreatePrData, PaymentRequest, PaymentMethod } from '@/types/pr';
+// src/lib/pr.test.ts
+import { Permission, Role } from '@/types/auth'; // Import Enums
+import { CreatePrData, PaymentMethod, PaymentRequest, PRStatus } from '@/types/pr';
+import { POStatus, Prisma, PurchaseOrder } from '@prisma/client';
 import { Session } from 'next-auth';
-import { Prisma, POStatus, PurchaseOrder } from '@prisma/client';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createPaymentRequest, getPRs, updatePRStatus } from './pr';
+import { prisma } from './prisma';
 
-import { logAudit, getAuditUser } from './audit';
+import { getAuditUser, logAudit } from './audit';
 
 import { authorize } from './auth-utils';
 
@@ -17,13 +18,13 @@ vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
 vi.mock('@/lib/auth-utils');
 
-const mockUserSession = (permissions: string[] = []): Session => ({
+const mockUserSession = (permissions: Permission[] = []): Session => ({
   user: {
     id: 'user-id',
     name: 'Test User',
     email: 'test@example.com',
     permissions,
-    role: { id: 'role-1', name: 'User' },
+    role: { id: 'role-1', name: Role.MANAGER },
   },
   expires: '2099-01-01T00:00:00.000Z',
 });
@@ -114,13 +115,14 @@ describe('Payment Request (PR) Functions', () => {
         reviewerId: 'reviewer-1',
         approverId: 'approver-1'
       };
-      const session = mockUserSession(['CREATE_PR']);
+
+      const session = mockUserSession([Permission.CREATE_PR]);
       vi.mocked(authorize).mockReturnValue(true);
       vi.mocked(prisma.paymentRequest.create).mockResolvedValue(mockPaymentRequest);
 
       await createPaymentRequest(prData, session);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'CREATE_PR');
+      expect(authorize).toHaveBeenCalledWith(session, Permission.CREATE_PR);
 
       expect(prisma.paymentRequest.create).toHaveBeenCalled();
       expect(logAudit).toHaveBeenCalledWith("CREATE", expect.any(Object));
@@ -141,7 +143,8 @@ describe('Payment Request (PR) Functions', () => {
         reviewerId: 'reviewer-1',
         approverId: 'approver-1'
       };
-      const session = mockUserSession(['CREATE_PR']);
+
+      const session = mockUserSession([Permission.CREATE_PR]);
       vi.mocked(authorize).mockReturnValue(true);
       const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed',
@@ -175,7 +178,8 @@ describe('Payment Request (PR) Functions', () => {
         reviewerId: 'reviewer-1',
         approverId: 'approver-1'
       };
-      const session = mockUserSession(['CREATE_PR']);
+
+      const session = mockUserSession([Permission.CREATE_PR]);
       vi.mocked(authorize).mockReturnValue(true);
       vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
         ...mockPurchaseOrder,
@@ -205,7 +209,8 @@ describe('Payment Request (PR) Functions', () => {
         reviewerId: 'reviewer-1',
         approverId: 'approver-1'
       };
-      const session = mockUserSession(['CREATE_PR']);
+
+      const session = mockUserSession([Permission.CREATE_PR]);
       vi.mocked(authorize).mockReturnValue(true);
       vi.mocked(prisma.purchaseOrder.findUnique).mockResolvedValue({
         ...mockPurchaseOrder,
@@ -223,9 +228,9 @@ describe('Payment Request (PR) Functions', () => {
     const prId = 'pr-123';
     const approverId = 'approver-id';
     const reviewerId = 'reviewer-id';
-    const approverSession = mockUserSession(['APPROVE_PR']);
+    const approverSession = mockUserSession([Permission.APPROVE_PR]);
     approverSession.user!.id = approverId;
-    const reviewerSession = mockUserSession(['REVIEW_PR']);
+    const reviewerSession = mockUserSession([Permission.REVIEW_PR]);
     reviewerSession.user!.id = reviewerId;
 
     const basePr = {
@@ -252,7 +257,7 @@ describe('Payment Request (PR) Functions', () => {
     });
 
     it('should throw an error if user is not the designated reviewer or approver', async () => {
-      const unrelatedUserSession = mockUserSession(['REVIEW_PR', 'APPROVE_PR']);
+      const unrelatedUserSession = mockUserSession([Permission.REVIEW_PR, Permission.APPROVE_PR]);
       unrelatedUserSession.user!.id = 'unrelated-user';
       vi.mocked(prisma.paymentRequest.findUnique).mockResolvedValue(basePr as PaymentRequest);
 
@@ -270,7 +275,7 @@ describe('Payment Request (PR) Functions', () => {
 
       await updatePRStatus(prId, "APPROVE", reviewerSession);
 
-      expect(authorize).toHaveBeenCalledWith(reviewerSession, 'REVIEW_PR');
+      expect(authorize).toHaveBeenCalledWith(reviewerSession, Permission.REVIEW_PR);
       expect(prisma.paymentRequest.update).toHaveBeenCalledWith({
         where: { id: prId },
         data: { reviewerStatus: "APPROVED" },
@@ -287,7 +292,7 @@ describe('Payment Request (PR) Functions', () => {
 
       await updatePRStatus(prId, "APPROVE", approverSession);
 
-      expect(authorize).toHaveBeenCalledWith(approverSession, 'APPROVE_PR');
+      expect(authorize).toHaveBeenCalledWith(approverSession, Permission.APPROVE_PR);
       expect(prisma.paymentRequest.update).toHaveBeenCalledWith({
         where: { id: prId },
         data: { approverStatus: "APPROVED" },
@@ -308,7 +313,7 @@ describe('Payment Request (PR) Functions', () => {
 
       await updatePRStatus(prId, "REJECT", reviewerSession);
 
-      expect(authorize).toHaveBeenCalledWith(reviewerSession, 'REVIEW_PR');
+      expect(authorize).toHaveBeenCalledWith(reviewerSession, Permission.REVIEW_PR);
       expect(prisma.paymentRequest.update).toHaveBeenCalledWith({
         where: { id: prId },
         data: { status: PRStatus.REJECTED },
@@ -325,7 +330,7 @@ describe('Payment Request (PR) Functions', () => {
     });
 
     it('should filter by user involvement if user lacks READ_ALL_PRS permission', async () => {
-      const session = mockUserSession(['SOME_OTHER_PERMISSION']);
+      const session = mockUserSession([Permission.CREATE_PR]); // Arbitrary permission
       await getPRs(session, {});
       expect(prisma.paymentRequest.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -346,7 +351,7 @@ describe('Payment Request (PR) Functions', () => {
     });
 
     it('should not apply user-based filters if user has READ_ALL_PRS permission', async () => {
-      const session = mockUserSession(['READ_ALL_PRS']);
+      const session = mockUserSession([Permission.READ_ALL_PRS]);
       await getPRs(session, {});
       expect(prisma.paymentRequest.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

@@ -1,11 +1,12 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { getAuditUser, logAudit } from '@/lib/audit';
 import { authOptions } from '@/lib/auth';
 import { authorize } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
-import { logAudit, getAuditUser } from '@/lib/audit';
 import { triggerPusherEvent } from '@/lib/pusher';
-import { PRStatus, POStatus, IOMStatus } from '@prisma/client';
+import { Permission } from "@/types/auth";
+import { IOMStatus, POStatus, PRStatus } from '@prisma/client';
+import { getServerSession } from 'next-auth/next';
+import { NextResponse } from 'next/server';
 
 import { NextRequest } from 'next/server';
 
@@ -19,7 +20,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    authorize(session, 'PROCESS_PAYMENT_REQUEST');
+    authorize(session, Permission.PROCESS_PAYMENT_REQUEST);
 
     const { id: prId } = await context.params;
 
@@ -59,17 +60,17 @@ export async function POST(
       if (pr.po?.id) {
         const po = await tx.purchaseOrder.findUnique({ where: { id: pr.po.id } });
         if (po) {
-            updatedPo = await tx.purchaseOrder.update({
-                where: { id: pr.po.id },
-                data: { status: POStatus.COMPLETED },
-            });
-            await logAudit("UPDATE", {
-                model: "PurchaseOrder",
-                recordId: pr.po.id,
-                userId: auditUser.userId,
-                userName: auditUser.userName,
-                changes: { from: { status: po.status }, to: { status: POStatus.COMPLETED } },
-            }, tx);
+          updatedPo = await tx.purchaseOrder.update({
+            where: { id: pr.po.id },
+            data: { status: POStatus.COMPLETED },
+          });
+          await logAudit("UPDATE", {
+            model: "PurchaseOrder",
+            recordId: pr.po.id,
+            userId: auditUser.userId,
+            userName: auditUser.userName,
+            changes: { from: { status: po.status }, to: { status: POStatus.COMPLETED } },
+          }, tx);
         }
       }
 
@@ -77,23 +78,23 @@ export async function POST(
       if (pr.po?.iomId) {
         const iom = await tx.iOM.findUnique({ where: { id: pr.po.iomId } });
         if (iom) {
-            updatedIom = await tx.iOM.update({
-                where: { id: pr.po.iomId },
-                data: { status: IOMStatus.COMPLETED },
-            });
-            await logAudit("UPDATE", {
-                model: "IOM",
-                recordId: pr.po.iomId,
-                userId: auditUser.userId,
-                userName: auditUser.userName,
-                changes: { from: { status: iom.status }, to: { status: IOMStatus.COMPLETED } },
-            }, tx);
+          updatedIom = await tx.iOM.update({
+            where: { id: pr.po.iomId },
+            data: { status: IOMStatus.COMPLETED },
+          });
+          await logAudit("UPDATE", {
+            model: "IOM",
+            recordId: pr.po.iomId,
+            userId: auditUser.userId,
+            userName: auditUser.userName,
+            changes: { from: { status: iom.status }, to: { status: IOMStatus.COMPLETED } },
+          }, tx);
         }
       }
 
       return { updatedPr, updatedPo, updatedIom };
     }, {
-        timeout: 20000, // Set a 20-second timeout for this complex transaction
+      timeout: 20000, // Set a 20-second timeout for this complex transaction
     });
 
     // Trigger real-time update
@@ -107,7 +108,7 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
     if (error instanceof Error) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -1,11 +1,12 @@
 "use client";
 
-import * as React from 'react';
 import { cn } from '@/lib/utils';
+import * as React from 'react';
 
 interface Tab {
   id: string;
   label: string;
+  icon?: React.ReactNode;
   content: React.ReactNode;
 }
 
@@ -52,10 +53,11 @@ const Tabs: React.FC<TabsProps> = ({ tabs, defaultTab }) => {
                   tab.id === activeTab
                     ? 'border-indigo-500 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-                  'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
+                  'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2'
                 )}
                 aria-current={tab.id === activeTab ? 'page' : undefined}
               >
+                {tab.icon && <span>{tab.icon}</span>}
                 {tab.label}
               </button>
             ))}

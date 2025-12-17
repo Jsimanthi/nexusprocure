@@ -10,9 +10,11 @@ import { Session } from 'next-auth';
  * @returns `true` if the user is authorized.
  * @throws {Error} if the user is not authenticated or lacks the required permission.
  */
+import { Permission, Role } from '@/types/auth'; // Adjust import path
+
 export function authorize(
   session: Session | null,
-  requiredPermission: string
+  requiredPermission: Permission
 ): true {
   if (!session || !session.user) {
     throw new Error('Not authenticated or user session is missing.');
@@ -21,7 +23,7 @@ export function authorize(
   const { user } = session;
 
   // Admins have all permissions
-  if (user.role?.name === 'Administrator') {
+  if (user.role?.name === Role.ADMINISTRATOR) {
     return true;
   }
 

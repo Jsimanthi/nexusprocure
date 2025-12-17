@@ -1,14 +1,16 @@
 // src/app/api/pr/[id]/route.ts
 
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { authorize } from "@/lib/auth-utils"; // Make sure to import authorize
+import logger from "@/lib/logger";
 import { getPRById, updatePRStatus } from "@/lib/pr";
+import { Permission } from "@/types/auth";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id:string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
 
@@ -20,7 +22,7 @@ export async function GET(
     }
 
     // This single line replaces the old manual check
-    authorize(session, 'READ_PR');
+    authorize(session, Permission.READ_PR);
 
     const pr = await getPRById(id);
 
@@ -30,7 +32,7 @@ export async function GET(
 
     return NextResponse.json(pr);
   } catch (error) {
-    console.error("Error fetching PR:", error);
+    logger.error({ error }, "Error fetching PR");
     if (error instanceof Error && error.message.includes('Not authorized')) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }

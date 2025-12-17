@@ -1,13 +1,14 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useParams, useRouter } from "next/navigation";
-import PageLayout from "@/components/PageLayout";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import ErrorDisplay from "@/components/ErrorDisplay";
-import { Vendor, PurchaseOrder } from "@prisma/client";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import PageLayout from "@/components/PageLayout";
 import { useHasPermission } from "@/hooks/useHasPermission";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { Permission } from "@/types/auth";
+import { PurchaseOrder, Vendor } from "@prisma/client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 type VendorWithPOs = Vendor & {
@@ -23,15 +24,15 @@ const fetchVendorDetails = async (id: string): Promise<VendorWithPOs> => {
 };
 
 const updatePoDetails = async ({ poId, qualityScore, deliveryNotes }: { poId: string, qualityScore?: number, deliveryNotes?: string }) => {
-    const response = await fetch(`/api/po/${poId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qualityScore, deliveryNotes }),
-    });
-    if (!response.ok) {
-        throw new Error('Failed to update PO details.');
-    }
-    return response.json();
+  const response = await fetch(`/api/po/${poId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ qualityScore, deliveryNotes }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update PO details.');
+  }
+  return response.json();
 };
 
 
@@ -39,7 +40,7 @@ export default function VendorDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const canManageVendors = useHasPermission('MANAGE_VENDORS');
+  const canManageVendors = useHasPermission(Permission.MANAGE_VENDORS);
   const vendorId = typeof params.id === "string" ? params.id : "";
 
   const { data: vendor, isLoading, isError, error } = useQuery<VendorWithPOs>({
@@ -61,8 +62,8 @@ export default function VendorDetailsPage() {
 
   const handleScoreUpdate = (poId: string, score: number) => {
     if (score < 1 || score > 5) {
-        toast.error("Quality score must be between 1 and 5.");
-        return;
+      toast.error("Quality score must be between 1 and 5.");
+      return;
     }
     mutation.mutate({ poId, qualityScore: score });
   }

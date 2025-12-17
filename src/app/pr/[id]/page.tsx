@@ -1,20 +1,28 @@
 // src/app/pr/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
-import { PaymentRequest } from "@/types/pr";
-import PageLayout from "@/components/PageLayout";
-import LoadingSpinner from "@/components/LoadingSpinner";
+import { BreadcrumbBackButton } from "@/components/BreadcrumbBackButton";
 import ErrorDisplay from "@/components/ErrorDisplay";
-import { getPRStatusColor, formatCurrency } from "@/lib/utils";
-import { UserRef } from "@/types/iom";
-import { PurchaseOrder } from "@prisma/client";
-import { useSession } from "next-auth/react";
-import { useHasPermission } from "@/hooks/useHasPermission";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import PageLayout from "@/components/PageLayout";
 import PRPrintView from "@/components/PRPrintView";
-import { ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useHasPermission } from "@/hooks/useHasPermission";
+import { formatCurrency } from "@/lib/utils";
+import { Permission } from "@/types/auth";
+import { UserRef } from "@/types/iom";
+import { PaymentRequest } from "@/types/pr";
+import { PurchaseOrder } from "@prisma/client";
+import { AlertCircle, Banknote, Calendar, CheckCircle, CreditCard, FileText, Link as LinkIcon, Printer, XCircle } from "lucide-react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 
 type FullPaymentRequest = PaymentRequest & {
   po?: (Partial<PurchaseOrder> & {
@@ -33,10 +41,10 @@ export default function PRDetailPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
-  // Added permission check to view PR
-  const canViewPR = useHasPermission('READ_PR');
-  const canCancel = useHasPermission('CANCEL_PR');
-  const canMarkAsProcessed = useHasPermission('PROCESS_PAYMENT_REQUEST');
+  // Permission checks
+  const canViewPR = useHasPermission(Permission.READ_PR);
+  const canCancel = useHasPermission(Permission.CANCEL_PR);
+  const canMarkAsProcessed = useHasPermission(Permission.PROCESS_PAYMENT_REQUEST);
 
   const fetchPR = useCallback(async () => {
     try {
@@ -45,10 +53,11 @@ export default function PRDetailPage() {
         const data = await response.json();
         setPr(data);
       } else {
-        console.error("Failed to fetch PR");
+        toast.error("Failed to fetch PR details");
       }
     } catch (error) {
       console.error("Error fetching PR:", error);
+      toast.error("Network error when fetching PR");
     } finally {
       setLoading(false);
     }
@@ -83,56 +92,29 @@ export default function PRDetailPage() {
       if (response.ok) {
         const updatedPR = await response.json();
         setPr(updatedPR);
+        toast.success(`PR action ${action} completed successfully`);
       } else {
         const errorData = await response.json();
-        console.error("Failed to update status:", errorData.error);
+        toast.error(`Action failed: ${errorData.error}`);
       }
     } catch (error) {
       console.error("Error updating status:", error);
+      toast.error("An unexpected error occurred");
     } finally {
       setUpdating(false);
     }
   };
 
-  if (loading) {
-    return <PageLayout><LoadingSpinner /></PageLayout>;
-  }
-
-  // Display forbidden message if user lacks permission
-  if (!canViewPR) {
-    return (
-      <PageLayout>
-        <ErrorDisplay
-          title="Forbidden"
-          message="You do not have permission to view this payment request."
-        />
-        <div className="mt-6 text-center">
-          <Link href="/pr" className="text-blue-600 hover:text-blue-800">
-            &larr; Back to PR List
-          </Link>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  if (!pr) {
-    return (
-      <PageLayout>
-        <ErrorDisplay title="PR Not Found" message={`Could not find a Payment Request with the ID: ${params.id}`} />
-        <div className="mt-6 text-center"><Link href="/pr" className="text-blue-600 hover:text-blue-800">&larr; Back to PR List</Link></div>
-      </PageLayout>
-    );
-  }
-
-  const isReviewer = session?.user?.id === pr.reviewedById;
-  const isApprover = session?.user?.id === pr.approvedById;
-
-  const getActionStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
+    let variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" = "default";
     switch (status) {
-      case 'APPROVED': return 'text-green-600';
-      case 'REJECTED': return 'text-red-600';
-      default: return 'text-yellow-600';
+      case 'APPROVED': variant = "success"; break;
+      case 'REJECTED': variant = "destructive"; break;
+      case 'PENDING_APPROVAL': variant = "warning"; break;
+      case 'PROCESSED': variant = "success"; break;
+      case 'CANCELLED': variant = "secondary"; break;
     }
+    return <Badge variant={variant}>{status.replace("_", " ")}</Badge>;
   };
 
   const handlePrint = () => {
@@ -156,163 +138,256 @@ export default function PRDetailPage() {
     const content = printContent.outerHTML;
 
     doc.open();
-    doc.write(`
-      <html>
-        <head>
-          <title>Print Payment Request</title>
-          ${styles}
-          <style>
-            @page { size: auto; margin: 0; }
-            body, html { margin: 0; padding: 0; height: 100%; }
-            body { padding: 2rem; box-sizing: border-box; }
-            #pr-print-view { display: flex; flex-direction: column; height: 100%; box-shadow: none !important; border: none !important; }
-            .pr-main-content { flex-grow: 1; }
-            .pr-footer { flex-shrink: 0; margin-top: auto; }
-          </style>
-        </head>
-        <body>
-          ${content}
-        </body>
-      </html>
-    `);
+    doc.write(`<html><head><title>Print PR ${pr?.prNumber}</title>${styles}<style>@page { size: auto; margin: 0; } body { padding: 2rem; } #pr-print-view { display: block !important; }</style></head><body>${content}</body></html>`);
     doc.close();
 
-    iframe.onload = function() {
+    iframe.onload = function () {
       if (iframe.contentWindow) {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
       }
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 500);
+      setTimeout(() => document.body.removeChild(iframe), 500);
     };
   };
 
+  if (loading) return <PageLayout><LoadingSpinner /></PageLayout>;
+
+  if (!canViewPR) {
+    return (
+      <PageLayout>
+        <ErrorDisplay title="Forbidden" message="You do not have permission to view this payment request." />
+        <div className="mt-6 text-center">
+          <Link href="/pr"><Button variant="link">&larr; Back to PR List</Button></Link>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (!pr) {
+    return (
+      <PageLayout>
+        <ErrorDisplay title="PR Not Found" message={`Could not find a Payment Request with the ID: ${params.id}`} />
+        <div className="mt-6 text-center">
+          <Link href="/pr"><Button variant="link">&larr; Back to PR List</Button></Link>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  const isReviewer = session?.user?.id === pr.reviewedById;
+  const isApprover = session?.user?.id === pr.approvedById;
+
   return (
     <PageLayout>
-      {/* Page Header */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">{pr.title}</h1>
-          <Link href="/pr" className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-            <ArrowLeft className="h-4 w-4" />
-            Back to PR List
-          </Link>
-        </div>
-        <div className="flex justify-between items-center mt-2">
+      <div className="flex flex-col space-y-6 pb-20">
+
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
           <div>
-            <p className="text-lg font-semibold text-gray-800">{pr.prNumber}</p>
-            {pr.po && (
-              <p className="text-sm text-gray-500 mt-1">
-                Linked to PO: {pr.po.poNumber}
-              </p>
-            )}
-            {pr.po?.iom && (
-              <p className="text-sm text-gray-500 mt-1">
-                Linked to IOM: {pr.po.iom.iomNumber}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPRStatusColor(pr.status)}`}>{pr.status.replace("_", " ")}</span>
-            <p className="text-sm text-gray-500">
-              Created: {new Date(pr.createdAt!).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          <PRPrintView pr={pr} />
-        </div>
-        <div className="space-y-4">
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">PR Actions</h3>
-            <div className="space-y-2">
-              {isReviewer && pr.reviewerStatus === 'PENDING' && (
-                <div className="flex space-x-2">
-                  <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Approve (Review)"}
-                  </button>
-                  <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Reject (Review)"}
-                  </button>
-                </div>
+            <div className="flex items-center gap-3">
+              <BreadcrumbBackButton href="/pr" text="Back to PR List" />
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight ml-2">{pr.prNumber}</h1>
+              {getStatusBadge(pr.status)}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><FileText className="w-4 h-4" /> {pr.title}</span>
+              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+              <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {new Date(pr.createdAt!).toLocaleDateString()}</span>
+
+              {pr.po && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                  <Link href={`/po/${pr.po.id}`} className="flex items-center gap-1 text-blue-600 hover:underline">
+                    <LinkIcon className="w-3 h-3" /> PO: {pr.po.poNumber}
+                  </Link>
+                </>
               )}
-              {isApprover && pr.approverStatus === 'PENDING' && (
-                <div className="flex space-x-2">
-                  <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Approve (Final)"}
-                  </button>
-                  <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Reject (Final)"}
-                  </button>
-                </div>
-              )}
-              {pr.status === 'APPROVED' && canMarkAsProcessed && (
-                <button onClick={() => handleAction('PROCESS')} disabled={updating} className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                  {updating ? "Processing..." : "Mark as Processed"}
-                </button>
-              )}
-              {pr.status === 'APPROVED' && canCancel && (
-                <button onClick={() => handleAction('CANCEL')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                  {updating ? "Processing..." : "Cancel PR"}
-                </button>
+              {pr.po?.iom && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                  <span className="text-slate-600">Ref: {pr.po.iom.iomNumber}</span>
+                </>
               )}
             </div>
           </div>
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Approval Status</h3>
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Reviewer Status</dt>
-                <dd className={`text-sm font-semibold ${getActionStatusColor(pr.reviewerStatus)}`}>
-                  {pr.reviewerStatus}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Approver Status</dt>
-                <dd className={`text-sm font-semibold ${getActionStatusColor(pr.approverStatus)}`}>
-                  {pr.approverStatus}
-                </dd>
-              </div>
-            </dl>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="w-4 h-4 mr-2" /> Print PDF
+            </Button>
+            <Link href={`/print/chain/${pr.id}`} target="_blank" rel="noopener noreferrer">
+              <Button variant="default" className="bg-blue-600 hover:bg-blue-700">
+                <LinkIcon className="w-4 h-4 mr-2" /> Full Chain Print
+              </Button>
+            </Link>
           </div>
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Financial Summary</h3>
-            <dl className="space-y-2">
-              <div className="flex justify-between"><dt className="text-sm font-medium text-gray-500">Total Amount</dt><dd className="text-sm text-gray-900">{formatCurrency(pr.totalAmount)}</dd></div>
-              <div className="flex justify-between"><dt className="text-sm font-medium text-gray-500">Tax Amount</dt><dd className="text-sm text-gray-900">{formatCurrency(pr.taxAmount)}</dd></div>
-              <div className="flex justify-between border-t pt-2"><dt className="text-sm font-semibold text-gray-900">Grand Total</dt><dd className="text-sm font-bold text-gray-900">{formatCurrency(pr.grandTotal)}</dd></div>
-            </dl>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* Left Column: Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="details">PR Details</TabsTrigger>
+                <TabsTrigger value="preview">Print Preview</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="details" className="mt-4 space-y-6">
+
+                {/* Financial & General Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base text-slate-500 font-medium uppercase tracking-wide">Payment Details</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <p className="text-xs text-slate-400 uppercase">Payment Method</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <CreditCard className="w-4 h-4 text-slate-600" />
+                          <span className="font-medium">{pr.paymentMethod.replace("_", " ")}</span>
+                        </div>
+                      </div>
+                      <Separator />
+                      <div>
+                        <p className="text-xs text-slate-400 uppercase">Purpose</p>
+                        <p className="text-sm text-slate-700 mt-1">{pr.purpose || "No purpose provided."}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base text-slate-500 font-medium uppercase tracking-wide">Financial Breakdown</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex justify-between items-center py-1">
+                        <span className="text-slate-600">Total Amount</span>
+                        <span className="font-medium text-slate-900">{formatCurrency(pr.totalAmount)}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1">
+                        <span className="text-slate-600">Tax Amount</span>
+                        <span className="text-slate-900">{formatCurrency(pr.taxAmount)}</span>
+                      </div>
+                      <Separator className="my-2" />
+                      <div className="flex justify-between items-center py-1">
+                        <span className="font-bold text-slate-900">Grand Total</span>
+                        <span className="font-bold text-emerald-600 text-lg">{formatCurrency(pr.grandTotal)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Stakeholders */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Stakeholders</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 uppercase">Requested By</p>
+                      <p className="font-medium text-slate-900 truncate">{pr.requestedBy?.name}</p>
+                      <p className="text-xs text-slate-400 truncate">{pr.requestedBy?.email}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 uppercase">Prepared By</p>
+                      <p className="font-medium text-slate-900 truncate">{pr.preparedBy?.name}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 uppercase">Reviewer</p>
+                      <p className="font-medium text-slate-900 truncate">{pr.reviewedBy?.name || "Pending"}</p>
+                      <div className="mt-1">{getStatusBadge(pr.reviewerStatus)}</div>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 uppercase">Approver</p>
+                      <p className="font-medium text-slate-900 truncate">{pr.approvedBy?.name || "Pending"}</p>
+                      <div className="mt-1">{getStatusBadge(pr.approverStatus)}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+              </TabsContent>
+
+              <TabsContent value="preview">
+                <Card>
+                  <CardContent className="p-0 overflow-hidden rounded-lg border border-slate-200">
+                    <div className="scale-[0.8] origin-top-left w-[125%] h-auto p-4 bg-gray-50">
+                      <PRPrintView pr={pr} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">People Involved</h3>
-            <dl className="space-y-3">
-              <div><dt className="text-sm font-medium text-gray-500">Prepared By</dt><dd className="text-sm text-gray-900">{pr.preparedBy?.name} ({pr.preparedBy?.email})</dd></div>
-              <div><dt className="text-sm font-medium text-gray-500">Requested By</dt><dd className="text-sm text-gray-900">{pr.requestedBy?.name} ({pr.requestedBy?.email})</dd></div>
-              {pr.reviewedBy && (<div><dt className="text-sm font-medium text-gray-500">Selected Reviewer</dt><dd className="text-sm text-gray-900">{pr.reviewedBy.name} ({pr.reviewedBy.email})</dd></div>)}
-              {pr.approvedBy && (<div><dt className="text-sm font-medium text-gray-500">Selected Approver</dt><dd className="text-sm text-gray-900">{pr.approvedBy.name} ({pr.approvedBy.email})</dd></div>)}
-            </dl>
-          </div>
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Printing</h3>
-            <div className="space-y-2">
-              <button
-                onClick={handlePrint}
-                className="w-full inline-flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Print Just This PR
-              </button>
-              <Link
-                href={`/print/chain/${pr.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Print All Linked Documents
-              </Link>
-            </div>
+
+          {/* Right Column: Actions Sidebar */}
+          <div className="space-y-6">
+            <Card className="border-l-4 border-l-blue-600 shadow-md">
+              <CardHeader>
+                <CardTitle className="text-lg">Workflow Actions</CardTitle>
+                <CardDescription>Manage the lifecycle of this PR.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+
+                {isReviewer && pr.reviewerStatus === 'PENDING' && (
+                  <>
+                    <Button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700">
+                      <CheckCircle className="w-4 h-4 mr-2" /> Approve Review
+                    </Button>
+                    <Button onClick={() => handleAction('REJECT')} variant="destructive" disabled={updating} className="w-full">
+                      <XCircle className="w-4 h-4 mr-2" /> Reject Review
+                    </Button>
+                  </>
+                )}
+
+                {isApprover && pr.approverStatus === 'PENDING' && (
+                  <>
+                    <Button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700">
+                      <CheckCircle className="w-4 h-4 mr-2" /> Final Approve
+                    </Button>
+                    <Button onClick={() => handleAction('REJECT')} variant="destructive" disabled={updating} className="w-full">
+                      <XCircle className="w-4 h-4 mr-2" /> Final Reject
+                    </Button>
+                  </>
+                )}
+
+                {pr.status === 'APPROVED' && canMarkAsProcessed && (
+                  <Button onClick={() => handleAction('PROCESS')} disabled={updating} className="w-full bg-purple-600 hover:bg-purple-700">
+                    <Banknote className="w-4 h-4 mr-2" /> Process Payment
+                  </Button>
+                )}
+
+                {pr.status === 'APPROVED' && canCancel && (
+                  <Button variant="outline" onClick={() => handleAction('CANCEL')} disabled={updating} className="w-full text-red-600 border-red-200 hover:bg-red-50">
+                    <AlertCircle className="w-4 h-4 mr-2" /> Cancel PR
+                  </Button>
+                )}
+
+                {!isReviewer && !isApprover && !canMarkAsProcessed && !canCancel && (
+                  <div className="text-center py-4 text-slate-500 italic text-sm">
+                    No actions available for your role.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium text-slate-500 uppercase">Payment Info</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Method</span>
+                  <span className="font-medium">{pr.paymentMethod}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Status</span>
+                  <Badge variant="outline">{pr.status}</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
           </div>
         </div>
       </div>

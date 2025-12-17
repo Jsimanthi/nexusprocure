@@ -2,6 +2,7 @@
 
 import { useHasPermission } from "@/hooks/useHasPermission";
 import { cn } from "@/lib/utils";
+import { Permission } from "@/types/auth";
 import {
     BarChart3,
     ChevronLeft,
@@ -27,10 +28,10 @@ export function Sidebar({ className }: SidebarProps) {
     const pathname = usePathname();
     const [isCollapsed, setIsCollapsed] = useState(false);
 
-    const canManageUsers = useHasPermission("MANAGE_USERS");
-    const canManageRoles = useHasPermission("MANAGE_ROLES");
-    const canManageSettings = useHasPermission("MANAGE_SETTINGS");
-    const canViewAnalytics = useHasPermission("VIEW_ANALYTICS");
+    const canManageUsers = useHasPermission(Permission.MANAGE_USERS);
+    const canManageRoles = useHasPermission(Permission.MANAGE_ROLES);
+    const canManageSettings = useHasPermission(Permission.MANAGE_SETTINGS);
+    const canViewAnalytics = useHasPermission(Permission.VIEW_ANALYTICS);
 
     const navLinks = [
         {

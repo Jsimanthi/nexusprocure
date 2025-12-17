@@ -1,33 +1,48 @@
 "use client";
 
-import { CatalogGrid } from "@/components/CatalogGrid";
+import { BreadcrumbBackButton } from "@/components/BreadcrumbBackButton";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import PageLayout from "@/components/PageLayout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CATALOG_ITEMS } from "@/lib/catalog-data";
-import { createIomSchema } from "@/lib/schemas";
-import { ArrowLeft, ArrowRight, ShoppingCart, Trash2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  FileText,
+  Plus,
+  Receipt,
+  Save,
+  Send,
+  Trash2,
+  Users
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { z } from "zod";
-
-interface IOMItem {
-  itemName: string;
-  description: string;
-  category: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-}
+import toast from "react-hot-toast";
 
 interface User {
   id: string;
   name: string;
+}
+
+interface IOMItemInput {
+  itemName: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
 }
 
 export default function CreateIOMPage() {
@@ -35,95 +50,75 @@ export default function CreateIOMPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [draftLoading, setDraftLoading] = useState(false);
-  const [view, setView] = useState<"catalog" | "review">("catalog");
 
-  const [formData, setFormData] = useState({
-    title: "Request for " + new Date().toLocaleDateString(),
-    from: session?.user?.name || "",
-    to: "",
-    subject: "",
-    content: "",
-    reviewerId: "",
-    approverId: "",
-    isUrgent: false,
-  });
-  const [items, setItems] = useState<IOMItem[]>([]);
-  const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [reviewers, setReviewers] = useState<User[]>([]);
   const [approvers, setApprovers] = useState<User[]>([]);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const [reviewersRes, approversRes] = await Promise.all([
-          fetch("/api/users/role/Approver"),
-          fetch("/api/users/role/Manager"),
-        ]);
-        if (reviewersRes.ok) {
-          const data = await reviewersRes.json();
-          setReviewers(data);
-        }
-        if (approversRes.ok) {
-          const data = await approversRes.json();
-          setApprovers(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-      }
-    };
-    fetchUsers();
-  }, []);
+  const [formData, setFormData] = useState({
+    title: "",
+    subject: "",
+    to: "",
+    from: "",
+    content: "",
+    isUrgent: false,
+    reviewerId: "",
+    approverId: "",
+  });
 
-  const handleCatalogSelect = (item: typeof CATALOG_ITEMS[0]) => {
-    // Check if item already exists
-    const existingIndex = items.findIndex(i => i.itemName === item.name);
-    if (existingIndex > -1) {
-      const newItems = [...items];
-      newItems[existingIndex].quantity += 1;
-      newItems[existingIndex].totalPrice = newItems[existingIndex].quantity * newItems[existingIndex].unitPrice;
-      setItems(newItems);
-    } else {
-      setItems([
-        ...items,
-        {
-          itemName: item.name,
-          description: item.description,
-          category: item.category,
-          quantity: 1,
-          unitPrice: item.price,
-          totalPrice: item.price
-        }
+  const [items, setItems] = useState<IOMItemInput[]>([
+    { itemName: "", description: "", quantity: 1, unitPrice: 0, totalPrice: 0 }
+  ]);
+
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    fetchUsers();
+    if (session?.user?.name) {
+      setFormData(prev => ({ ...prev, from: session.user?.name || "" }));
+    }
+  }, [session]);
+
+  const fetchUsers = async () => {
+    try {
+      const [reviewersRes, approversRes] = await Promise.all([
+        fetch("/api/users/role/Approver"),
+        fetch("/api/users/role/Manager"),
       ]);
+      if (reviewersRes.ok) setReviewers(await reviewersRes.json());
+      if (approversRes.ok) setApprovers(await approversRes.json());
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
     }
   };
 
   const addItem = () => {
-    setItems([
-      ...items,
-      { itemName: "", description: "", category: "", quantity: 1, unitPrice: 0, totalPrice: 0 },
-    ]);
+    setItems([...items, { itemName: "", description: "", quantity: 1, unitPrice: 0, totalPrice: 0 }]);
   };
 
   const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+    if (items.length > 1) {
+      setItems(items.filter((_, i) => i !== index));
+    } else {
+      toast.error("At least one item is required");
+    }
   };
 
-  const updateItem = (index: number, field: keyof IOMItem, value: string | number) => {
+  const updateItem = (index: number, field: keyof IOMItemInput, value: string | number) => {
     const newItems = [...items];
+    // @ts-ignore - dynamic key assignment
     newItems[index] = { ...newItems[index], [field]: value };
 
-    if (field === "quantity" || field === "unitPrice") {
-      const quantity = field === "quantity" ? Number(value) : newItems[index].quantity;
-      const unitPrice = field === "unitPrice" ? Number(value) : newItems[index].unitPrice;
+    if (field === 'quantity' || field === 'unitPrice') {
+      const quantity = field === 'quantity' ? Number(value) : newItems[index].quantity;
+      const unitPrice = field === 'unitPrice' ? Number(value) : newItems[index].unitPrice;
       newItems[index].totalPrice = quantity * unitPrice;
     }
-
     setItems(newItems);
   };
 
   const handleSave = async (isDraft: boolean) => {
     if (!session?.user?.id) {
-      console.error("User session not found. Cannot create IOM.");
+      toast.error("User session not found. Please log in.");
       return;
     }
 
@@ -135,48 +130,43 @@ export default function CreateIOMPage() {
     setErrors({});
 
     try {
-      const payload: z.infer<typeof createIomSchema> & { status?: string; isUrgent?: boolean; } = {
-        title: formData.title,
-        from: formData.from,
-        to: formData.to,
-        subject: formData.subject || `Purchase Request for ${items.length} items`,
-        content: formData.content,
-        isUrgent: formData.isUrgent,
-        items: items.map((item) => ({
-          itemName: item.itemName,
-          description: item.description,
-          category: item.category,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-        })),
-        requestedById: session.user.id,
-        reviewerId: formData.reviewerId,
-        approverId: formData.approverId,
-        status: isDraft ? 'DRAFT' : 'PENDING_APPROVAL',
-      };
-
       const response = await fetch("/api/iom", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...formData,
+          items: items.map(item => ({
+            itemName: item.itemName,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice
+          })),
+          preparedById: session.user.id,
+          requestedById: session.user.id, // Assuming creator is requester for now
+          status: isDraft ? 'DRAFT' : 'PENDING_APPROVAL',
+        }),
       });
 
       if (response.ok) {
+        toast.success(isDraft ? "IOM saved as draft" : "IOM submitted for approval");
         router.push("/iom");
       } else {
         const errorData = await response.json();
-        if (response.status === 400) {
-          setErrors(errorData.details.fieldErrors);
-          // If validation error, go back to review to show them
-          setView("review");
+        if (response.status === 400 && errorData.error === 'Validation failed') {
+          // If backend sends specific field errors, map them here. 
+          // Currently using generic toast for simplicity as I assume generic error structure.
+          toast.error("Please fill in all required fields.");
         } else {
-          console.error("Failed to create IOM:", errorData.error);
+          console.error("Failed to create IOM", errorData);
+          toast.error(`Error: ${errorData.error || "Failed to create IOM"}`);
         }
       }
     } catch (error) {
       console.error("Error creating IOM:", error);
+      toast.error("An unexpected error occurred");
     } finally {
       if (isDraft) {
         setDraftLoading(false);
@@ -189,208 +179,282 @@ export default function CreateIOMPage() {
   const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
   return (
-    <PageLayout title="Create New Request">
-      <div className="flex flex-col space-y-6">
-        {/* Navigation / Progress */}
-        <div className="flex justify-between items-center mb-4">
-          <Button variant="ghost" onClick={() => router.back()} className="text-muted-foreground">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Cancel
-          </Button>
-
-          <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-lg">
+    <PageLayout>
+      <div className="max-w-7xl mx-auto space-y-6 pb-24">
+        {/* Header Actions */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <BreadcrumbBackButton href="/iom" text="Back to IOM List" className="mb-2 w-fit" />
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Create New Memo</h1>
+            <p className="text-slate-500 mt-1">Draft a new Inter-Office Memo for internal requests.</p>
+          </div>
+          <div className="flex gap-3">
             <Button
-              variant={view === "catalog" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setView("catalog")}
-              className={view === "catalog" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}
+              variant="outline"
+              onClick={() => handleSave(true)}
+              disabled={draftLoading || loading}
+              className="border-slate-300 text-slate-700 hover:bg-slate-50"
             >
-              1. Shop Catalog
+              {draftLoading ? <LoadingSpinner /> : <Save className="w-4 h-4 mr-2" />}
+              Save Draft
             </Button>
-            <ArrowRight className="h-4 w-4 text-slate-300" />
             <Button
-              variant={view === "review" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setView("review")}
-              className={view === "review" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}
+              onClick={() => handleSave(false)}
+              disabled={draftLoading || loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-200"
             >
-              2. Review & Submit
+              {loading ? <LoadingSpinner /> : <Send className="w-4 h-4 mr-2" />}
+              Submit Memo
             </Button>
           </div>
-
-          <Button onClick={() => setView(view === "catalog" ? "review" : "catalog")} disabled={items.length === 0} className={view === "review" ? "invisible" : ""}>
-            Review Cart ({items.length}) <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
         </div>
 
-        {view === "catalog" ? (
-          <div className="space-y-6 animate-in fade-in zoom-in duration-300">
-            <div className="bg-indigo-600 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 opacity-10 transform translate-x-1/4 -translate-y-1/4">
-                <ShoppingCart className="h-64 w-64" />
-              </div>
-              <div className="relative z-10">
-                <h2 className="text-3xl font-bold mb-2">Internal Procurement Catalog</h2>
-                <p className="text-indigo-100 max-w-xl">Browse approved items for your department. Select items to add them to your automated purchase request.</p>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column: Form Details */}
+          <div className="lg:col-span-2 space-y-6">
 
-            <h3 className="text-xl font-bold text-slate-800">Featured Categories</h3>
-            <CatalogGrid onSelect={handleCatalogSelect} />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in slide-in-from-right duration-300">
-            {/* Left Col: Cart Items */}
-            <div className="lg:col-span-2 space-y-6">
-              <Card className="border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle>Request Items ({items.length})</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {items.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      Your cart is empty. <br />
-                      <Button variant="link" onClick={() => setView("catalog")} className="mt-2">Go back to catalog</Button>
-                    </div>
-                  ) : (
-                    items.map((item, index) => (
-                      <div key={index} className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 border rounded-lg bg-slate-50/50 hover:bg-white transition-colors">
-                        <div className="flex-1 space-y-1">
-                          <div className="flex justify-between">
-                            <h4 className="font-semibold text-slate-800">{item.itemName || "New Item"}</h4>
-                            <Button variant="ghost" size="sm" onClick={() => removeItem(index)} className="text-red-500 h-6 w-6 p-0 sm:hidden">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="text-sm text-slate-500 line-clamp-1">{item.description}</p>
-                          <div className="flex gap-2 mt-2">
-                            <Badge variant="secondary" className="text-xs">{item.category}</Badge>
-                          </div>
-                        </div>
+            {/* General Information Card */}
+            <Card className="border-0 shadow-sm ring-1 ring-slate-200">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 rounded-lg">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">General Details</CardTitle>
+                    <CardDescription>Basic information about this memo.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <Separator />
+              <CardContent className="pt-6 grid gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label>Title <span className="text-red-500">*</span></Label>
+                    <Input
+                      placeholder="e.g. Q4 Office Supplies"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Subject <span className="text-red-500">*</span></Label>
+                    <Input
+                      placeholder="e.g. Stationeries Request"
+                      value={formData.subject}
+                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>From</Label>
+                    <Input
+                      value={formData.from}
+                      onChange={(e) => setFormData({ ...formData, from: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>To</Label>
+                    <Input
+                      placeholder="e.g. Procurement Dep."
+                      value={formData.to}
+                      onChange={(e) => setFormData({ ...formData, to: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Memo Content / Description</Label>
+                  <Textarea
+                    placeholder="Enter additional details..."
+                    className="h-24 resize-none"
+                    value={formData.content}
+                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="urgent-mode"
+                    checked={formData.isUrgent}
+                    onCheckedChange={(checked: boolean) => setFormData({ ...formData, isUrgent: checked })}
+                  />
+                  <Label htmlFor="urgent-mode">Mark as Urgent</Label>
+                </div>
+              </CardContent>
+            </Card>
 
-                        <div className="flex items-center gap-4 mt-2 sm:mt-0 w-full sm:w-auto">
-                          <div className="flex flex-col w-20">
-                            <label className="text-[10px] text-slate-400 uppercase font-bold">Qty</label>
+            {/* Items Card */}
+            <Card className="border-0 shadow-sm ring-1 ring-slate-200">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-50 rounded-lg">
+                    <Receipt className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Items Request</CardTitle>
+                    <CardDescription>List the items you need to request.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <Separator />
+              <CardContent className="pt-6">
+
+                {/* Items Table */}
+                <div className="border rounded-lg overflow-hidden bg-slate-50/50">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[40%]">Item & Description</TableHead>
+                        <TableHead className="w-[15%]">Qty</TableHead>
+                        <TableHead className="w-[20%]">Est. Cost</TableHead>
+                        <TableHead className="w-[20%]">Total</TableHead>
+                        <TableHead className="w-[5%]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((item, index) => (
+                        <TableRow key={index} className="group bg-white">
+                          <TableCell className="align-top">
+                            <Input
+                              placeholder="Item Name"
+                              className="mb-2 font-medium"
+                              value={item.itemName}
+                              onChange={(e) => updateItem(index, 'itemName', e.target.value)}
+                            />
+                            <Textarea
+                              placeholder="Description"
+                              className="h-14 text-xs resize-none"
+                              value={item.description}
+                              onChange={(e) => updateItem(index, 'description', e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell className="align-top">
                             <Input
                               type="number"
                               min="1"
                               value={item.quantity}
-                              onChange={(e) => updateItem(index, "quantity", e.target.value)}
-                              className="h-8"
+                              onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
                             />
-                          </div>
-                          <div className="flex flex-col w-24">
-                            <label className="text-[10px] text-slate-400 uppercase font-bold">Price</label>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={item.unitPrice}
-                              onChange={(e) => updateItem(index, "unitPrice", e.target.value)}
-                              className="h-8"
-                            />
-                          </div>
-                          <div className="text-right min-w-[80px]">
-                            <p className="font-bold text-slate-700">{formatCurrency(item.totalPrice)}</p>
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={() => removeItem(index)} className="text-red-500 hidden sm:flex">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-
-                  <Button onClick={addItem} variant="outline" className="w-full border-dashed">
-                    <Plus className="mr-2 h-4 w-4" /> Add Custom Item manually
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right Col: Details & Submit */}
-            <div className="space-y-6">
-              <Card className="border-0 shadow-lg bg-indigo-50/50 border-indigo-100">
-                <CardHeader>
-                  <CardTitle className="text-indigo-900">Request Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Title / Project Name</Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="bg-white"
-                    />
-                    {errors.title && <p className="text-red-500 text-xs">{errors.title[0]}</p>}
+                          </TableCell>
+                          <TableCell className="align-top">
+                            <div className="relative">
+                              <span className="absolute left-3 top-2.5 text-slate-400 text-sm">₹</span>
+                              <Input
+                                type="number"
+                                className="pl-6"
+                                min="0"
+                                step="0.01"
+                                value={item.unitPrice}
+                                onChange={(e) => updateItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell className="align-top">
+                            <div className="py-2.5 font-medium text-slate-700">
+                              ₹{item.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </div>
+                          </TableCell>
+                          <TableCell className="align-top text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeItem(index)}
+                              className="text-slate-400 hover:text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div className="p-3 bg-slate-100 border-t flex justify-center">
+                    <Button variant="outline" size="sm" onClick={addItem} className="bg-white hover:bg-slate-50 text-slate-700">
+                      <Plus className="w-4 h-4 mr-2" /> Add Item
+                    </Button>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="reason">Business Justification</Label>
-                    <Input
-                      id="reason"
-                      value={formData.content}
-                      onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                      placeholder="Why do you need this?"
-                      className="bg-white"
-                    />
+          </div>
+
+          {/* Right Column: Workflow & Summary */}
+          <div className="space-y-6">
+
+            {/* Order Summary Card */}
+            <Card className="border-0 shadow-sm ring-1 ring-slate-200 bg-slate-50/50">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-slate-500" />
+                  <CardTitle className="text-base text-slate-700">Estimated Total</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center">
+                  <span className="text-base font-bold text-slate-800">Total Amount</span>
+                  <span className="text-2xl font-bold text-indigo-600">₹{totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">
+                  * Total is an estimate based on unit prices.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Workflow Card */}
+            <Card className="border-0 shadow-sm ring-1 ring-slate-200">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-50 rounded-lg">
+                    <Users className="w-5 h-5 text-purple-600" />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label>Select Approver</Label>
+                  <div>
+                    <CardTitle className="text-lg">Workflow</CardTitle>
+                    <CardDescription>Assign approval chain.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <Separator />
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>Assign Reviewer</Label>
+                  <div className="relative">
                     <select
-                      className="w-full h-10 rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      value={formData.reviewerId}
+                      onChange={(e) => setFormData({ ...formData, reviewerId: e.target.value })}
+                      className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm appearance-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+                    >
+                      <option value="">Select Reviewer...</option>
+                      {reviewers.map((reviewer) => (
+                        <option key={reviewer.id} value={reviewer.id}>{reviewer.name}</option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-700">
+                      <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Assign Approver</Label>
+                  <div className="relative">
+                    <select
                       value={formData.approverId}
                       onChange={(e) => setFormData({ ...formData, approverId: e.target.value })}
+                      className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm appearance-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
                     >
-                      <option value="">Select Manager...</option>
-                      {approvers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                      <option value="">Select Approver...</option>
+                      {approvers.map((approver) => (
+                        <option key={approver.id} value={approver.id}>{approver.name}</option>
+                      ))}
                     </select>
-                    {errors.approverId && <p className="text-red-500 text-xs">{errors.approverId[0]}</p>}
-                  </div>
-
-                  <div className="pt-4 border-t border-indigo-200">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-slate-600">Subtotal</span>
-                      <span className="font-medium text-slate-800">{formatCurrency(totalAmount)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-lg font-bold text-indigo-700">
-                      <span>Total</span>
-                      <span>{formatCurrency(totalAmount)}</span>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-700">
+                      <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
                     </div>
                   </div>
-                </CardContent>
-                <CardFooter className="flex flex-col gap-3">
-                  <Button
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-lg py-6"
-                    onClick={() => handleSave(false)}
-                    disabled={loading || items.length === 0}
-                  >
-                    {loading && <LoadingSpinner />}
-                    {loading ? "Ordering..." : `Place Order (${items.length})`}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleSave(true)}
-                    disabled={draftLoading}
-                  >
-                    Save as Draft
-                  </Button>
-                </CardFooter>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        )}
+        </div>
       </div>
     </PageLayout>
   );
 }
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-  }).format(amount);
-}
-
-import { Plus } from "lucide-react";

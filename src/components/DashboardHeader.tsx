@@ -1,26 +1,27 @@
 // src/components/DashboardHeader.tsx
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
-import Link from "next/link";
-import Notifications from "./Notifications";
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
-import { usePathname } from "next/navigation";
 import { useHasPermission } from "@/hooks/useHasPermission";
+import { Permission } from "@/types/auth";
+import { Menu, X } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import Notifications from "./Notifications";
 
 export default function DashboardHeader() {
   const { data: session } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const canManageUsers = useHasPermission('MANAGE_USERS');
-  const canManageRoles = useHasPermission('MANAGE_ROLES');
-  const canManageSettings = useHasPermission('MANAGE_SETTINGS');
+  const canManageUsers = useHasPermission(Permission.MANAGE_USERS);
+  const canManageRoles = useHasPermission(Permission.MANAGE_ROLES);
+  const canManageSettings = useHasPermission(Permission.MANAGE_SETTINGS);
 
   const navLinks = [
     { href: "/dashboard", text: "Dashboard", show: true },
-    { href: "/dashboard/analytics", text: "Analytics", show: useHasPermission('VIEW_ANALYTICS') },
+    { href: "/dashboard/analytics", text: "Analytics", show: useHasPermission(Permission.VIEW_ANALYTICS) },
     { href: "/iom", text: "IOMs", show: true },
     { href: "/po", text: "POs", show: true },
     { href: "/pr", text: "PRs", show: true },
@@ -41,18 +42,17 @@ export default function DashboardHeader() {
               <Image src="/logo.png" alt="NexusProcure Logo" width={64} height={32} className="mr-3" />
               <h1 className="text-2xl font-bold text-gray-900">NexusProcure</h1>
             </div>
-            
+
             {/* Desktop Navigation */}
             <nav className="hidden md:flex ml-8 space-x-2">
               {visibleNavLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-2 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                    pathname === link.href
+                  className={`px-2 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${pathname === link.href
                       ? "bg-gray-100 text-gray-900"
                       : "text-gray-700 hover:text-gray-900"
-                  }`}
+                    }`}
                 >
                   {link.text}
                 </Link>
@@ -91,11 +91,10 @@ export default function DashboardHeader() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    pathname === link.href
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${pathname === link.href
                       ? "bg-blue-50 text-blue-700"
                       : "text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   {link.text}
                 </Link>

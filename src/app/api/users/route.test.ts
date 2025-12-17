@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { POST } from './route';
-import { prisma } from '@/lib/prisma';
-import { Session } from 'next-auth';
-import { User } from '@prisma/client';
-import { getServerSession } from 'next-auth/next';
 import { authorize } from '@/lib/auth-utils';
+import { prisma } from '@/lib/prisma';
+import { Permission, Role } from '@/types/auth';
+import { User } from '@prisma/client';
+import { Session } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { NextRequest } from 'next/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { POST } from './route';
 
 vi.mock('@/lib/prisma');
 vi.mock('next-auth/next', () => ({
@@ -19,7 +20,7 @@ vi.mock('@/lib/auth-utils', () => ({
 }));
 
 const mockSession: Session = {
-  user: { id: '1', name: 'Test User', email: 'test@example.com', permissions: [], role: { id: '1', name: 'Admin' } },
+  user: { id: '1', name: 'Test User', email: 'test@example.com', permissions: [], role: { id: '1', name: Role.ADMINISTRATOR } },
   expires: '2025-01-01T00:00:00.000Z',
 };
 
@@ -63,7 +64,7 @@ describe('POST /api/users', () => {
 
     expect(response.status).toBe(201);
     expect(data.name).toBe(mockUser.name);
-    expect(vi.mocked(authorize)).toHaveBeenCalledWith(expect.any(Object), 'MANAGE_USERS');
+    expect(vi.mocked(authorize)).toHaveBeenCalledWith(expect.any(Object), Permission.MANAGE_USERS);
     expect(vi.mocked(prisma.user.create)).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ name: createUserData.name }),

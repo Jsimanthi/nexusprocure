@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getIOMs, createIOM } from "@/lib/iom";
-import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { getIOMsSchema, createIomSchema } from "@/lib/schemas";
+import { createIOM, getIOMs } from "@/lib/iom";
+import logger from "@/lib/logger";
+import { createIomSchema, getIOMsSchema } from "@/lib/schemas";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 export async function POST(req: NextRequest) {
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof ZodError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    console.error("Error creating IOM:", error);
+    logger.error({ error }, "Error creating IOM");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
     if (error instanceof ZodError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    console.error("Error fetching IOMs:", error);
+    logger.error({ error }, "Error fetching IOMs");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

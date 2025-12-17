@@ -1,10 +1,10 @@
+import { Permission, Role } from "@/types/auth";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { type AuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { prisma } from "./prisma";
-import bcrypt from "bcryptjs";
 import { z } from "zod";
-import crypto from "crypto";
-import { Permission } from "@prisma/client";
+import { prisma } from "./prisma";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -85,9 +85,9 @@ export const authOptions: AuthOptions = {
         token.name = dbUser.name;
         token.email = dbUser.email;
         token.roleId = dbUser.role?.id;
-        token.roleName = dbUser.role?.name;
+        token.roleName = dbUser.role?.name as Role;
         token.permissions = dbUser.role?.permissions.map(
-          (p: { permission: Permission }) => p.permission.name
+          (p) => p.permission.name as Permission
         );
       }
 
@@ -100,9 +100,9 @@ export const authOptions: AuthOptions = {
         session.user.email = token.email as string;
         session.user.role = {
           id: token.roleId as string,
-          name: token.roleName as string
+          name: token.roleName as Role
         };
-        session.user.permissions = token.permissions as string[];
+        session.user.permissions = token.permissions as Permission[];
       }
       return session;
     },

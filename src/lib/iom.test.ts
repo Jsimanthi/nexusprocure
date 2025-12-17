@@ -1,12 +1,13 @@
 // src/lib/iom.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getIOMs, createIOM, updateIOMStatus, deleteIOM } from './iom';
-import { prisma } from './prisma';
+import { Permission, Role } from '@/types/auth'; // Import Enums
 import { IOM, IOMStatus } from '@/types/iom';
-import { Session } from 'next-auth';
 import { Prisma } from '@prisma/client';
+import { Session } from 'next-auth';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createIOM, deleteIOM, getIOMs, updateIOMStatus } from './iom';
+import { prisma } from './prisma';
 
-import { logAudit, getAuditUser } from './audit';
+import { getAuditUser, logAudit } from './audit';
 
 import { authorize } from './auth-utils';
 
@@ -17,13 +18,13 @@ vi.mock('@/lib/notification');
 vi.mock('@/lib/audit');
 vi.mock('@/lib/auth-utils');
 
-const mockUserSession = (permissions: string[] = []): Session => ({
+const mockUserSession = (permissions: Permission[] = []): Session => ({
   user: {
     id: 'user-id',
     name: 'Test User',
     email: 'test@example.com',
     permissions,
-    role: { id: 'role-1', name: 'User' },
+    role: { id: 'role-1', name: Role.MANAGER }, // Assuming generic user role is Manager or similar for base tests
   },
   expires: '2099-01-01T00:00:00.000Z',
 });
@@ -48,7 +49,8 @@ describe('IOM Functions', () => {
         items: [],
         isUrgent: false
       };
-      const session = mockUserSession(['CREATE_IOM']);
+
+      const session = mockUserSession([Permission.CREATE_IOM]);
       vi.mocked(authorize).mockReturnValue(true);
 
       vi.mocked(prisma.iOM.create).mockResolvedValue({
@@ -70,7 +72,7 @@ describe('IOM Functions', () => {
 
       await createIOM(iomData, session);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'CREATE_IOM');
+      expect(authorize).toHaveBeenCalledWith(session, Permission.CREATE_IOM);
 
       expect(prisma.iOM.create).toHaveBeenCalled();
       expect(logAudit).toHaveBeenCalledWith("CREATE", expect.any(Object));
@@ -89,7 +91,8 @@ describe('IOM Functions', () => {
         items: [],
         isUrgent: false
       };
-      const session = mockUserSession(['CREATE_IOM']);
+
+      const session = mockUserSession([Permission.CREATE_IOM]);
       vi.mocked(authorize).mockReturnValue(true);
       const uniqueConstraintError = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed',
@@ -99,7 +102,6 @@ describe('IOM Functions', () => {
       vi.mocked(prisma.iOM.count).mockResolvedValue(0);
       vi.mocked(prisma.iOM.create)
         .mockRejectedValueOnce(uniqueConstraintError)
-
         .mockResolvedValue({ id: 'new-iom-id', ...iomData, isUrgent: false } as unknown as IOM);
 
       await createIOM(iomData, session);
@@ -117,7 +119,8 @@ describe('IOM Functions', () => {
         requestedById: 'user-2',
         // 'items' property is intentionally omitted
       };
-      const session = mockUserSession(['CREATE_IOM']);
+
+      const session = mockUserSession([Permission.CREATE_IOM]);
       vi.mocked(authorize).mockReturnValue(true);
 
       const createdIomMock = {
@@ -143,7 +146,7 @@ describe('IOM Functions', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await createIOM(iomData as any, session);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'CREATE_IOM');
+      expect(authorize).toHaveBeenCalledWith(session, Permission.CREATE_IOM);
 
       // Check that prisma.create was called with an empty array for items
       expect(prisma.iOM.create).toHaveBeenCalledWith(
@@ -164,9 +167,9 @@ describe('IOM Functions', () => {
     const iomId = 'iom-123';
     const approverId = 'approver-id';
     const reviewerId = 'reviewer-id';
-    const approverSession = mockUserSession(['APPROVE_IOM']);
+    const approverSession = mockUserSession([Permission.APPROVE_IOM]);
     approverSession.user!.id = approverId;
-    const reviewerSession = mockUserSession(['REVIEW_IOM']);
+    const reviewerSession = mockUserSession([Permission.REVIEW_IOM]);
     reviewerSession.user!.id = reviewerId;
 
     const baseIom = {
@@ -206,7 +209,7 @@ describe('IOM Functions', () => {
     });
 
     it('should throw an error if user is not the designated reviewer or approver', async () => {
-      const unrelatedUserSession = mockUserSession(['REVIEW_IOM', 'APPROVE_IOM']);
+      const unrelatedUserSession = mockUserSession([Permission.REVIEW_IOM, Permission.APPROVE_IOM]);
       unrelatedUserSession.user!.id = 'unrelated-user';
       vi.mocked(prisma.iOM.findUnique).mockResolvedValue(baseIom as IOM);
 
@@ -227,7 +230,7 @@ describe('IOM Functions', () => {
 
       await updateIOMStatus(iomId, "APPROVE", reviewerSession);
 
-      expect(authorize).toHaveBeenCalledWith(reviewerSession, 'REVIEW_IOM');
+      expect(authorize).toHaveBeenCalledWith(reviewerSession, Permission.REVIEW_IOM);
       // Check that the first update sets the reviewerStatus
       expect(prisma.iOM.update).toHaveBeenCalledWith({
         where: { id: iomId },
@@ -249,7 +252,7 @@ describe('IOM Functions', () => {
 
       await updateIOMStatus(iomId, "APPROVE", approverSession);
 
-      expect(authorize).toHaveBeenCalledWith(approverSession, 'APPROVE_IOM');
+      expect(authorize).toHaveBeenCalledWith(approverSession, Permission.APPROVE_IOM);
       // Check sub-status update
       expect(prisma.iOM.update).toHaveBeenCalledWith({
         where: { id: iomId },
@@ -272,7 +275,7 @@ describe('IOM Functions', () => {
 
       await updateIOMStatus(iomId, "REJECT", reviewerSession);
 
-      expect(authorize).toHaveBeenCalledWith(reviewerSession, 'REVIEW_IOM');
+      expect(authorize).toHaveBeenCalledWith(reviewerSession, Permission.REVIEW_IOM);
       // Check final status update
       expect(prisma.iOM.update).toHaveBeenCalledWith({
         where: { id: iomId },
@@ -285,7 +288,7 @@ describe('IOM Functions', () => {
   describe('deleteIOM', () => {
     it('should delete an IOM if user has DELETE_IOM permission', async () => {
       const iomId = 'iom-to-delete';
-      const session = mockUserSession(['DELETE_IOM']);
+      const session = mockUserSession([Permission.DELETE_IOM]);
       vi.mocked(authorize).mockReturnValue(true);
 
       vi.mocked(prisma.iOM.findUnique).mockResolvedValue({
@@ -313,7 +316,7 @@ describe('IOM Functions', () => {
 
       await deleteIOM(iomId, session);
 
-      expect(authorize).toHaveBeenCalledWith(session, 'DELETE_IOM');
+      expect(authorize).toHaveBeenCalledWith(session, Permission.DELETE_IOM);
       expect(prisma.iOM.delete).toHaveBeenCalledWith({ where: { id: iomId } });
       expect(logAudit).toHaveBeenCalledWith("DELETE", expect.any(Object));
     });
@@ -327,7 +330,7 @@ describe('IOM Functions', () => {
     });
 
     it('should filter by user involvement if user lacks READ_ALL_IOMS permission', async () => {
-      const session = mockUserSession(['SOME_OTHER_PERMISSION']);
+      const session = mockUserSession([Permission.CREATE_IOM]); // Just some other permission
       await getIOMs({ session });
       expect(prisma.iOM.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -348,7 +351,7 @@ describe('IOM Functions', () => {
     });
 
     it('should not apply user-based filters if user has READ_ALL_IOMS permission', async () => {
-      const session = mockUserSession(['READ_ALL_IOMS']);
+      const session = mockUserSession([Permission.READ_ALL_IOMS]);
       await getIOMs({ session });
       expect(prisma.iOM.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

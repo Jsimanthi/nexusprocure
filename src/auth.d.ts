@@ -1,4 +1,5 @@
 import { type DefaultSession } from 'next-auth';
+import { type Permission, type Role } from './types/auth'; // Adjust import path if needed
 
 declare module 'next-auth' {
   /**
@@ -9,18 +10,18 @@ declare module 'next-auth' {
       id: string;
       role: {
         id: string;
-        name: string;
+        name: Role;
       };
-      permissions: string[];
+      permissions: Permission[];
     } & DefaultSession['user'];
   }
 
   interface User {
     role?: {
       id: string;
-      name: string;
+      name: Role;
     };
-    permissions?: string[];
+    permissions?: Permission[];
   }
 }
 
@@ -28,7 +29,7 @@ declare module 'next-auth/jwt' {
   /** Returned by the `jwt` callback and `getToken`, when using JWT sessions */
   interface JWT {
     roleId?: string;
-    roleName?: string;
-    permissions?: string[];
+    roleName?: Role;
+    permissions?: Permission[];
   }
 }

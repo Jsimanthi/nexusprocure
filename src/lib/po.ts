@@ -1,18 +1,19 @@
 // src/lib/po.ts
-import { prisma } from "./prisma";
-import { POStatus } from "@/types/po";
-import { z } from "zod";
-import crypto from "crypto";
-import { createNotification } from "./notification";
-import { sendEmail } from "./email";
 import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
-import { createPoSchema } from "./schemas";
-import { logAudit, getAuditUser } from "./audit";
+import { Permission } from "@/types/auth";
+import { POStatus } from "@/types/po";
+import { Prisma } from "@prisma/client";
+import crypto from "crypto";
 import { Session } from "next-auth";
 import * as React from "react";
+import { z } from "zod";
+import { getAuditUser, logAudit } from "./audit";
 import { authorize } from "./auth-utils";
-import { Prisma } from "@prisma/client";
+import { sendEmail } from "./email";
+import { createNotification } from "./notification";
+import { prisma } from "./prisma";
 import { triggerPusherEvent } from "./pusher";
+import { createPoSchema } from "./schemas";
 import { updateVendorPerformanceMetrics } from "./vendor";
 
 export async function generatePONumber(): Promise<string> {
@@ -49,7 +50,7 @@ export async function getPOs(
   };
 
   // If user does not have permission to see all POs, filter by their involvement.
-  if (!userPermissions.includes('READ_ALL_POS')) {
+  if (!userPermissions.includes(Permission.READ_ALL_POS)) {
     (where.AND as Prisma.PurchaseOrderWhereInput[]).push({
       OR: [
         { preparedById: user.id },
@@ -201,7 +202,7 @@ export async function getAllPOsForExport(session: Session) {
   if (!session.user) {
     throw new Error("Authentication failed: No user session found.");
   }
-  authorize(session, 'READ_ALL_POS');
+  authorize(session, Permission.READ_ALL_POS);
 
   return await prisma.purchaseOrder.findMany({
     include: {
@@ -224,7 +225,7 @@ type CreatePoData = z.infer<typeof createPoSchema> & {
 };
 
 export async function createPurchaseOrder(data: CreatePoData, session: Session) {
-  authorize(session, 'CREATE_PO');
+  authorize(session, Permission.CREATE_PO);
   const { items, attachments, reviewerId, approverId, status, ...restOfData } = data;
 
   let totalAmount = 0;
@@ -320,7 +321,7 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
           );
         }
         if (createdPo.preparedById) {
-           await createNotification(
+          await createNotification(
             createdPo.preparedById,
             `Your PO ${createdPo.poNumber} has been submitted for review.`
           );
@@ -356,16 +357,16 @@ export async function updatePOStatus(
     const updateData: Prisma.PurchaseOrderUpdateInput = {};
     switch (action) {
       case "ORDER":
-        authorize(session, "ORDER_PO");
+        authorize(session, Permission.ORDER_PO);
         updateData.status = POStatus.ORDERED;
         break;
       case "DELIVER":
-        authorize(session, "DELIVER_PO");
+        authorize(session, Permission.DELIVER_PO);
         updateData.status = POStatus.DELIVERED;
         updateData.fulfilledAt = new Date();
         break;
       case "CANCEL":
-        authorize(session, "CANCEL_PO");
+        authorize(session, Permission.CANCEL_PO);
         updateData.status = POStatus.CANCELLED;
         break;
     }
@@ -407,12 +408,12 @@ export async function updatePOStatus(
   const updateData: Partial<Prisma.PurchaseOrderUpdateInput> = {};
 
   if (isReviewer) {
-    authorize(session, 'REVIEW_PO');
+    authorize(session, Permission.REVIEW_PO);
     updateData.reviewerStatus = newActionStatus;
   }
 
   if (isApprover) {
-    authorize(session, 'APPROVE_PO');
+    authorize(session, Permission.APPROVE_PO);
     updateData.approverStatus = newActionStatus;
   }
 
@@ -509,7 +510,7 @@ export async function updatePODetails(
   if (!session.user) {
     throw new Error("User not found in session");
   }
-  authorize(session, 'MANAGE_VENDORS'); // Reuse this permission for now
+  authorize(session, Permission.MANAGE_VENDORS); // Reuse this permission for now
 
   const po = await prisma.purchaseOrder.findUnique({ where: { id } });
   if (!po) {

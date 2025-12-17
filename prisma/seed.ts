@@ -2,74 +2,84 @@
 import getPrimaryClient from '@/lib/db/index';
 import bcrypt from 'bcryptjs';
 
+import { Permission, Role } from "@/types/auth";
+
 const permissions = [
   // User Permissions
-  'MANAGE_USERS',
-  'MANAGE_ROLES',
-  'MANAGE_SETTINGS',
+  Permission.MANAGE_USERS,
+  Permission.MANAGE_ROLES,
+  Permission.MANAGE_SETTINGS,
   // Dashboard / Analytics
-  'VIEW_ANALYTICS',
+  Permission.VIEW_ANALYTICS,
   // Vendor Permissions
-  'MANAGE_VENDORS',
+  Permission.MANAGE_VENDORS,
+  Permission.READ_ALL_VENDORS,
   // IOM Permissions
-  'CREATE_IOM',
-  'READ_IOM',
-  'UPDATE_IOM',
-  'DELETE_IOM',
-  'APPROVE_IOM',
-  'REJECT_IOM',
-  'REVIEW_IOM',
+  Permission.CREATE_IOM,
+  Permission.READ_IOM,
+  Permission.UPDATE_IOM,
+  Permission.DELETE_IOM,
+  Permission.APPROVE_IOM,
+  Permission.REJECT_IOM,
+  Permission.REVIEW_IOM,
+  Permission.COMPLETE_IOM,
   // PO Permissions
-  'CREATE_PO',
-  'READ_PO', // Added this permission
-  'UPDATE_PO',
-  'DELETE_PO',
-  'APPROVE_PO',
-  'REJECT_PO',
-  'REVIEW_PO',
+  Permission.CREATE_PO,
+  Permission.READ_PO,
+  Permission.UPDATE_PO,
+  Permission.DELETE_PO,
+  Permission.APPROVE_PO,
+  Permission.REJECT_PO,
+  Permission.REVIEW_PO,
+  Permission.ORDER_PO,
+  Permission.DELIVER_PO,
+  Permission.CANCEL_PO,
   // PR Permissions
-  'CREATE_PR',
-  'READ_PR', // Added this permission
-  'UPDATE_PR',
-  'DELETE_PR',
-  'APPROVE_PR',
-  'REJECT_PR',
-  'REVIEW_PR',
-  'PROCESS_PAYMENT_REQUEST',
+  Permission.CREATE_PR,
+  Permission.READ_PR,
+  Permission.UPDATE_PR,
+  Permission.DELETE_PR,
+  Permission.APPROVE_PR,
+  Permission.REJECT_PR,
+  Permission.REVIEW_PR,
+  Permission.CANCEL_PR,
+  Permission.PROCESS_PAYMENT_REQUEST,
   // Permissions for viewing all documents of a type
-  'READ_ALL_IOMS',
-  'READ_ALL_POS',
-  'READ_ALL_PRS',
+  Permission.READ_ALL_IOMS,
+  Permission.READ_ALL_POS,
+  Permission.READ_ALL_PRS,
 ];
 
 const roles = {
-  Administrator: permissions,
-  Manager: [
-    'READ_ALL_IOMS', 'READ_ALL_POS', 'READ_ALL_PRS', 'APPROVE_IOM', 'APPROVE_PO', 'APPROVE_PR',
-    'REJECT_IOM', 'REJECT_PO', 'REJECT_PR', 'REVIEW_IOM', 'REVIEW_PO', 'REVIEW_PR', 'VIEW_ANALYTICS'
+  [Role.ADMINISTRATOR]: permissions,
+  [Role.MANAGER]: [
+    Permission.READ_ALL_IOMS, Permission.READ_ALL_POS, Permission.READ_ALL_PRS, Permission.APPROVE_IOM, Permission.APPROVE_PO, Permission.APPROVE_PR,
+    Permission.REJECT_IOM, Permission.REJECT_PO, Permission.REJECT_PR, Permission.REVIEW_IOM, Permission.REVIEW_PO, Permission.REVIEW_PR, Permission.VIEW_ANALYTICS,
+    Permission.COMPLETE_IOM, Permission.CANCEL_PO, Permission.CANCEL_PR
   ],
-  Approver: [
-    'READ_IOM', 'READ_ALL_IOMS', 'READ_ALL_POS', 'READ_ALL_PRS', 'APPROVE_IOM', 'APPROVE_PO', 'APPROVE_PR',
-    'REJECT_IOM', 'REJECT_PO', 'REJECT_PR', 'REVIEW_IOM', 'REVIEW_PO', 'REVIEW_PR'
+  [Role.APPROVER]: [
+    Permission.READ_IOM, Permission.READ_ALL_IOMS, Permission.READ_ALL_POS, Permission.READ_ALL_PRS, Permission.APPROVE_IOM, Permission.APPROVE_PO, Permission.APPROVE_PR,
+    Permission.REJECT_IOM, Permission.REJECT_PO, Permission.REJECT_PR, Permission.REVIEW_IOM, Permission.REVIEW_PO, Permission.REVIEW_PR
   ],
-  'Procurement Officer': [
-    'CREATE_IOM', 'READ_IOM', 'UPDATE_IOM', 'DELETE_IOM',
-    'CREATE_PO', 'READ_PO', 'UPDATE_PO', 'DELETE_PO',
-    'CREATE_PR', 'READ_PR', 'UPDATE_PR', 'DELETE_PR',
-    'MANAGE_VENDORS',
-    'PROCESS_PAYMENT_REQUEST'
+  [Role.PROCUREMENT_OFFICER]: [
+    Permission.CREATE_IOM, Permission.READ_IOM, Permission.UPDATE_IOM, Permission.DELETE_IOM,
+    Permission.CREATE_PO, Permission.READ_PO, Permission.UPDATE_PO, Permission.DELETE_PO, Permission.ORDER_PO, Permission.DELIVER_PO, Permission.CANCEL_PO,
+    Permission.CREATE_PR, Permission.READ_PR, Permission.UPDATE_PR, Permission.DELETE_PR, Permission.CANCEL_PR,
+    Permission.MANAGE_VENDORS, Permission.READ_ALL_VENDORS,
+    Permission.PROCESS_PAYMENT_REQUEST
   ],
-  'Finance Officer': [
-    'READ_ALL_PRS', 'UPDATE_PR', 'APPROVE_PR', 'PROCESS_PAYMENT_REQUEST'
+  [Role.FINANCE_OFFICER]: [
+    Permission.READ_ALL_PRS, Permission.UPDATE_PR, Permission.APPROVE_PR, Permission.PROCESS_PAYMENT_REQUEST,
+    Permission.CANCEL_PR
   ],
 };
 
 const usersToCreate = [
-  { name: 'Admin User', email: 'admin@nexusprocure.com', role: 'Administrator' },
-  { name: 'Manager User', email: 'manager@nexusprocure.com', role: 'Manager' },
-  { name: 'Approver User', email: 'approver@nexusprocure.com', role: 'Approver' },
-  { name: 'Procurement User', email: 'procurement@nexusprocure.com', role: 'Procurement Officer' },
-  { name: 'Finance User', email: 'finance@nexusprocure.com', role: 'Finance Officer' },
+  { name: 'Admin User', email: 'admin@nexusprocure.com', role: Role.ADMINISTRATOR },
+  { name: 'Manager User', email: 'manager@nexusprocure.com', role: Role.MANAGER },
+  { name: 'Approver User', email: 'approver@nexusprocure.com', role: Role.APPROVER },
+  { name: 'Procurement User', email: 'procurement@nexusprocure.com', role: Role.PROCUREMENT_OFFICER },
+  { name: 'Finance User', email: 'finance@nexusprocure.com', role: Role.FINANCE_OFFICER },
 ];
 
 export async function main() {

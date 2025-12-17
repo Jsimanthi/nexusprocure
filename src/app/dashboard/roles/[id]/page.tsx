@@ -1,12 +1,13 @@
 "use client";
 
-import { useQuery } from '@tanstack/react-query';
-import PageLayout from '@/components/PageLayout';
-import { useHasPermission } from '@/hooks/useHasPermission';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import ErrorDisplay from '@/components/ErrorDisplay';
 import BackButton from '@/components/BackButton';
 import EditRoleForm from '@/components/EditRoleForm';
+import ErrorDisplay from '@/components/ErrorDisplay';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import PageLayout from '@/components/PageLayout';
+import { useHasPermission } from '@/hooks/useHasPermission';
+import { Permission as AuthPermission } from '@/types/auth';
+import { useQuery } from '@tanstack/react-query';
 
 interface Permission {
   id: string;
@@ -45,7 +46,7 @@ interface RoleDetailsPageProps {
 }
 
 export default function RoleDetailsPage({ params }: RoleDetailsPageProps) {
-  const canManageRoles = useHasPermission('MANAGE_ROLES');
+  const canManageRoles = useHasPermission(AuthPermission.MANAGE_ROLES);
   const { id } = params;
 
   const { data, isLoading, isError, error } = useQuery<{ role: Role; allPermissions: Permission[] }>({
@@ -88,9 +89,9 @@ export default function RoleDetailsPage({ params }: RoleDetailsPageProps) {
 
   return (
     <PageLayout title={`Edit Role: ${data.role.name}`}>
-        <div className="mb-4">
-            <BackButton />
-        </div>
+      <div className="mb-4">
+        <BackButton />
+      </div>
       <div className="bg-white shadow overflow-hidden sm:rounded-md p-6">
         <EditRoleForm role={data.role} allPermissions={data.allPermissions} />
       </div>

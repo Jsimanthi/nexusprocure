@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET } from './route';
-import { getServerSession } from 'next-auth/next';
 import { prisma } from '@/lib/prisma';
-import { NextRequest } from 'next/server';
+import { Permission, Role } from '@/types/auth'; // Import Enums
 import { Session } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
+import { NextRequest } from 'next/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GET } from './route';
 
 // Mock dependencies
 vi.mock('next-auth/next', () => ({ getServerSession: vi.fn() }));
@@ -15,8 +16,8 @@ const mockUserSession = (): Session => ({
     id: 'user-id',
     name: 'Test User',
     email: 'test@example.com',
-    role: { id: 'role-1', name: 'User' },
-    permissions: ['SOME_PERMISSION'],
+    role: { id: 'role-1', name: Role.MANAGER },
+    permissions: [Permission.CREATE_PO], // Valid Permission
   },
   expires: '2099-01-01T00:00:00.000Z',
 });

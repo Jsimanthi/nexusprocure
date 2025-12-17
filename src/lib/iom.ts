@@ -1,19 +1,20 @@
 // src/lib/iom.ts
-import { prisma } from "./prisma";
-import { IOMStatus } from "@/types/iom";
-import { z } from "zod";
-import crypto from "crypto";
-import { createNotification } from "./notification";
-import { sendEmail } from "./email";
 import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
-import { createIomSchema } from "./schemas";
-import * as React from "react";
-import { Session } from "next-auth";
-import { authorize } from "./auth-utils";
-import { logAudit, getAuditUser } from "./audit";
+import { Permission } from "@/types/auth";
+import { IOMStatus } from "@/types/iom";
 import { Prisma } from "@prisma/client";
-import { triggerPusherEvent } from "./pusher";
+import crypto from "crypto";
+import { Session } from "next-auth";
+import * as React from "react";
+import { z } from "zod";
+import { getAuditUser, logAudit } from "./audit";
+import { authorize } from "./auth-utils";
+import { sendEmail } from "./email";
 import logger from "./logger";
+import { createNotification } from "./notification";
+import { prisma } from "./prisma";
+import { triggerPusherEvent } from "./pusher";
+import { createIomSchema } from "./schemas";
 
 export async function generateIOMNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -58,7 +59,7 @@ export async function getIOMs(
   };
 
   // If user does not have permission to see all IOMs, filter by their involvement.
-  if (!userPermissions.includes('READ_ALL_IOMS')) {
+  if (!userPermissions.includes(Permission.READ_ALL_IOMS)) {
     (where.AND as Prisma.IOMWhereInput[]).push({
       OR: [
         { preparedById: user.id },
@@ -187,7 +188,7 @@ type CreateIomData = z.infer<typeof createIomSchema> & {
 };
 
 export async function createIOM(data: CreateIomData, session: Session) {
-  authorize(session, 'CREATE_IOM');
+  authorize(session, Permission.CREATE_IOM);
   const { items, reviewerId, approverId, status, isUrgent, ...actualRest } = data;
   const totalAmount = (items || []).reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
@@ -284,7 +285,7 @@ export async function updateIOMStatus(
 
   // Handle simple status changes first
   if (action === "COMPLETE") {
-    authorize(session, "COMPLETE_IOM");
+    authorize(session, Permission.COMPLETE_IOM);
     return await prisma.iOM.update({
       where: { id },
       data: { status: IOMStatus.COMPLETED },
@@ -319,12 +320,12 @@ export async function updateIOMStatus(
   const updateData: Partial<Prisma.IOMUpdateInput> = {};
 
   if (isReviewer) {
-    authorize(session, 'REVIEW_IOM');
+    authorize(session, Permission.REVIEW_IOM);
     updateData.reviewerStatus = newActionStatus;
   }
 
   if (isApprover) {
-    authorize(session, 'APPROVE_IOM');
+    authorize(session, Permission.APPROVE_IOM);
     updateData.approverStatus = newActionStatus;
   }
 
@@ -412,7 +413,7 @@ export async function getAllIOMsForExport(session: Session) {
   if (!session.user) {
     throw new Error("Authentication failed: No user session found.");
   }
-  authorize(session, 'READ_ALL_IOMS'); // Assuming only users who can see all can export all
+  authorize(session, Permission.READ_ALL_IOMS); // Assuming only users who can see all can export all
 
   return await prisma.iOM.findMany({
     include: {
@@ -427,7 +428,7 @@ export async function getAllIOMsForExport(session: Session) {
 }
 
 export async function deleteIOM(id: string, session: Session) {
-  authorize(session, 'DELETE_IOM');
+  authorize(session, Permission.DELETE_IOM);
   const iomToDelete = await prisma.iOM.findUnique({ where: { id } });
 
   if (iomToDelete) {

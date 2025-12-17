@@ -1,11 +1,12 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SessionProvider } from 'next-auth/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import SettingsPage from './page';
 import { useHasPermission } from '@/hooks/useHasPermission';
+import { Role } from '@/types/auth';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { SessionProvider } from 'next-auth/react';
+import React from 'react';
 import toast from 'react-hot-toast';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import SettingsPage from './page';
 
 // Mock dependencies
 vi.mock('@/hooks/useHasPermission');
@@ -22,7 +23,7 @@ const queryClient = new QueryClient({
 // Wrapper component to provide necessary contexts
 const renderWithProviders = (ui: React.ReactElement) => {
   const mockSession = {
-    user: { id: 'test-user', name: 'Test User', role: { id: 'role-1', name: 'User' }, permissions: [] },
+    user: { id: 'test-user', name: 'Test User', role: { id: 'role-1', name: Role.MANAGER }, permissions: [] },
     expires: '2099-01-01T00:00:00.000Z',
   };
   return render(
@@ -55,7 +56,7 @@ describe('SettingsPage', () => {
 
   it('should display loading spinner while fetching settings', async () => {
     vi.mocked(useHasPermission).mockReturnValue(true);
-    fetchSpy.mockImplementation(() => new Promise(() => {})); // Mocks a pending promise
+    fetchSpy.mockImplementation(() => new Promise(() => { })); // Mocks a pending promise
     renderWithProviders(<SettingsPage />);
     expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
   });
@@ -115,16 +116,16 @@ describe('SettingsPage', () => {
     const mockSettings = [{ id: '1', key: 'company_name', value: 'Nexus Inc.' }];
 
     fetchSpy.mockImplementation((url: string, options: RequestInit) => {
-        if (options?.method === 'PUT') {
-            return Promise.resolve({
-                ok: false, status: 500,
-                json: () => Promise.resolve({ error: 'Update Failed' }),
-            } as Response);
-        }
+      if (options?.method === 'PUT') {
         return Promise.resolve({
-            ok: true, status: 200,
-            json: () => Promise.resolve(mockSettings),
+          ok: false, status: 500,
+          json: () => Promise.resolve({ error: 'Update Failed' }),
         } as Response);
+      }
+      return Promise.resolve({
+        ok: true, status: 200,
+        json: () => Promise.resolve(mockSettings),
+      } as Response);
     });
 
     renderWithProviders(<SettingsPage />);

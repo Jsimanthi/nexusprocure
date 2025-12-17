@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import { authorize } from '@/lib/auth-utils';
 import logger from '@/lib/logger';
+import { prisma } from '@/lib/prisma';
+import { Permission } from "@/types/auth";
+import { getServerSession } from 'next-auth/next';
+import { NextResponse } from 'next/server';
 
 type SpendOverTimeItem = { month: string; total: number };
 type SpendByCategoryItem = { category: string | null; _sum: { totalPrice: number | null } };
@@ -16,7 +17,7 @@ export async function GET() {
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    authorize(session, 'VIEW_ANALYTICS');
+    authorize(session, Permission.VIEW_ANALYTICS);
 
     const spendOverTimePromise = prisma.$queryRaw<
       { month: string; total: number }[]
@@ -94,8 +95,8 @@ export async function GET() {
     }));
 
     const formattedDepartmentData = spendByDepartment.map((item: SpendByDepartmentItem) => ({
-        name: item.department,
-        Total: item.total,
+      name: item.department,
+      Total: item.total,
     }));
 
     const formattedTopVendors = topVendors.map((item: TopVendorsItem) => ({

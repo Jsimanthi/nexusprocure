@@ -52,7 +52,7 @@ export function TopBar() {
                             <Link href="/profile" className="cursor-pointer">Profile</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                            <Link href="/settings" className="cursor-pointer">Settings</Link>
+                            <Link href="/dashboard/settings" className="cursor-pointer">Settings</Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

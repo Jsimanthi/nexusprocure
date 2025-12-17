@@ -1,18 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET } from './route';
-import { prisma } from '@/lib/prisma';
-import { Session } from 'next-auth';
-import { Setting } from '@prisma/client';
 import { authorize } from '@/lib/auth-utils';
+import { prisma } from '@/lib/prisma';
+import { Permission, Role } from '@/types/auth'; // Import Enums
+import { Setting } from '@prisma/client';
+import { Session } from 'next-auth';
 import { getServerSession } from 'next-auth/next';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GET } from './route';
 
 // Mock dependencies
 vi.mock('@/lib/prisma');
 vi.mock('next-auth/next', () => ({
-  getServerSession: vi.fn(),
+    getServerSession: vi.fn(),
 }));
 vi.mock('@/lib/auth', () => ({
-  authOptions: {},
+    authOptions: {},
 }));
 vi.mock('@/lib/auth-utils');
 
@@ -34,7 +35,7 @@ describe('GET /api/settings', () => {
 
     it('should return 403 Forbidden if user lacks MANAGE_SETTINGS permission', async () => {
         const mockSession: Session = {
-            user: { id: 'user-id', name: 'Test User', email: 'test@example.com', permissions: [], role: { id: 'user-role', name: 'User' } },
+            user: { id: 'user-id', name: 'Test User', email: 'test@example.com', permissions: [], role: { id: 'user-role', name: Role.MANAGER } },
             expires: '2099-01-01T00:00:00.000Z',
         };
         vi.mocked(getServerSession).mockResolvedValue(mockSession);
@@ -49,7 +50,7 @@ describe('GET /api/settings', () => {
 
     it('should return a list of settings if user is authenticated and authorized', async () => {
         const mockSession: Session = {
-            user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['MANAGE_SETTINGS'], role: { id: 'admin-role', name: 'Admin' } },
+            user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: [Permission.MANAGE_SETTINGS], role: { id: 'admin-role', name: Role.ADMINISTRATOR } },
             expires: '2099-01-01T00:00:00.000Z',
         };
         vi.mocked(getServerSession).mockResolvedValue(mockSession);
@@ -73,7 +74,7 @@ describe('GET /api/settings', () => {
 
     it('should return 500 Internal Server Error if there is a database error', async () => {
         const mockSession: Session = {
-            user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: ['MANAGE_SETTINGS'], role: { id: 'admin-role', name: 'Admin' } },
+            user: { id: 'admin-id', name: 'Admin', email: 'admin@test.com', permissions: [Permission.MANAGE_SETTINGS], role: { id: 'admin-role', name: Role.ADMINISTRATOR } },
             expires: '2099-01-01T00:00:00.000Z',
         };
         vi.mocked(getServerSession).mockResolvedValue(mockSession);

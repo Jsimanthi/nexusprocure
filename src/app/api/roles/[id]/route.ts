@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from "@/lib/auth";
 import { authorize } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
+import { Permission } from '@/types/auth';
+import { getServerSession } from 'next-auth/next';
+import { NextRequest, NextResponse } from 'next/server';
 
 // HACK: The type for params is a Promise when using Next.js 15.5.2 with Turbopack.
 // This is likely a bug and this workaround should be removed when the issue is fixed.
@@ -17,7 +18,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    authorize(session, 'MANAGE_ROLES');
+    authorize(session, Permission.MANAGE_ROLES);
 
     const role = await prisma.role.findUnique({
       where: { id: params.id },
@@ -51,51 +52,51 @@ export async function PUT(
   request: NextRequest,
   { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
-    try {
-      const params = await paramsPromise;
-      const session = await getServerSession(authOptions);
-      if (!session?.user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-      // Capture user to satisfy TypeScript's type narrowing within the transaction callback
-      const user = session.user;
+  try {
+    const params = await paramsPromise;
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    // Capture user to satisfy TypeScript's type narrowing within the transaction callback
+    const user = session.user;
 
-      authorize(session, 'MANAGE_ROLES');
+    authorize(session, Permission.MANAGE_ROLES);
 
-      const { name, permissionIds } = await request.json();
+    const { name, permissionIds } = await request.json();
 
-      const updatedRole = await prisma.$transaction(async (tx) => {
-        const role = await tx.role.update({
-          where: { id: params.id },
-          data: { name },
-        });
-
-        await tx.permissionsOnRoles.deleteMany({
-          where: { roleId: params.id },
-        });
-
-        if (permissionIds && permissionIds.length > 0) {
-            await tx.permissionsOnRoles.createMany({
-                data: permissionIds.map((permissionId: string) => ({
-                    roleId: params.id,
-                    permissionId,
-                    assignedBy: user.id, // Use the captured user object
-                })),
-            });
-        }
-
-        return role;
+    const updatedRole = await prisma.$transaction(async (tx) => {
+      const role = await tx.role.update({
+        where: { id: params.id },
+        data: { name },
       });
 
-      return NextResponse.json(updatedRole);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('Not authorized')) {
-        return NextResponse.json({ error: error.message }, { status: 403 });
+      await tx.permissionsOnRoles.deleteMany({
+        where: { roleId: params.id },
+      });
+
+      if (permissionIds && permissionIds.length > 0) {
+        await tx.permissionsOnRoles.createMany({
+          data: permissionIds.map((permissionId: string) => ({
+            roleId: params.id,
+            permissionId,
+            assignedBy: user.id, // Use the captured user object
+          })),
+        });
       }
-      console.error('Error updating role:', error);
-      return NextResponse.json(
-        { error: 'Internal server error' },
-        { status: 500 }
-      );
+
+      return role;
+    });
+
+    return NextResponse.json(updatedRole);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Not authorized')) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
     }
+    console.error('Error updating role:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
+}

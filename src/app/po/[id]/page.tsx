@@ -1,20 +1,27 @@
 // src/app/po/[id]/page.tsx
 "use client";
 
+import { BreadcrumbBackButton } from "@/components/BreadcrumbBackButton";
 import ErrorDisplay from "@/components/ErrorDisplay";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import PageLayout from "@/components/PageLayout";
 import POPrintView from "@/components/POPrintView";
 import { ThreeWayMatch } from "@/components/ThreeWayMatch";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHasPermission } from "@/hooks/useHasPermission";
-import { getPOStatusColor } from "@/lib/utils";
+import { Permission } from "@/types/auth";
 import { PurchaseOrder } from "@/types/po";
 import { PaymentMethod } from "@/types/pr";
-import { ArrowLeft } from "lucide-react";
+import { AlertCircle, CheckCircle, Clock, FileText, Printer, ShoppingCart, Truck, XCircle } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 
 export default function PODetailPage() {
   const params = useParams();
@@ -28,12 +35,12 @@ export default function PODetailPage() {
     PaymentMethod.CHEQUE
   );
 
-  // Add permission check to view PO
-  const canViewPO = useHasPermission('READ_PO');
-  const canCancel = useHasPermission('CANCEL_PO');
-  const canMarkAsOrdered = useHasPermission('ORDER_PO');
-  const canMarkAsDelivered = useHasPermission('DELIVER_PO');
-  const canConvertToPR = useHasPermission('CREATE_PR');
+  // Permission checks
+  const canViewPO = useHasPermission(Permission.READ_PO);
+  const canCancel = useHasPermission(Permission.CANCEL_PO);
+  const canMarkAsOrdered = useHasPermission(Permission.ORDER_PO);
+  const canMarkAsDelivered = useHasPermission(Permission.DELIVER_PO);
+  const canConvertToPR = useHasPermission(Permission.CREATE_PR);
 
   const fetchPO = useCallback(async () => {
     try {
@@ -42,17 +49,17 @@ export default function PODetailPage() {
         const data = await response.json();
         setPo(data);
       } else {
-        console.error("Failed to fetch PO");
+        toast.error("Failed to fetch PO details");
       }
     } catch (error) {
       console.error("Error fetching PO:", error);
+      toast.error("Network error when fetching PO");
     } finally {
       setLoading(false);
     }
   }, [params.id]);
 
   useEffect(() => {
-    // Check permission before fetching data
     if (!canViewPO) {
       setLoading(false);
       return;
@@ -74,12 +81,14 @@ export default function PODetailPage() {
       if (response.ok) {
         const updatedPO = await response.json();
         setPo(updatedPO);
+        toast.success(`PO status updated to ${action}`);
       } else {
         const errorData = await response.json();
-        console.error("Failed to update status:", errorData.error);
+        toast.error(`Failed: ${errorData.error}`);
       }
     } catch (error) {
       console.error("Error updating status:", error);
+      toast.error("An unexpected error occurred");
     } finally {
       setUpdating(false);
     }
@@ -96,15 +105,15 @@ export default function PODetailPage() {
 
       if (response.ok) {
         const pr = await response.json();
+        toast.success("Converted to Payment Request successfully!");
         router.push(`/pr/${pr.id}`);
       } else {
         const errorData = await response.json();
-        console.error("Failed to convert PO to PR:", errorData.error);
-        alert(`Failed to convert PO to PR: ${errorData.error}`);
+        toast.error(`Conversion failed: ${errorData.error}`);
       }
     } catch (error) {
       console.error("Error converting PO to PR:", error);
-      alert("An unexpected error occurred while converting the PO to a PR.");
+      toast.error("An unexpected error occurred during conversion.");
     } finally {
       setConverting(false);
     }
@@ -114,63 +123,23 @@ export default function PODetailPage() {
     return ['APPROVED', 'ORDERED', 'DELIVERED'].includes(status) && canConvertToPR;
   };
 
-  if (loading) {
-    return (
-      <PageLayout>
-        <LoadingSpinner />
-      </PageLayout>
-    );
-  }
-
-  // Display a forbidden message if the user does not have permission
-  if (!canViewPO) {
-    return (
-      <PageLayout>
-        <ErrorDisplay
-          title="Forbidden"
-          message="You do not have permission to view this purchase order."
-        />
-        <div className="mt-6 text-center">
-          <Link href="/po" className="text-blue-600 hover:text-blue-800">
-            &larr; Back to PO List
-          </Link>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  if (!po) {
-    return (
-      <PageLayout>
-        <ErrorDisplay
-          title="PO Not Found"
-          message={`Could not find a Purchase Order with the ID: ${params.id}`}
-        />
-        <div className="mt-6 text-center">
-          <Link href="/po" className="text-blue-600 hover:text-blue-800">
-            &larr; Back to PO List
-          </Link>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  const isReviewer = session?.user?.id === po.reviewedById;
-  const isApprover = session?.user?.id === po.approvedById;
-
-  const getActionStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
+    let variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" = "default";
     switch (status) {
-      case 'APPROVED': return 'text-green-600';
-      case 'REJECTED': return 'text-red-600';
-      default: return 'text-yellow-600';
+      case 'APPROVED': variant = "success"; break;
+      case 'REJECTED': variant = "destructive"; break;
+      case 'PENDING_APPROVAL': variant = "warning"; break;
+      case 'ORDERED': variant = "default"; break;
+      case 'DELIVERED': variant = "success"; break;
+      case 'CANCELLED': variant = "secondary"; break;
     }
+    return <Badge variant={variant}>{status.replace("_", " ")}</Badge>;
   };
 
   const handlePrint = () => {
     const printContent = document.getElementById('po-print-view');
     if (!printContent) return;
 
-    // Create a new iframe
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
     iframe.style.width = '0';
@@ -181,260 +150,266 @@ export default function PODetailPage() {
     const doc = iframe.contentWindow?.document;
     if (!doc) return;
 
-    // Get stylesheets from the main document
     const styles = Array.from(document.styleSheets)
       .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : (s.ownerNode as HTMLStyleElement)?.outerHTML)
       .join('');
 
-    // Get the HTML content to print
     const content = printContent.outerHTML;
 
-    // Write the content and styles to the iframe
     doc.open();
-    doc.write(`
-      <html>
-        <head>
-          <title>Print Purchase Order</title>
-          ${styles}
-          <style>
-            @page { size: auto; margin: 0; }
-            body, html { margin: 0; padding: 0; height: 100%; }
-            body { padding: 2rem; box-sizing: border-box; }
-            #po-print-view { display: flex; flex-direction: column; height: 100%; box-shadow: none !important; border: none !important; }
-            .po-main-content { flex-grow: 1; }
-            .po-footer { flex-shrink: 0; margin-top: auto; }
-          </style>
-        </head>
-        <body>
-          ${content}
-        </body>
-      </html>
-    `);
+    doc.write(`<html><head><title>Print PO ${po?.poNumber}</title>${styles}<style>@page { size: auto; margin: 0; } body { padding: 2rem; } #po-print-view { display: block !important; }</style></head><body>${content}</body></html>`);
     doc.close();
 
-    // Wait for the iframe to load before printing
     iframe.onload = function () {
       if (iframe.contentWindow) {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
       }
-      // Remove the iframe after a delay
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 500);
+      setTimeout(() => document.body.removeChild(iframe), 500);
     };
   };
 
+  if (loading) return <PageLayout><LoadingSpinner /></PageLayout>;
+
+  if (!canViewPO) {
+    return (
+      <PageLayout>
+        <ErrorDisplay title="Forbidden" message="You do not have permission to view this purchase order." />
+        <div className="mt-6 text-center">
+          <Link href="/po"><Button variant="link">&larr; Back to PO List</Button></Link>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (!po) {
+    return (
+      <PageLayout>
+        <ErrorDisplay title="PO Not Found" message={`Could not find a Purchase Order with the ID: ${params.id}`} />
+        <div className="mt-6 text-center">
+          <Link href="/po"><Button variant="link">&larr; Back to PO List</Button></Link>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  const isReviewer = session?.user?.id === po.reviewedById;
+  const isApprover = session?.user?.id === po.approvedById;
+
   return (
     <PageLayout>
-      {/* Page Header */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">{po.title}</h1>
-          <Link href="/po" className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-            <ArrowLeft className="h-4 w-4" />
-            Back to PO List
-          </Link>
-        </div>
-        <div className="flex justify-between items-center mt-2">
+      <div className="flex flex-col space-y-6 pb-20">
+
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
           <div>
-            <p className="text-lg font-semibold text-gray-800">{po.poNumber}</p>
-            {po.iom && (
-              <p className="text-sm text-gray-500 mt-1">
-                Created from IOM: {po.iom.iomNumber}
-              </p>
+            <div className="flex items-center gap-3">
+              <BreadcrumbBackButton href="/po" text="Back to PO List" />
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight ml-2">{po.poNumber}</h1>
+              {getStatusBadge(po.status)}
+            </div>
+            <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><FileText className="w-4 h-4" /> {po.title}</span>
+              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+              <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {new Date(po.createdAt!).toLocaleDateString()}</span>
+              {po.iom && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                  <span className="text-blue-600 font-medium">Ref: {po.iom.iomNumber}</span>
+                </>
+              )}
+            </div>
+          </div>
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="w-4 h-4 mr-2" /> Print PDF
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* Left Column: Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Three Way Match Visualizer */}
+            <ThreeWayMatch
+              poId={po.poNumber}
+              poAmount={po.grandTotal}
+              grnAmount={po.status === 'DELIVERED' || po.status === 'ORDERED' ? po.grandTotal : undefined}
+              invoiceAmount={po.status === 'DELIVERED' ? po.grandTotal : undefined}
+            />
+
+            {/* Document Tabs */}
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="details">PO Details</TabsTrigger>
+                <TabsTrigger value="preview">Print Preview</TabsTrigger>
+              </TabsList>
+              <TabsContent value="details" className="mt-4 space-y-6">
+
+                {/* Vendor & General Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base text-slate-500 font-medium uppercase tracking-wide">Vendor Details</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-lg font-semibold text-slate-900">{po.vendorName}</p>
+                      <p className="text-sm text-slate-500">{po.vendorAddress || "No address provided"}</p>
+                      {po.vendor && (
+                        <div className="mt-2 pt-2 border-t border-slate-100">
+                          <p className="text-sm text-slate-600">Contact: {po.vendor.contactInfo}</p>
+                          <p className="text-sm text-slate-600">Email: {po.vendor.email}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base text-slate-500 font-medium uppercase tracking-wide">Order Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex justify-between items-center py-1">
+                        <span className="text-slate-600">Subtotal</span>
+                        <span className="font-medium text-slate-900">₹{po.totalAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-1">
+                        <span className="text-slate-600">Tax ({po.taxRate}%)</span>
+                        <span className="text-slate-900">₹{po.taxAmount.toFixed(2)}</span>
+                      </div>
+                      <Separator className="my-2" />
+                      <div className="flex justify-between items-center py-1">
+                        <span className="font-bold text-slate-900">Grand Total</span>
+                        <span className="font-bold text-amber-600 text-lg">₹{po.grandTotal.toFixed(2)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* People Involved */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Stakeholders</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 uppercase">Requested By</p>
+                      <p className="font-medium text-slate-900 truncate">{po.requestedBy?.name}</p>
+                      <p className="text-xs text-slate-400 truncate">{po.requestedBy?.email}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 uppercase">Prepared By</p>
+                      <p className="font-medium text-slate-900 truncate">{po.preparedBy?.name}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 uppercase">Reviewer</p>
+                      <p className="font-medium text-slate-900 truncate">{po.reviewedBy?.name || "Pending"}</p>
+                      <div className="mt-1">{getStatusBadge(po.reviewerStatus)}</div>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 uppercase">Approver</p>
+                      <p className="font-medium text-slate-900 truncate">{po.approvedBy?.name || "Pending"}</p>
+                      <div className="mt-1">{getStatusBadge(po.approverStatus)}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+              </TabsContent>
+              <TabsContent value="preview">
+                <Card>
+                  <CardContent className="p-0 overflow-hidden rounded-lg border border-slate-200">
+                    <div className="scale-[0.8] origin-top-left w-[125%] h-auto p-4 bg-gray-50">
+                      <POPrintView po={po} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Right Column: Actions Sidebar */}
+          <div className="space-y-6">
+
+            {/* Action Card */}
+            <Card className="border-l-4 border-l-blue-600 shadow-md">
+              <CardHeader>
+                <CardTitle className="text-lg">Workflow Actions</CardTitle>
+                <CardDescription>Manage the lifecycle of this PO.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {isReviewer && po.reviewerStatus === 'PENDING' && (
+                  <>
+                    <Button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700">
+                      <CheckCircle className="w-4 h-4 mr-2" /> Approve Review
+                    </Button>
+                    <Button onClick={() => handleAction('REJECT')} variant="destructive" disabled={updating} className="w-full">
+                      <XCircle className="w-4 h-4 mr-2" /> Reject Review
+                    </Button>
+                  </>
+                )}
+
+                {isApprover && po.approverStatus === 'PENDING' && (
+                  <>
+                    <Button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700">
+                      <CheckCircle className="w-4 h-4 mr-2" /> Final Approve
+                    </Button>
+                    <Button onClick={() => handleAction('REJECT')} variant="destructive" disabled={updating} className="w-full">
+                      <XCircle className="w-4 h-4 mr-2" /> Final Reject
+                    </Button>
+                  </>
+                )}
+
+                {po.status === 'APPROVED' && canMarkAsOrdered && (
+                  <Button onClick={() => handleAction('ORDER')} disabled={updating} className="w-full bg-purple-600 hover:bg-purple-700">
+                    <ShoppingCart className="w-4 h-4 mr-2" /> Mark as Ordered
+                  </Button>
+                )}
+
+                {po.status === 'ORDERED' && canMarkAsDelivered && (
+                  <Button onClick={() => handleAction('DELIVER')} disabled={updating} className="w-full bg-teal-600 hover:bg-teal-700">
+                    <Truck className="w-4 h-4 mr-2" /> Mark as Delivered
+                  </Button>
+                )}
+
+                {po.status === 'APPROVED' && canCancel && (
+                  <Button variant="outline" onClick={() => handleAction('CANCEL')} disabled={updating} className="w-full text-red-600 border-red-200 hover:bg-red-50">
+                    <AlertCircle className="w-4 h-4 mr-2" /> Cancel PO
+                  </Button>
+                )}
+
+                {!isReviewer && !isApprover && !canMarkAsOrdered && !canMarkAsDelivered && !canCancel && (
+                  <div className="text-center py-4 text-slate-500 italic text-sm">
+                    No actions available for your role.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Payment Processing Card */}
+            {isAllowedToConvertToPR(po.status) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Payment Processing</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Payment Method</label>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                      className="w-full rounded-md border border-slate-300 p-2 text-sm"
+                    >
+                      {Object.values(PaymentMethod).map((method) => (
+                        <option key={method} value={method}>{method.replace("_", " ")}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button onClick={convertToPR} disabled={converting} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white">
+                    {converting ? <LoadingSpinner /> : "Convert to Payment Request"}
+                  </Button>
+                </CardContent>
+              </Card>
             )}
-          </div>
-          <div className="flex items-center gap-4">
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getPOStatusColor(po.status)}`}>
-              {po.status.replace("_", " ")}
-            </span>
-            <p className="text-sm text-gray-500">
-              Created: {new Date(po.createdAt!).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          <ThreeWayMatch
-            poId={po.poNumber}
-            poAmount={po.grandTotal}
-            grnAmount={po.status === 'DELIVERED' || po.status === 'ORDERED' ? po.grandTotal : undefined} // Mock logic
-            invoiceAmount={po.status === 'DELIVERED' ? po.grandTotal : undefined} // Mock logic
-          />
-          <POPrintView po={po} />
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* PO Actions */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">PO Actions</h3>
-            <div className="space-y-2">
-              {isReviewer && po.reviewerStatus === 'PENDING' && (
-                <div className="flex space-x-2">
-                  <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Approve (Review)"}
-                  </button>
-                  <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Reject (Review)"}
-                  </button>
-                </div>
-              )}
-              {isApprover && po.approverStatus === 'PENDING' && (
-                <div className="flex space-x-2">
-                  <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Approve (Final)"}
-                  </button>
-                  <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Reject (Final)"}
-                  </button>
-                </div>
-              )}
-              {po.status === 'APPROVED' && canMarkAsOrdered && (
-                <button onClick={() => handleAction('ORDER')} disabled={updating} className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                  {updating ? "Processing..." : "Mark as Ordered"}
-                </button>
-              )}
-              {po.status === 'ORDERED' && canMarkAsDelivered && (
-                <button onClick={() => handleAction('DELIVER')} disabled={updating} className="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                  {updating ? "Processing..." : "Mark as Delivered"}
-                </button>
-              )}
-              {po.status === 'APPROVED' && canCancel && (
-                <button onClick={() => handleAction('CANCEL')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                  {updating ? "Processing..." : "Cancel PO"}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Approval Status */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Approval Status</h3>
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Reviewer Status</dt>
-                <dd className={`text-sm font-semibold ${getActionStatusColor(po.reviewerStatus)}`}>
-                  {po.reviewerStatus}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Approver Status</dt>
-                <dd className={`text-sm font-semibold ${getActionStatusColor(po.approverStatus)}`}>
-                  {po.approverStatus}
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          {/* Convert to PR Button */}
-          {isAllowedToConvertToPR(po.status) && (
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Payment Processing
-              </h3>
-              <div className="mb-4">
-                <label
-                  htmlFor="paymentMethod"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Payment Method
-                </label>
-                <select
-                  id="paymentMethod"
-                  name="paymentMethod"
-                  value={paymentMethod}
-                  onChange={(e) =>
-                    setPaymentMethod(e.target.value as PaymentMethod)
-                  }
-                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                >
-                  {Object.values(PaymentMethod).map((method) => (
-                    <option key={method} value={method}>
-                      {method.replace("_", " ")}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                onClick={convertToPR}
-                disabled={converting}
-                className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                {converting ? "Converting..." : "Convert to Payment Request"}
-              </button>
-              <p className="text-sm text-gray-500 mt-2">
-                Create a payment request for this purchase order.
-              </p>
-            </div>
-          )}
-
-          {/* People Involved */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">People Involved</h3>
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Prepared By</dt>
-                <dd className="text-sm text-gray-900">
-                  {po.preparedBy?.name} ({po.preparedBy?.email})
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Requested By</dt>
-                <dd className="text-sm text-gray-900">
-                  {po.requestedBy?.name} ({po.requestedBy?.email})
-                </dd>
-              </div>
-              {po.reviewedBy && (
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Selected Reviewer</dt>
-                  <dd className="text-sm text-gray-900">
-                    {po.reviewedBy.name} ({po.reviewedBy.email})
-                  </dd>
-                </div>
-              )}
-              {po.approvedBy && (
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Selected Approver</dt>
-                  <dd className="text-sm text-gray-900">
-                    {po.approvedBy.name} ({po.approvedBy.email})
-                  </dd>
-                </div>
-              )}
-            </dl>
-          </div>
-
-          {/* Financial Summary */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Financial Summary</h3>
-            <dl className="space-y-2">
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Subtotal</dt>
-                <dd className="text-sm text-gray-900">₹{po.totalAmount.toFixed(2)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Tax ({po.taxRate}%)</dt>
-                <dd className="text-sm text-gray-900">₹{po.taxAmount.toFixed(2)}</dd>
-              </div>
-              <div className="flex justify-between border-t pt-2">
-                <dt className="text-sm font-semibold text-gray-900">Grand Total</dt>
-                <dd className="text-sm font-bold text-gray-900">₹{po.grandTotal.toFixed(2)}</dd>
-              </div>
-            </dl>
-          </div>
-
-          {/* Print Button */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <button
-              onClick={handlePrint}
-              className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              Print PO
-            </button>
           </div>
         </div>
       </div>

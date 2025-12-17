@@ -1,25 +1,26 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PATCH } from './route';
-import { getServerSession } from 'next-auth/next';
 import { updatePRStatus } from '@/lib/pr';
+import { Permission, Role } from '@/types/auth';
 import { PRStatus, PaymentRequest as PaymentRequestType } from '@/types/pr';
 import { Session } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { NextRequest } from 'next/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PATCH } from './route';
 
 // Mock dependencies
 vi.mock('next/server', async (importOriginal) => {
-    const mod = await importOriginal<typeof import('next/server')>();
-    return {
-        ...mod,
-        NextResponse: {
-            json: vi.fn((data, options) => {
-                return {
-                    json: () => Promise.resolve(data),
-                    status: options?.status || 200,
-                }
-            }),
-        },
-    };
+  const mod = await importOriginal<typeof import('next/server')>();
+  return {
+    ...mod,
+    NextResponse: {
+      json: vi.fn((data, options) => {
+        return {
+          json: () => Promise.resolve(data),
+          status: options?.status || 200,
+        }
+      }),
+    },
+  };
 });
 vi.mock('next-auth/next', () => ({
   getServerSession: vi.fn(),
@@ -30,13 +31,13 @@ vi.mock('@/lib/auth', () => ({
 vi.mock('@/lib/pr');
 
 
-const mockUserSession = (permissions = ['APPROVE_PR']): Session => ({
+const mockUserSession = (permissions: Permission[] = [Permission.APPROVE_PR]): Session => ({
   user: {
     id: 'user-id',
     name: 'Test User',
     email: 'test@example.com',
     permissions,
-    role: { id: 'user-role', name: 'User' },
+    role: { id: 'user-role', name: Role.MANAGER },
   },
   expires: '2099-01-01T00:00:00.000Z',
 });

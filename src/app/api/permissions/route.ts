@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from "@/lib/auth";
 import { authorize } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
+import { Permission } from '@/types/auth';
+import { getServerSession } from 'next-auth/next';
+import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
@@ -11,7 +12,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    authorize(session, 'MANAGE_ROLES');
+    authorize(session, Permission.MANAGE_ROLES);
 
     const permissions = await prisma.permission.findMany({
       orderBy: {

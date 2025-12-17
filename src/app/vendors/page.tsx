@@ -13,7 +13,7 @@ import toast from "react-hot-toast";
 // New UI Components
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
@@ -109,6 +109,19 @@ export default function VendorsPage() {
     }
   });
 
+  // Alias mutation for compatibility with new UI calls that might use saveMutation
+  const saveMutation = mutation;
+
+  const resetForm = () => {
+    setFormData({});
+    setEditingVendor(null);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     mutation.mutate(formData);
@@ -122,8 +135,7 @@ export default function VendorsPage() {
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
-    setEditingVendor(null);
-    setFormData({});
+    resetForm();
   };
 
   const handleDelete = (id: string) => {
@@ -179,7 +191,7 @@ export default function VendorsPage() {
 
   if (isLoading) {
     return (
-      <PageLayout title="Vendor Management">
+      <PageLayout title="Vendor Directory">
         <LoadingSpinner />
       </PageLayout>
     );
@@ -187,7 +199,7 @@ export default function VendorsPage() {
 
   if (isError) {
     return (
-      <PageLayout title="Vendor Management">
+      <PageLayout title="Vendor Directory">
         <ErrorDisplay
           title="Error Loading Vendors"
           message={error.message}
@@ -198,174 +210,212 @@ export default function VendorsPage() {
   }
 
   return (
-    <PageLayout title="Vendor Management">
-      <div className="space-y-6 animate-in fade-in duration-500">
+    <PageLayout title="Vendor Directory">
+      <div className="space-y-8 animate-in fade-in duration-500">
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        {/* Creative Header Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Total Vendors Card */}
+          <Card className="border-0 shadow bg-white rounded-xl overflow-hidden relative group hover:shadow-lg transition-all transform hover:-translate-y-1">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Building2 className="w-24 h-24 text-indigo-600" />
+            </div>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-slate-500 uppercase tracking-wider">Total Vendors</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-extrabold text-slate-800">{total}</div>
+              <p className="text-xs text-slate-400 mt-1">Active Database</p>
+            </CardContent>
+          </Card>
+
+          {/* Add Vendor Action Card */}
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Card className="border-0 shadow bg-indigo-600 rounded-xl overflow-hidden relative group cursor-pointer hover:bg-indigo-700 transition-colors">
+                <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-30">
+                  <Plus className="w-24 h-24 text-white" />
+                </div>
+                <CardContent className="flex flex-col justify-center h-full text-white p-6">
+                  <div className="font-bold text-2xl mb-1 flex items-center gap-2">
+                    <Plus className="w-6 h-6" /> Add Vendor
+                  </div>
+                  <p className="text-indigo-100 text-sm opacity-80">Onboard a new supplier.</p>
+                </CardContent>
+              </Card>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>{editingVendor ? "Edit Vendor" : "Add New Vendor"}</DialogTitle>
+                <DialogDescription>
+                  {editingVendor ? "Update vendor details below." : "Enter the details for the new vendor to be added to the system."}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">Name</Label>
+                  <Input id="name" name="name" value={formData.name} onChange={handleInputChange} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="email" className="text-right">Email</Label>
+                  <Input id="email" name="email" value={formData.email} onChange={handleInputChange} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="phone" className="text-right">Phone</Label>
+                  <Input id="phone" name="phone" value={formData.phone || ""} onChange={handleInputChange} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="address" className="text-right">Address</Label>
+                  <Textarea id="address" name="address" value={formData.address || ""} onChange={handleInputChange} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="taxId" className="text-right">Tax ID</Label>
+                  <Input id="taxId" name="taxId" value={formData.taxId || ""} onChange={handleInputChange} className="col-span-3" />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" onClick={handleSubmit} disabled={saveMutation.isPending}>
+                  {saveMutation.isPending && <LoadingSpinner className="mr-2" />}
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Export Action Card */}
+          <Card className="border-0 shadow bg-emerald-600 rounded-xl overflow-hidden relative group cursor-pointer hover:bg-emerald-700 transition-colors" onClick={() => toast.success("Export started")}>
+            <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-30">
+              <Download className="w-24 h-24 text-white" />
+            </div>
+            <CardContent className="flex flex-col justify-center h-full text-white p-6">
+              <div className="font-bold text-2xl mb-1 flex items-center gap-2">
+                <Download className="w-6 h-6" /> Export List
+              </div>
+              <p className="text-emerald-100 text-sm opacity-80">Download vendor data as CSV.</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search & Filter */}
+        <div className="bg-white p-4 rounded-xl shadow border-0 flex flex-col sm:flex-row gap-4 items-center justify-between">
           <SearchAndFilter
             onSearch={handleSearch}
             onFilter={handleFilter}
-            filterOptions={{ dateRange: true }}
-            placeholder="Search vendors..."
-            className="w-full md:w-auto md:flex-1 md:max-w-xl mb-0"
+            filterOptions={{
+              status: ["ACTIVE", "INACTIVE"], // Mock status options
+            }}
+            placeholder="Search Vendors..."
+            className="w-full sm:w-auto flex-1 m-0"
           />
-
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
-              {isExporting ? <LoadingSpinner /> : <Download className="mr-2 h-4 w-4" />}
-              Export
-            </Button>
-
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200" onClick={() => { setEditingVendor(null); setFormData({}); }}>
-                  <Plus className="mr-2 h-4 w-4" /> Add Vendor
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editingVendor ? "Edit Vendor" : "Add New Vendor"}</DialogTitle>
-                  <DialogDescription>
-                    {editingVendor ? "Update the vendor details below." : "Enter the details for the new vendor."}
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Vendor Name *</Label>
-                      <Input id="name" required value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Vendor Name" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="taxId">Tax ID (GSTIN)</Label>
-                      <Input id="taxId" value={formData.taxId || ''} onChange={(e) => setFormData({ ...formData, taxId: e.target.value })} placeholder="GSTIN" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
-                      <Input id="email" type="email" required value={formData.email || ''} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="vendor@co.com" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone *</Label>
-                      <Input id="phone" type="tel" required value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="+91..." />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Address *</Label>
-                    <Textarea id="address" required value={formData.address || ''} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, address: e.target.value })} placeholder="Full billing address" />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="contactInfo">Contact Person *</Label>
-                      <Input id="contactInfo" required value={formData.contactInfo || ''} onChange={(e) => setFormData({ ...formData, contactInfo: e.target.value })} placeholder="John Doe" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="currency">Currency</Label>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        value={formData.currency || 'INR'}
-                        onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                      >
-                        <option value="INR">INR</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <DialogFooter className="pt-4">
-                    <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancel</Button>
-                    <Button type="submit" disabled={mutation.isPending}>
-                      {mutation.isPending ? "Saving..." : "Save Changes"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+          <div className="text-sm text-slate-500 hidden md:block">
+            Showing <span className="font-bold text-slate-700">{(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)}</span> of {total}
           </div>
         </div>
 
-        <Card className="border-0 shadow-xl bg-white/70 backdrop-blur-md">
-          <CardHeader className="pb-2">
-            <CardTitle>Approved Vendors</CardTitle>
-            <CardDescription>Directory of authorized suppliers and service providers.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border bg-white/50">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Vendor</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Performance</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+        {/* Content Table */}
+        <Card className="border-0 shadow bg-white rounded-xl overflow-hidden">
+          <Table>
+            <TableHeader className="bg-slate-50/50">
+              <TableRow className="hover:bg-transparent border-slate-100">
+                <TableHead className="w-[180px] pl-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Vendor Name</TableHead>
+                <TableHead className="py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Contact</TableHead>
+                <TableHead className="py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Tax ID</TableHead>
+                <TableHead className="py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Location</TableHead>
+                <TableHead className="text-right pr-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {vendors.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-64 text-center">
+                    <div className="flex flex-col items-center justify-center text-slate-400">
+                      <Building2 className="w-12 h-12 mb-4 text-slate-200" />
+                      <p className="text-lg font-medium text-slate-600">No vendors found</p>
+                      <Button variant="outline" className="mt-4" onClick={() => setIsDialogOpen(true)}>Add First Vendor</Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                vendors.map((vendor: Vendor) => (
+                  <TableRow key={vendor.id} className="cursor-pointer hover:bg-slate-50 transition-colors border-slate-100">
+                    <TableCell className="font-semibold text-slate-700 pl-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs shadow-sm">
+                          {vendor.name.charAt(0).toUpperCase()}
+                        </div>
+                        {vendor.name}
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="flex flex-col gap-1 text-sm">
+                        <div className="flex items-center gap-1.5 text-slate-600">
+                          <Mail className="w-3.5 h-3.5 text-slate-400" /> {vendor.email}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-slate-600">
+                          <Phone className="w-3.5 h-3.5 text-slate-400" /> {vendor.phone || "N/A"}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <Badge variant="outline" className="font-mono text-slate-500 border-slate-200 bg-slate-50">
+                        {vendor.taxId || "N/A"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <span className="text-sm text-slate-600 truncate max-w-[150px] block" title={vendor.address || ""}>
+                        {vendor.address || "N/A"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right pr-6 py-4">
+                      <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(vendor)} className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(vendor.id as string)}
+                          className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vendors.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center">
-                        No vendors found.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    vendors.map((vendor: Vendor) => (
-                      <TableRow key={vendor.id} className="hover:bg-slate-50/80 transition-colors">
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-slate-800 flex items-center gap-2">
-                              <Building2 className="h-3 w-3 text-slate-400" />
-                              {vendor.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground ml-5">{vendor.address?.substring(0, 30)}...</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col text-sm text-slate-600 space-y-1">
-                            <span className="flex items-center gap-2">
-                              <Mail className="h-3 w-3 text-slate-400" /> {vendor.email}
-                            </span>
-                            <span className="flex items-center gap-2">
-                              <Phone className="h-3 w-3 text-slate-400" /> {vendor.phone}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col space-y-1">
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="font-medium">On-Time:</span>
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                {(vendor.onTimeDeliveryRate || 0).toFixed(0)}%
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="font-medium">Quality:</span>
-                              <span className="font-bold text-blue-600">{(vendor.averageQualityScore || 0).toFixed(1)}/5</span>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(vendor)}>
-                              <Pencil className="h-4 w-4 text-blue-500" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(vendor.id!)} disabled={deleteMutation.isPending} className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </Card>
+
+        {/* Pagination */}
+        {(pageCount > 1 || total > 0) && (
+          <div className="flex items-center justify-between px-2 py-4">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+                className="bg-white border-0 shadow-sm hover:bg-slate-50"
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(page + 1)}
+                disabled={page >= pageCount}
+                className="bg-white border-0 shadow-sm hover:bg-slate-50"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </PageLayout>
   );

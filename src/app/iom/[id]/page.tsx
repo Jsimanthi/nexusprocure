@@ -1,18 +1,25 @@
 // src/app/iom/[id]/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
-import { IOM } from "@/types/iom";
-import PageLayout from "@/components/PageLayout";
-import LoadingSpinner from "@/components/LoadingSpinner";
+import { BreadcrumbBackButton } from "@/components/BreadcrumbBackButton";
 import ErrorDisplay from "@/components/ErrorDisplay";
-import { getIOMStatusColor } from "@/lib/utils";
-import { useHasPermission } from "@/hooks/useHasPermission";
-import { useSession } from "next-auth/react";
 import IOMPrintView from "@/components/IOMPrintView";
-import { ArrowLeft } from "lucide-react";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import PageLayout from "@/components/PageLayout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useHasPermission } from "@/hooks/useHasPermission";
+import { Permission } from "@/types/auth";
+import { IOM } from "@/types/iom";
+import { Calendar, CheckCircle, FileInput, FileText, Printer, XCircle } from "lucide-react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 
 export default function IOMDetailPage() {
   const params = useParams();
@@ -21,7 +28,9 @@ export default function IOMDetailPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
-  const canCreatePO = useHasPermission('CREATE_PO');
+  const canCreatePO = useHasPermission(Permission.CREATE_PO);
+  // Add permission check to view IOM
+  const canViewIOM = useHasPermission(Permission.READ_IOM);
 
   const fetchIOM = useCallback(async () => {
     setLoading(true);
@@ -31,20 +40,25 @@ export default function IOMDetailPage() {
         const data = await response.json();
         setIom(data);
       } else {
-        console.error("Failed to fetch IOM");
+        toast.error("Failed to fetch IOM details");
       }
     } catch (error) {
       console.error("Error fetching IOM:", error);
+      toast.error("Network error when fetching IOM");
     } finally {
       setLoading(false);
     }
   }, [params.id]);
 
   useEffect(() => {
+    if (!canViewIOM) {
+      setLoading(false);
+      return;
+    }
     if (params.id) {
       fetchIOM();
     }
-  }, [params.id, fetchIOM]);
+  }, [params.id, canViewIOM, fetchIOM]);
 
   const handleAction = async (action: 'APPROVE' | 'REJECT') => {
     setUpdating(true);
@@ -58,58 +72,35 @@ export default function IOMDetailPage() {
       if (response.ok) {
         const updatedIOM = await response.json();
         setIom(updatedIOM);
+        toast.success(`IOM status updated to ${action}`);
       } else {
         const errorData = await response.json();
-        console.error("Failed to update status:", errorData.error);
-        // You might want to show a toast notification here
+        toast.error(`Failed: ${errorData.error}`);
       }
     } catch (error) {
       console.error("Error updating status:", error);
+      toast.error("An unexpected error occurred");
     } finally {
       setUpdating(false);
     }
   };
 
-  if (loading) {
-    return (
-      <PageLayout>
-        <LoadingSpinner />
-      </PageLayout>
-    );
-  }
-
-  if (!iom) {
-    return (
-      <PageLayout>
-        <ErrorDisplay
-          title="IOM Not Found"
-          message={`Could not find an IOM with the ID: ${params.id}`}
-        />
-        <div className="mt-6 text-center">
-          <Link href="/iom" className="text-blue-600 hover:text-blue-800">
-            &larr; Back to IOM List
-          </Link>
-        </div>
-      </PageLayout>
-    );
-  }
-
-  const isReviewer = session?.user?.id === iom.reviewedById;
-  const isApprover = session?.user?.id === iom.approvedById;
-
-  const getActionStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
+    let variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" = "default";
     switch (status) {
-      case 'APPROVED': return 'text-green-600';
-      case 'REJECTED': return 'text-red-600';
-      default: return 'text-yellow-600';
+      case 'APPROVED': variant = "success"; break;
+      case 'REJECTED': variant = "destructive"; break;
+      case 'PENDING_APPROVAL': variant = "warning"; break;
+      case 'SUBMITTED': variant = "default"; break;
+      case 'DRAFT': variant = "secondary"; break;
     }
+    return <Badge variant={variant}>{status.replace("_", " ")}</Badge>;
   };
 
   const handlePrint = () => {
     const printContent = document.getElementById('iom-print-view');
     if (!printContent) return;
 
-    // Create a new iframe
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
     iframe.style.width = '0';
@@ -120,200 +111,216 @@ export default function IOMDetailPage() {
     const doc = iframe.contentWindow?.document;
     if (!doc) return;
 
-    // Get stylesheets from the main document
     const styles = Array.from(document.styleSheets)
       .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : (s.ownerNode as HTMLStyleElement)?.outerHTML)
       .join('');
 
-    // Get the HTML content to print
     const content = printContent.outerHTML;
 
-    // Write the content and styles to the iframe
     doc.open();
-    doc.write(`
-      <html>
-        <head>
-          <title>Print IOM</title>
-          ${styles}
-          <style>
-            @page {
-              size: auto;
-              margin: 0;
-            }
-            body, html {
-              margin: 0;
-              padding: 0;
-              height: 100%;
-            }
-            body {
-              padding: 2rem; /* Add some margin to the printed page */
-              box-sizing: border-box;
-            }
-            #iom-print-view {
-              display: flex;
-              flex-direction: column;
-              height: 100%; /* Make the container fill the body height */
-              box-shadow: none !important;
-              border: none !important;
-            }
-            .iom-main-content {
-              flex-grow: 1;
-            }
-            .iom-footer {
-              flex-shrink: 0;
-              margin-top: auto; /* Push footer to the bottom */
-            }
-          </style>
-        </head>
-        <body>
-          ${content}
-        </body>
-      </html>
-    `);
+    doc.write(`<html><head><title>Print IOM ${iom?.iomNumber}</title>${styles}<style>@page { size: auto; margin: 0; } body { padding: 2rem; } #iom-print-view { display: block !important; }</style></head><body>${content}</body></html>`);
     doc.close();
 
-    // Wait for the iframe to load before printing
-    iframe.onload = function() {
+    iframe.onload = function () {
       if (iframe.contentWindow) {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
       }
-      // Remove the iframe after a delay
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 500);
+      setTimeout(() => document.body.removeChild(iframe), 500);
     };
   };
 
+  if (loading) return <PageLayout><LoadingSpinner /></PageLayout>;
+
+  if (!canViewIOM) {
+    return (
+      <PageLayout>
+        <ErrorDisplay title="Forbidden" message="You do not have permission to view this IOM." />
+        <div className="mt-6 text-center">
+          <Link href="/iom"><Button variant="link">&larr; Back to IOM List</Button></Link>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (!iom) {
+    return (
+      <PageLayout>
+        <ErrorDisplay title="IOM Not Found" message={`Could not find an IOM with the ID: ${params.id}`} />
+        <div className="mt-6 text-center">
+          <Link href="/iom"><Button variant="link">&larr; Back to IOM List</Button></Link>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  const isReviewer = session?.user?.id === iom.reviewedById;
+  const isApprover = session?.user?.id === iom.approvedById;
+
   return (
     <PageLayout>
-      {/* Page Header */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">{iom.title}</h1>
-          <Link href="/iom" className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-            <ArrowLeft className="h-4 w-4" />
-            Back to IOM List
-          </Link>
-        </div>
-        <div className="flex justify-between items-center mt-2">
-          <p className="text-lg font-semibold text-gray-800">{iom.iomNumber}</p>
-          <div className="flex items-center gap-4">
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getIOMStatusColor(iom.status)}`}>
-              {iom.status.replace("_", " ")}
-            </span>
-            <p className="text-sm text-gray-500">
-              Created: {new Date(iom.createdAt!).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-      </div>
+      <div className="flex flex-col space-y-6 pb-20">
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Main Content */}
-        <div className="lg:col-span-2">
-          <IOMPrintView iom={iom} />
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* IOM Actions */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">IOM Actions</h3>
-            <div className="space-y-2">
-              {isReviewer && iom.reviewerStatus === 'PENDING' && (
-                <div className="flex space-x-2">
-                  <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Approve (Review)"}
-                  </button>
-                  <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Reject (Review)"}
-                  </button>
-                </div>
-              )}
-              {isApprover && iom.approverStatus === 'PENDING' && (
-                <div className="flex space-x-2">
-                  <button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Approve (Final)"}
-                  </button>
-                  <button onClick={() => handleAction('REJECT')} disabled={updating} className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50">
-                    {updating ? "Processing..." : "Reject (Final)"}
-                  </button>
-                </div>
-              )}
-              {iom.status === "APPROVED" && canCreatePO && (
-                <Link href={`/po/create?iomId=${iom.id}`} className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center block">
-                  Convert to Purchase Order
-                </Link>
-              )}
-              {iom.status !== 'DRAFT' && !isReviewer && !isApprover && iom.status !== 'APPROVED' && (
-                <p className="text-sm text-gray-600">You are not assigned to review or approve this IOM.</p>
-              )}
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div>
+            <div className="flex items-center gap-3">
+              <BreadcrumbBackButton href="/iom" text="Back to IOM List" />
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight ml-2">{iom.iomNumber}</h1>
+              {getStatusBadge(iom.status)}
+            </div>
+            <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
+              <span className="flex items-center gap-1"><FileText className="w-4 h-4" /> {iom.title}</span>
+              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+              <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {new Date(iom.createdAt!).toLocaleDateString()}</span>
             </div>
           </div>
 
-          {/* Approval Status */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Approval Status</h3>
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Reviewer Status</dt>
-                <dd className={`text-sm font-semibold ${getActionStatusColor(iom.reviewerStatus)}`}>
-                  {iom.reviewerStatus}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Approver Status</dt>
-                <dd className={`text-sm font-semibold ${getActionStatusColor(iom.approverStatus)}`}>
-                  {iom.approverStatus}
-                </dd>
-              </div>
-            </dl>
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="w-4 h-4 mr-2" /> Print PDF
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* Left Column: Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="details">IOM Details</TabsTrigger>
+                <TabsTrigger value="preview">Print Preview</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="details" className="mt-4 space-y-6">
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base text-slate-500 font-medium uppercase tracking-wide">Category & Description</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 bg-slate-50 rounded-lg">
+                        <span className="text-xs text-slate-500 uppercase">Subject</span>
+                        <p className="font-medium text-slate-900 mt-1">{iom.subject}</p>
+                      </div>
+                      <div className="p-3 bg-slate-50 rounded-lg">
+                        <span className="text-xs text-slate-500 uppercase">Items Count</span>
+                        <p className="font-medium text-slate-900 mt-1">{iom.items.length}</p>
+                      </div>
+                    </div>
+                    <Separator />
+                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 italic text-slate-600 text-sm">
+                      {/* Using title as description if no description field exists yet, otherwise add description field to IOM type */}
+                      "{iom.title}"
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Stakeholders */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Stakeholders</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 uppercase">Requested By</p>
+                      <p className="font-medium text-slate-900 truncate">{iom.requestedBy?.name}</p>
+                      <p className="text-xs text-slate-400 truncate">{iom.requestedBy?.email}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 uppercase">Prepared By</p>
+                      <p className="font-medium text-slate-900 truncate">{iom.preparedBy?.name}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 uppercase">Reviewer</p>
+                      <p className="font-medium text-slate-900 truncate">{iom.reviewedBy?.name || "Pending"}</p>
+                      <div className="mt-1">{getStatusBadge(iom.reviewerStatus)}</div>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 uppercase">Approver</p>
+                      <p className="font-medium text-slate-900 truncate">{iom.approvedBy?.name || "Pending"}</p>
+                      <div className="mt-1">{getStatusBadge(iom.approverStatus)}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+              </TabsContent>
+
+              <TabsContent value="preview">
+                <Card>
+                  <CardContent className="p-0 overflow-hidden rounded-lg border border-slate-200">
+                    <div className="scale-[0.8] origin-top-left w-[125%] h-auto p-4 bg-gray-50">
+                      <IOMPrintView iom={iom} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          {/* People Involved */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">People Involved</h3>
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Prepared By</dt>
-                <dd className="text-sm text-gray-900">
-                  {iom.preparedBy?.name} ({iom.preparedBy?.email})
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Requested By</dt>
-                <dd className="text-sm text-gray-900">
-                  {iom.requestedBy?.name} ({iom.requestedBy?.email})
-                </dd>
-              </div>
-              {iom.reviewedBy && (
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Selected Reviewer</dt>
-                  <dd className="text-sm text-gray-900">
-                    {iom.reviewedBy.name} ({iom.reviewedBy.email})
-                  </dd>
-                </div>
-              )}
-              {iom.approvedBy && (
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Selected Approver</dt>
-                  <dd className="text-sm text-gray-900">
-                    {iom.approvedBy.name} ({iom.approvedBy.email})
-                  </dd>
-                </div>
-              )}
-            </dl>
-          </div>
+          {/* Right Column: Actions Sidebar */}
+          <div className="space-y-6">
+            <Card className="border-l-4 border-l-blue-600 shadow-md">
+              <CardHeader>
+                <CardTitle className="text-lg">Workflow Actions</CardTitle>
+                <CardDescription>Manage the lifecycle of this IOM.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
 
-          {/* Print Button */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <button
-              onClick={handlePrint}
-              className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              Print IOM
-            </button>
+                {isReviewer && iom.reviewerStatus === 'PENDING' && (
+                  <>
+                    <Button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700">
+                      <CheckCircle className="w-4 h-4 mr-2" /> Approve Review
+                    </Button>
+                    <Button onClick={() => handleAction('REJECT')} variant="destructive" disabled={updating} className="w-full">
+                      <XCircle className="w-4 h-4 mr-2" /> Reject Review
+                    </Button>
+                  </>
+                )}
+
+                {isApprover && iom.approverStatus === 'PENDING' && (
+                  <>
+                    <Button onClick={() => handleAction('APPROVE')} disabled={updating} className="w-full bg-green-600 hover:bg-green-700">
+                      <CheckCircle className="w-4 h-4 mr-2" /> Final Approve
+                    </Button>
+                    <Button onClick={() => handleAction('REJECT')} variant="destructive" disabled={updating} className="w-full">
+                      <XCircle className="w-4 h-4 mr-2" /> Final Reject
+                    </Button>
+                  </>
+                )}
+
+                {iom.status === "APPROVED" && canCreatePO && (
+                  <Link href={`/po/create?iomId=${iom.id}`} className="w-full">
+                    <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                      <FileInput className="w-4 h-4 mr-2" /> Convert to PO
+                    </Button>
+                  </Link>
+                )}
+
+                {iom.status !== 'DRAFT' && !isReviewer && !isApprover && iom.status !== 'APPROVED' && (
+                  <div className="text-center py-4 text-slate-500 italic text-sm">
+                    No actions available for your role.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium text-slate-500 uppercase">IOM Info</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Subject</span>
+                  <span className="font-medium">{iom.subject}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Total Items</span>
+                  <span className="font-medium">{iom.items.length}</span>
+                </div>
+              </CardContent>
+            </Card>
+
           </div>
         </div>
       </div>

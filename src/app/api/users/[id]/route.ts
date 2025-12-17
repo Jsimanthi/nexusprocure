@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { authorize } from '@/lib/auth-utils';
 import { prisma } from '@/lib/prisma';
+import { Permission } from '@/types/auth'; // Import Enum
+import { getServerSession } from 'next-auth/next';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 const updateRoleSchema = z.object({
@@ -23,7 +24,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    authorize(session, 'MANAGE_USERS');
+    authorize(session, Permission.MANAGE_USERS);
 
     const user = await prisma.user.findUnique({
       where: { id: params.id },
@@ -68,7 +69,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    authorize(session, 'MANAGE_USERS');
+    authorize(session, Permission.MANAGE_USERS);
 
     const userId = params.id;
     const body = await request.json();

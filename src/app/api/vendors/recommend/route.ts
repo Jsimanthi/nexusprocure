@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { authorize } from '@/lib/auth-utils';
-import { getTopVendors } from '@/lib/vendor';
 import logger from '@/lib/logger';
+import { getTopVendors } from '@/lib/vendor';
+import { Permission } from '@/types/auth';
+import { getServerSession } from 'next-auth/next';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    authorize(session, 'READ_ALL_VENDORS');
+    authorize(session, Permission.READ_ALL_VENDORS);
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '5');
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    logger.error(`Error getting vendor recommendations: ${String(error)}`);
+    logger.error({ error }, `Error getting vendor recommendations`);
     if (error instanceof Error && error.message.includes('Not authorized')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

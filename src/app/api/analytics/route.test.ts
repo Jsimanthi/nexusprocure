@@ -1,8 +1,9 @@
-import { GET } from './route';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth/next';
+import { Permission, Role } from '@/types/auth'; // Import Permission
 import { Session } from 'next-auth';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { getServerSession } from 'next-auth/next';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GET } from './route';
 
 // Mock dependencies
 vi.mock('next-auth/next', () => ({
@@ -13,17 +14,17 @@ vi.mock('@/lib/prisma');
 // A utility type to make all properties of a type optional recursively
 type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends (infer U)[]
-    ? DeepPartial<U>[]
-    : T[P] extends object
-    ? DeepPartial<T[P]>
-    : T[P];
+  ? DeepPartial<U>[]
+  : T[P] extends object
+  ? DeepPartial<T[P]>
+  : T[P];
 };
 
 // Define a type for our mock session to avoid using 'any'
 type MockSession = DeepPartial<Session> & {
   user?: {
     id?: string;
-    permissions?: string[];
+    permissions?: Permission[]; // Update type
     role?: {
       id: string;
       name: string;
@@ -44,7 +45,7 @@ describe('GET /api/analytics', () => {
 
   it('should return 403 if user does not have VIEW_ANALYTICS permission', async () => {
     const mockSession: MockSession = {
-      user: { id: 'user-1', permissions: [], role: { id: 'role-1', name: 'User' } },
+      user: { id: 'user-1', permissions: [], role: { id: 'role-1', name: Role.MANAGER } },
     };
     vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
     const response = await GET();
@@ -53,7 +54,7 @@ describe('GET /api/analytics', () => {
 
   it('should return analytics data for an authorized user', async () => {
     const mockSession: MockSession = {
-      user: { id: 'admin-id', permissions: ['VIEW_ANALYTICS'], role: { id: 'role-2', name: 'Admin' } },
+      user: { id: 'admin-id', permissions: [Permission.VIEW_ANALYTICS], role: { id: 'role-2', name: Role.ADMINISTRATOR } },
     };
     vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
 
@@ -83,7 +84,7 @@ describe('GET /api/analytics', () => {
 
   it('should handle database errors gracefully', async () => {
     const mockSession: MockSession = {
-      user: { id: 'admin-id', permissions: ['VIEW_ANALYTICS'], role: { id: 'role-2', name: 'Admin' } },
+      user: { id: 'admin-id', permissions: [Permission.VIEW_ANALYTICS], role: { id: 'role-2', name: Role.ADMINISTRATOR } },
     };
     vi.mocked(getServerSession).mockResolvedValue(mockSession as Session);
 

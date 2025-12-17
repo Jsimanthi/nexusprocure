@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET, PUT } from './route';
-import { prisma } from '@/lib/prisma';
-import { Session } from 'next-auth';
-import { Role, Permission } from '@prisma/client';
-import { DeepMockProxy } from 'vitest-mock-extended';
-import { getServerSession } from 'next-auth/next';
 import { authorize } from '@/lib/auth-utils';
+import { prisma } from '@/lib/prisma';
+import { Role as AuthRole } from '@/types/auth';
+import { Permission as PrismaPermission, Role as PrismaRole } from '@prisma/client';
+import { Session } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { NextRequest } from 'next/server';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DeepMockProxy } from 'vitest-mock-extended';
+import { GET, PUT } from './route';
 
 vi.mock('@/lib/prisma');
 vi.mock('next-auth/next', () => ({
@@ -20,17 +21,17 @@ vi.mock('@/lib/auth-utils', () => ({
 }));
 
 const mockSession: Session = {
-  user: { id: '1', name: 'Test User', email: 'test@example.com', permissions: [], role: { id: '1', name: 'Admin' } },
+  user: { id: '1', name: 'Test User', email: 'test@example.com', permissions: [], role: { id: '1', name: AuthRole.ADMINISTRATOR } },
   expires: '2025-01-01T00:00:00.000Z',
 };
 
-const mockRole: Role & { permissions: { permission: Permission }[] } = {
-    id: '1',
-    name: 'ADMIN',
-    permissions: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-} as Role & { permissions: { permission: Permission }[] };
+const mockRole: PrismaRole & { permissions: { permission: PrismaPermission }[] } = {
+  id: '1',
+  name: 'ADMIN',
+  permissions: [],
+  createdAt: new Date(),
+  updatedAt: new Date(),
+} as PrismaRole & { permissions: { permission: PrismaPermission }[] };
 
 describe('GET /api/roles/[id]', () => {
   beforeEach(() => {
@@ -60,35 +61,35 @@ describe('GET /api/roles/[id]', () => {
 });
 
 describe('PUT /api/roles/[id]', () => {
-    beforeEach(() => {
-      vi.resetAllMocks();
-      const mockTx = {
-        role: { update: vi.fn().mockResolvedValue(mockRole) },
-        permissionsOnRoles: {
-            deleteMany: vi.fn(),
-            createMany: vi.fn(),
-        },
-      } as unknown as DeepMockProxy<typeof prisma>;
+  beforeEach(() => {
+    vi.resetAllMocks();
+    const mockTx = {
+      role: { update: vi.fn().mockResolvedValue(mockRole) },
+      permissionsOnRoles: {
+        deleteMany: vi.fn(),
+        createMany: vi.fn(),
+      },
+    } as unknown as DeepMockProxy<typeof prisma>;
 
-      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
-        return callback(mockTx);
-      });
-    });
-
-    it('should update a role successfully', async () => {
-      vi.mocked(getServerSession).mockResolvedValue(mockSession);
-      vi.mocked(authorize).mockReturnValue(true);
-
-      const req = new NextRequest('http://localhost', {
-        method: 'PUT',
-        body: JSON.stringify({ name: 'NEW_NAME', permissionIds: ['1', '2'] }),
-      });
-
-      const response = await PUT(req, { params: Promise.resolve({ id: '1' }) });
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.name).toBe('ADMIN'); // The mock returns the original name
-      expect(prisma.$transaction).toHaveBeenCalled();
+    vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+      return callback(mockTx);
     });
   });
+
+  it('should update a role successfully', async () => {
+    vi.mocked(getServerSession).mockResolvedValue(mockSession);
+    vi.mocked(authorize).mockReturnValue(true);
+
+    const req = new NextRequest('http://localhost', {
+      method: 'PUT',
+      body: JSON.stringify({ name: 'NEW_NAME', permissionIds: ['1', '2'] }),
+    });
+
+    const response = await PUT(req, { params: Promise.resolve({ id: '1' }) });
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.name).toBe('ADMIN'); // The mock returns the original name
+    expect(prisma.$transaction).toHaveBeenCalled();
+  });
+});

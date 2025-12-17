@@ -1,18 +1,19 @@
 // src/lib/pr.ts
-import { prisma } from "./prisma";
-import { PRStatus } from "@/types/pr";
-import { z } from "zod";
-import crypto from "crypto";
-import { createNotification } from "./notification";
-import { sendEmail } from "./email";
 import { StatusUpdateEmail } from "@/components/emails/StatusUpdateEmail";
-import { createPrSchema } from "./schemas";
-import * as React from "react";
-import { Session } from "next-auth";
-import { authorize } from "./auth-utils";
-import { logAudit, getAuditUser } from "./audit";
+import { Permission } from "@/types/auth";
+import { PRStatus } from "@/types/pr";
 import { Prisma } from "@prisma/client";
+import crypto from "crypto";
+import { Session } from "next-auth";
+import * as React from "react";
+import { z } from "zod";
+import { getAuditUser, logAudit } from "./audit";
+import { authorize } from "./auth-utils";
+import { sendEmail } from "./email";
+import { createNotification } from "./notification";
+import { prisma } from "./prisma";
 import { triggerPusherEvent } from "./pusher";
+import { createPrSchema } from "./schemas";
 
 export async function generatePRNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -47,7 +48,7 @@ export async function getPRs(
   };
 
   // If user does not have permission to see all PRs, filter by their involvement.
-  if (!userPermissions.includes('READ_ALL_PRS')) {
+  if (!userPermissions.includes(Permission.READ_ALL_PRS)) {
     (where.AND as Prisma.PaymentRequestWhereInput[]).push({
       OR: [
         { preparedById: user.id },
@@ -203,7 +204,7 @@ type CreatePrData = z.infer<typeof createPrSchema> & {
 };
 
 export async function createPaymentRequest(data: CreatePrData, session: Session) {
-  authorize(session, 'CREATE_PR');
+  authorize(session, Permission.CREATE_PR);
   const { status, reviewerId, approverId, ...restOfData } = data;
   if (restOfData.poId) {
     const po = await prisma.purchaseOrder.findUnique({
@@ -310,11 +311,11 @@ export async function updatePRStatus(
     let newStatus: PRStatus;
     switch (action) {
       case "PROCESS":
-        authorize(session, "PROCESS_PAYMENT_REQUEST");
+        authorize(session, Permission.PROCESS_PAYMENT_REQUEST);
         newStatus = PRStatus.PROCESSED;
         break;
       case "CANCEL":
-        authorize(session, "CANCEL_PR");
+        authorize(session, Permission.CANCEL_PR);
         newStatus = PRStatus.CANCELLED;
         break;
     }
@@ -349,12 +350,12 @@ export async function updatePRStatus(
   const updateData: Partial<Prisma.PaymentRequestUpdateInput> = {};
 
   if (isReviewer) {
-    authorize(session, 'REVIEW_PR'); // Assuming REVIEW_PR permission exists
+    authorize(session, Permission.REVIEW_PR); // Assuming REVIEW_PR permission exists
     updateData.reviewerStatus = newActionStatus;
   }
 
   if (isApprover) {
-    authorize(session, 'APPROVE_PR');
+    authorize(session, Permission.APPROVE_PR);
     updateData.approverStatus = newActionStatus;
   }
 
@@ -440,7 +441,7 @@ export async function getAllPRsForExport(session: Session) {
   if (!session.user) {
     throw new Error("Authentication failed: No user session found.");
   }
-  authorize(session, 'READ_ALL_PRS');
+  authorize(session, Permission.READ_ALL_PRS);
 
   return await prisma.paymentRequest.findMany({
     include: {
