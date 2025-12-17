@@ -247,6 +247,16 @@ export async function createPurchaseOrder(data: CreatePoData, session: Session) 
 
   const grandTotal = totalAmount + taxAmount;
 
+  // [IMPERIUM V2] Hard Budget Enforcement
+  // In a real app, department comes from user.department or cost center field.
+  // Here we assume a global 'Operations' budget for demonstration.
+  const budget = await prisma.budget.findUnique({ where: { departmentName: "Operations" } });
+  if (budget) {
+    if (budget.spentAmount + grandTotal > budget.totalBudget) {
+      throw new Error(`[Budget Enforcer] Blocked: Request amount ${grandTotal} exceeds remaining budget for Operations.`);
+    }
+  }
+
   const maxRetries = 3;
   let lastError: unknown;
 

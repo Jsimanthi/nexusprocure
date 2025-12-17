@@ -1,6 +1,6 @@
 // src/lib/prisma.ts
-import getPrimaryClient from './db'
 import { PrismaClient } from '@prisma/client'
+import getPrimaryClient from './db'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined

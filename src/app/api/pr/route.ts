@@ -1,16 +1,16 @@
 // src/app/api/pr/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { createPaymentRequest, getPRs } from "@/lib/pr";
 import { createPrSchema } from "@/lib/schemas";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { Prisma } from "@prisma/client";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
 import { fromZodError } from "zod-validation-error";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -55,19 +55,19 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     const prData = {
       ...validation.data,
       preparedById: session.user.id,
     };
-    
+
     const pr = await createPaymentRequest(prData, session);
 
     return NextResponse.json(pr, { status: 201 });
   } catch (error) {
     console.error("Error creating PR:", error);
-    if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
-        return NextResponse.json({ error: "A payment request with this number already exists." }, { status: 409 });
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: "A payment request with this number already exists." }, { status: 409 });
     }
     return NextResponse.json(
       { error: "Internal server error" },

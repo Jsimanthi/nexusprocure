@@ -475,3 +475,16 @@ model WorkflowInstance {
   @@index([entityType, entityId])
   @@index([assignedTo])
 }
+
+model Budget {
+  id             String   @id @default(cuid())
+  departmentName String   @unique // e.g., "IT", "Marketing"
+  totalBudget    Float
+  spentAmount    Float    @default(0)
+  fiscalYear     Int
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([departmentName])
+}

@@ -1,5 +1,4 @@
-import { PrismaClient as PostgresClient } from '../../../node_modules/.prisma/postgres-client';
-import { PrismaClient as SqliteClient } from '../../../node_modules/.prisma/sqlite-client';
+import { PrismaClient as PostgresClient, PrismaClient as SqliteClient } from '../../../node_modules/.prisma/sqlite-client';
 
 const pg = new PostgresClient();
 const sq = new SqliteClient();
@@ -10,7 +9,7 @@ async function getPrimaryClient() {
     await pg.$connect();
     // quick health check - select 1
     await pg.$queryRaw`SELECT 1`;
-    await sq.$disconnect().catch(()=>{});
+    await sq.$disconnect().catch(() => { });
     return pg;
   } catch {
     // fallback to sqlite

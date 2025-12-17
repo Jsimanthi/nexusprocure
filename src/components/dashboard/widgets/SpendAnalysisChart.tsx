@@ -26,15 +26,16 @@ const defaultData = [
 
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+        const value = payload[0].value; // Extract value here
         return (
             <div className="bg-popover border border-border p-3 rounded-lg shadow-lg">
                 <p className="font-semibold text-popover-foreground mb-1">{label}</p>
                 <p className="text-primary font-bold">
                     {new Intl.NumberFormat("en-US", {
                         style: "currency",
-                        currency: "USD",
-                    }).format(payload[0].value)}
-                </p>
+                        currency: "INR",
+                        maximumFractionDigits: 0,
+                    }).format(value)}</p>
             </div>
         );
     }

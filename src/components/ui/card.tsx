@@ -8,9 +8,13 @@ const Card = React.forwardRef<
     <div
         ref={ref}
         className={cn(
-            "rounded-xl border bg-card text-card-foreground shadow-sm backdrop-blur-sm bg-opacity-80 transition-all hover:shadow-md",
+            "rounded-xl border border-[var(--glass-border)] bg-[var(--card)] text-card-foreground shadow-[var(--glass-shadow)] backdrop-blur-[var(--glass-backdrop)] transition-all duration-300 hover:shadow-lg hover:-translate-y-1",
             className
         )}
+        style={{
+            backdropFilter: "var(--glass-backdrop)",
+            WebkitBackdropFilter: "var(--glass-backdrop)"
+        }}
         {...props}
     />
 ))

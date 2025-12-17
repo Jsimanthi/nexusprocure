@@ -1,9 +1,10 @@
+import { SmartCommandBar } from "@/components/dashboard/SmartCommandBar";
+import QueryProvider from "@/providers/QueryProvider";
+import SessionProvider from "@/providers/SessionProvider";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
-import SessionProvider from "@/providers/SessionProvider";
-import QueryProvider from "@/providers/QueryProvider";
 import { Toaster } from "react-hot-toast";
+import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,6 +24,7 @@ export default function RootLayout({
         <QueryProvider>
           <SessionProvider>
             <Toaster position="top-center" />
+            <SmartCommandBar />
             <main>{children}</main>
           </SessionProvider>
         </QueryProvider>
